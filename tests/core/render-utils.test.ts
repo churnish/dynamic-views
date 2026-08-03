@@ -7,7 +7,7 @@ import {
   isBasesDateValue,
   extractTimestamp,
 } from '../../src/core/render-utils';
-import type { Settings, ResolvedSettings } from '../../src/types';
+import type { ResolvedSettings } from '../../src/types';
 
 // Mock style-settings module
 vi.mock('../../src/utils/style-settings', () => ({
@@ -161,7 +161,7 @@ describe('render-utils', () => {
   describe('getTimestampIcon', () => {
     const standardSettings = {
       createdTimeProperty: 'created time',
-    } as Settings;
+    } as ResolvedSettings;
 
     it('should return "calendar" for file.ctime', () => {
       expect(getTimestampIcon('file.ctime', standardSettings)).toBe('calendar');
@@ -177,7 +177,7 @@ describe('render-utils', () => {
       const settings = {
         ...standardSettings,
         createdTimeProperty: 'date_created',
-      } as Settings;
+      } as ResolvedSettings;
       expect(getTimestampIcon('date_created', settings)).toBe('calendar');
     });
 
@@ -190,21 +190,21 @@ describe('render-utils', () => {
     it('should return "calendar" for note.-prefixed custom created property', () => {
       const settings = {
         createdTimeProperty: 'ctd',
-      } as Settings;
+      } as ResolvedSettings;
       expect(getTimestampIcon('note.ctd', settings)).toBe('calendar');
     });
 
     it('should return "clock" for note.-prefixed custom modified property', () => {
       const settings = {
         createdTimeProperty: 'ctd',
-      } as Settings;
+      } as ResolvedSettings;
       expect(getTimestampIcon('note.upd', settings)).toBe('clock');
     });
 
     it('should return "calendar" when both property and setting have note. prefix', () => {
       const settings = {
         createdTimeProperty: 'note.created',
-      } as Settings;
+      } as ResolvedSettings;
       // Both stripped to "created" via stripNotePrefix
       expect(getTimestampIcon('note.created', settings)).toBe('calendar');
     });

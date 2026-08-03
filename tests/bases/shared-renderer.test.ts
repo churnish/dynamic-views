@@ -294,7 +294,7 @@ describe('Structural content classes', () => {
 
     it('not added when only thumbnail-placeholder-only previews exist', () => {
       const card = buildCardDOM();
-      const body = card.querySelector('.card-body')!;
+      const body = card.querySelector<HTMLElement>('.card-body')!;
       const previews = document.createElement('div');
       previews.classList.add('card-previews', 'thumbnail-placeholder-only');
       body.appendChild(previews);
@@ -309,7 +309,7 @@ describe('Structural content classes', () => {
   describe('has-body-content', () => {
     it('added on card-body when it has visible children', () => {
       const card = buildCardDOM({ hasPropertiesBottom: true });
-      const body = card.querySelector('.card-body')!;
+      const body = card.querySelector<HTMLElement>('.card-body')!;
       if (body.querySelector(VISIBLE_BODY_SELECTOR)) {
         body.classList.add('has-body-content');
       }
@@ -318,7 +318,7 @@ describe('Structural content classes', () => {
 
     it('not added on card-body when empty', () => {
       const card = buildCardDOM();
-      const body = card.querySelector('.card-body')!;
+      const body = card.querySelector<HTMLElement>('.card-body')!;
       if (body.querySelector(VISIBLE_BODY_SELECTOR)) {
         body.classList.add('has-body-content');
       }
@@ -336,7 +336,7 @@ describe('Structural content classes', () => {
 
     it('poster card with empty body does not get has-body-content (header is in card-content)', () => {
       const card = buildCardDOM({ hasHeader: false });
-      const body = card.querySelector('.card-body')!;
+      const body = card.querySelector<HTMLElement>('.card-body')!;
 
       applyHasBodyContent(body);
       expect(body.classList.contains('has-body-content')).toBe(false);
@@ -344,7 +344,7 @@ describe('Structural content classes', () => {
 
     it('poster card with no visible content does not get has-body-content', () => {
       const card = buildCardDOM();
-      const body = card.querySelector('.card-body')!;
+      const body = card.querySelector<HTMLElement>('.card-body')!;
 
       applyHasBodyContent(body);
       expect(body.classList.contains('has-body-content')).toBe(false);
@@ -352,7 +352,7 @@ describe('Structural content classes', () => {
 
     it('poster card with properties gets has-body-content', () => {
       const card = buildCardDOM({ hasPropertiesTop: true });
-      const body = card.querySelector('.card-body')!;
+      const body = card.querySelector<HTMLElement>('.card-body')!;
 
       applyHasBodyContent(body);
       expect(body.classList.contains('has-body-content')).toBe(true);
@@ -366,21 +366,21 @@ describe('Structural content classes', () => {
 
     it('added to card-properties when propertyNames is above', () => {
       const card = buildCardDOM({ hasPropertiesTop: true });
-      const propsTop = card.querySelector('.card-properties-top')!;
+      const propsTop = card.querySelector<HTMLElement>('.card-properties-top')!;
       applyNamesAbove(propsTop, 'above');
       expect(propsTop.classList.contains('names-above')).toBe(true);
     });
 
     it('not added when propertyNames is inline', () => {
       const card = buildCardDOM({ hasPropertiesTop: true });
-      const propsTop = card.querySelector('.card-properties-top')!;
+      const propsTop = card.querySelector<HTMLElement>('.card-properties-top')!;
       applyNamesAbove(propsTop, 'inline');
       expect(propsTop.classList.contains('names-above')).toBe(false);
     });
 
     it('not added when propertyNames is hide', () => {
       const card = buildCardDOM({ hasPropertiesTop: true });
-      const propsTop = card.querySelector('.card-properties-top')!;
+      const propsTop = card.querySelector<HTMLElement>('.card-properties-top')!;
       applyNamesAbove(propsTop, 'hide');
       expect(propsTop.classList.contains('names-above')).toBe(false);
     });

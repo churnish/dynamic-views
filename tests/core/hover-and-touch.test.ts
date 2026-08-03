@@ -279,8 +279,8 @@ describe('isTouchPointer', () => {
 
 describe('setupTouchPress', () => {
   let el: HTMLElement;
-  let onActivate: ReturnType<typeof vi.fn>;
-  let onDeactivate: ReturnType<typeof vi.fn>;
+  let onActivate: Mock;
+  let onDeactivate: Mock;
   let controller: AbortController;
 
   beforeEach(() => {

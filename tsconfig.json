@@ -12,8 +12,9 @@
     "isolatedModules": true,
     "strictNullChecks": true,
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["vitest/globals", "node"]
   },
   "include": ["**/*.ts"],
-  "exclude": ["node_modules", "tests", "archive"]
+  "exclude": ["node_modules", "archive"]
 }

@@ -426,7 +426,7 @@ describe('randomize', () => {
     beforeEach(() => {
       mockApp = new App();
       // Suppress console.log in tests
-      vi.spyOn(console, 'log').mockImplementation();
+      vi.spyOn(console, 'log').mockImplementation(() => {});
     });
 
     afterEach(() => {

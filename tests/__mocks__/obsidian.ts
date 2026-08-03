@@ -307,6 +307,3 @@ export const Platform = {
   isLinux: false,
   isSafari: false,
 };
-
-// Export commonly used types
-export type { CachedMetadata };
