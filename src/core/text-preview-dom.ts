@@ -44,8 +44,22 @@ export function setTextPreviewContent(el: HTMLElement, text: string): void {
       el.appendChild(p);
     }
   } else {
-    el.textContent = text;
+    // Wrap in a span rather than setting textContent directly: _text-selection.scss
+    // blocks user-select on .card-text-preview (so empty space in the -webkit-box
+    // stays non-selectable) and re-enables it on .card-text-preview-text and <p>.
+    // A bare text node has no element to carry that override, leaving
+    // single-paragraph previews unselectable. poster.ts also keys tap-target
+    // detection off .card-text-preview-text.
+    el.textContent = '';
     el.classList.remove('has-paragraphs');
+    // Empty text gets no span — nothing to make selectable, and the caller
+    // removes the wrapper outright in that case.
+    if (text) {
+      const span = el.ownerDocument.createElement('span');
+      span.className = 'card-text-preview-text';
+      span.textContent = text;
+      el.appendChild(span);
+    }
   }
 }
 

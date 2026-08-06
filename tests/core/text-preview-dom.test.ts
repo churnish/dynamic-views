@@ -36,7 +36,7 @@ function makeCardWithText(text: string, withThumbnail = false): HTMLElement {
   textWrapper.className = 'card-text-preview-wrapper';
   const textEl = document.createElement('div');
   textEl.className = 'card-text-preview';
-  textEl.textContent = text;
+  setTextPreviewContent(textEl, text);
   textWrapper.appendChild(textEl);
   previewsWrapper.appendChild(textWrapper);
 
@@ -220,18 +220,19 @@ describe('updateTextPreviewDOM', () => {
       expect(textEl.classList.contains('has-paragraphs')).toBe(true);
     });
 
-    it('uses plain textContent when text has no newlines', () => {
+    it('wraps text in span when text has no newlines', () => {
       const card = makeEmptyCard();
 
       updateTextPreviewDOM(card, 'No newlines here');
 
       const textEl = card.querySelector('.card-text-preview')!;
       expect(textEl.querySelectorAll('p').length).toBe(0);
+      expect(textEl.querySelector('.card-text-preview-text')).not.toBeNull();
       expect(textEl.textContent).toBe('No newlines here');
       expect(textEl.classList.contains('has-paragraphs')).toBe(false);
     });
 
-    it('replaces <p> elements with plain textContent when updating without newlines', () => {
+    it('replaces <p> elements with span when updating without newlines', () => {
       const card = makeEmptyCard();
 
       // First call — creates <p> elements
@@ -245,6 +246,7 @@ describe('updateTextPreviewDOM', () => {
 
       const textEl = card.querySelector('.card-text-preview')!;
       expect(textEl.querySelectorAll('p').length).toBe(0);
+      expect(textEl.querySelector('.card-text-preview-text')).not.toBeNull();
       expect(textEl.textContent).toBe('Plain text now');
       expect(textEl.classList.contains('has-paragraphs')).toBe(false);
     });
@@ -525,11 +527,12 @@ describe('setTextPreviewContent', () => {
     return el;
   }
 
-  it('sets plain text when no newlines', () => {
+  it('sets plain text in a span when no newlines', () => {
     const el = makePreviewEl();
     setTextPreviewContent(el, 'Hello world');
     expect(el.textContent).toBe('Hello world');
-    expect(el.children.length).toBe(0);
+    expect(el.children.length).toBe(1);
+    expect(el.children[0].className).toBe('card-text-preview-text');
     expect(el.classList.contains('has-paragraphs')).toBe(false);
   });
 
@@ -537,7 +540,8 @@ describe('setTextPreviewContent', () => {
     const el = makePreviewEl();
     setTextPreviewContent(el, 'No breaks here');
     expect(el.textContent).toBe('No breaks here');
-    expect(el.children.length).toBe(0);
+    expect(el.children.length).toBe(1);
+    expect(el.children[0].className).toBe('card-text-preview-text');
     expect(el.classList.contains('has-paragraphs')).toBe(false);
   });
 
