@@ -259,22 +259,17 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
   .interact .card-title a.precise-hover:active:not(.is-title-hover-hit) {
     opacity: 1;
   }
-
-  /* WebKit compositor bug: opacity on <a> inside position:absolute card
-     causes horizontal shift. Block Obsidian's a.mobile-tap { opacity: 0.5 }. */
-  .card-title a.mobile-tap {
-    opacity: 1;
-  }
 }
 
 /* Underline title on hover when open action is "Press on title".
-   Hover-only: touch gets opacity feedback (`:active` rule above). */
+   Desktop-only: .is-title-hover-hit is set by JS on !app.isMobile.
+   Touch gets opacity feedback (`:active` rule above), not underline. */
 @media (any-hover: hover) {
   body.dynamic-views-open-on-title
     .dynamic-views
     .card.interact
     .card-title
-    a:is(.is-title-hover-hit, :active:not(.precise-hover)) {
+    a.is-title-hover-hit {
     text-decoration: underline;
     color: var(--dynamic-views-title-color, var(--dynamic-views-text-normal));
   }
