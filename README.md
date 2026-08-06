@@ -62,7 +62,7 @@ And numerous other quality‑of‑life improvements over the default Bases card 
 ## Installation
 
 > [!IMPORTANT]  
-> The plugin is in active development — things can break, or change drastically between releases.
+> The plugin is in beta — things can break, or change drastically between releases.
 >
 > Please ensure your files are regularly [backed up](https://help.obsidian.md/backup).
 
