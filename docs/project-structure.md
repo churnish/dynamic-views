@@ -55,6 +55,7 @@ dynamic-views/
 │   │   ├── slideshow.ts              # Card image slideshow (animation + swipe)
 │   │   ├── text-preview-dom.ts       # DOM updates for card text previews
 │   │   ├── text-preview.ts           # Markdown stripping for card previews
+│   │   ├── text-selection.ts         # Confines drag text selection to the card it started in
 │   │   ├── thumbnail-scrub.ts        # Touch scrubbing with slide animation + shared visibility reset IO for multi-image thumbnails
 │   │   ├── view-validation.ts        # ViewDefaults validation + cleanup
 │   │   ├── virtual-scroll.ts         # Virtual scrolling: VirtualItem, syncVisibleItems
@@ -141,6 +142,7 @@ dynamic-views/
 │   │   ├── settings-schema.test.ts
 │   │   ├── text-preview-dom.test.ts
 │   │   ├── text-preview.test.ts
+│   │   ├── text-selection.test.ts
 │   │   ├── thumbnail-scrub.test.ts
 │   │   ├── virtual-scroll.test.ts
 │   │   └── youtube-preview.test.ts

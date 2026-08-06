@@ -91,6 +91,10 @@ import {
   setupHoverKeyboardNavigation,
   type VirtualCardRect,
 } from '../core/keyboard-nav';
+import {
+  setupSelectionScoping,
+  type SelectionScoping,
+} from '../core/text-selection';
 import { ScrollPreservation, getLeafProps } from '../core/scroll-preservation';
 import {
   buildDisplayToSyntaxMap,
@@ -217,6 +221,7 @@ export class DynamicViewsGridView extends BasesView {
   private focusCleanup: (() => void) | null = null;
   private keyboardNav: { cleanup: () => void; reattach: () => void } | null =
     null;
+  private selectionScoping: SelectionScoping | null = null;
   private templateInitializedRef = { value: false };
   private templateCooldownRef = {
     value: null as ReturnType<typeof setTimeout> | null,
@@ -804,6 +809,10 @@ export class DynamicViewsGridView extends BasesView {
     );
     this.register(this.keyboardNav.cleanup);
 
+    // Confine drag text selection to the card it started in
+    this.selectionScoping = setupSelectionScoping(() => this.containerEl);
+    this.register(this.selectionScoping.cleanup);
+
     // Setup scroll preservation (handles tab switching, scroll tracking, reset detection)
     if (this.leafId) {
       this.scrollPreservation = new ScrollPreservation({
@@ -887,6 +896,7 @@ export class DynamicViewsGridView extends BasesView {
 
     // Rebind keydown listener to the new document (was on old document)
     this.keyboardNav?.reattach();
+    this.selectionScoping?.reattach();
 
     // Force processDataUpdate to fall through to full render (which
     // recreates observers in the new window context). Without this, the
