@@ -16,13 +16,6 @@ body:
           required: true
         - label: I have updated to the latest versions of Obsidian, Obsidian installer, and Dynamic Views
           required: true
-  - type: checkboxes
-    id: affected-views
-    attributes:
-      label: What views does this suggestion affect? (If applicable)
-      options:
-        - label: Bases view
-        - label: Datacore view
   - type: markdown
     attributes:
       value: '&#8203;'

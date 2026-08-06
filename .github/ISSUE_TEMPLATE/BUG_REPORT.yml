@@ -18,13 +18,6 @@ body:
           required: true
         - label: I can reproduce the issue in the sandbox vault, or after disabling all other third-party plugins and CSS snippets, switching to default theme, then restarting Obsidian
           required: false
-  - type: checkboxes
-    id: affected-views
-    attributes:
-      label: What views does the issue affect? (If applicable)
-      options:
-        - label: Bases view
-        - label: Datacore view
   - type: markdown
     attributes:
       value: '&#8203;'
