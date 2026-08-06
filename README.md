@@ -52,7 +52,7 @@ And numerous other quality‑of‑life improvements over the default Bases card 
 
 Until **Dynamic Views** is [approved](https://github.com/obsidianmd/obsidian-releases/pull/8400), to install it:
 
-1. Download and enable [BRAT](https://churnish.github.io/http-protocol-redirector?r=obsidian://show-plugin?id=obsidian42-brat).
+1. Download and enable the [BRAT](https://churnish.github.io/http-protocol-redirector?r=obsidian://show-plugin?id=obsidian42-brat) plugin.
 2. [Install via BRAT](https://churnish.github.io/http-protocol-redirector?r=obsidian://brat?plugin=churnish/dynamic-views).
 3. Select **Add plugin**.
 
