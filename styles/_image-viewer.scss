@@ -19,6 +19,137 @@ body:not(.dynamic-views-image-viewer-disabled)
   contain: strict;
 }
 
+/* Overlay chrome — declarations replicated from Obsidian's native lightbox
+   (.lightbox-titlebar / .modal-close-button) rather than reusing its class names:
+   none of that CSS exists before 1.13, and the plugin supports 1.11+. */
+body:not(.dynamic-views-image-viewer-disabled)
+  > .dynamic-views-image-embed.is-zoomed
+  .dynamic-views-viewer-titlebar {
+  --dynamic-views-viewer-close-top: var(--size-2-3);
+  --dynamic-views-viewer-close-size: calc(
+    var(--dynamic-views-icon-m) + var(--size-2-2) * 2
+  );
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding-top: var(--dynamic-views-viewer-close-top);
+  min-height: calc(
+    var(--dynamic-views-viewer-close-top) +
+      var(--dynamic-views-viewer-close-size)
+  );
+  display: var(--dynamic-views-lightbox-titlebar-display);
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4), transparent);
+  color: var(--dynamic-views-lightbox-titlebar-color);
+  font-size: var(--dynamic-views-font-ui-small);
+  transition: opacity 150ms ease;
+}
+
+body.is-mobile:not(.dynamic-views-image-viewer-disabled)
+  > .dynamic-views-image-embed.is-zoomed
+  .dynamic-views-viewer-titlebar {
+  --dynamic-views-viewer-close-top: max(
+    var(--dynamic-views-safe-area-inset-top),
+    var(--size-4-3)
+  );
+  --dynamic-views-viewer-close-size: var(--dynamic-views-touch-size-m);
+}
+
+body:not(.dynamic-views-image-viewer-disabled)
+  > .dynamic-views-image-embed.is-zoomed
+  .dynamic-views-viewer-titlebar-text {
+  max-width: calc(100% - var(--size-4-12) * 2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+/* Native fades the titlebar out once the image is zoomed
+   (`.lightbox.is-zoomed .lightbox-titlebar`). `.is-pannable` is the plugin's
+   equivalent zoom-level class, set from both gesture backends. */
+body:not(.dynamic-views-image-viewer-disabled)
+  > .dynamic-views-image-embed.is-zoomed.is-pannable
+  .dynamic-views-viewer-titlebar {
+  opacity: 0;
+}
+
+/* File name hidden via Style Settings (inverted toggle — absence of class shows it) */
+body.dynamic-views-image-viewer-hide-filename
+  > .dynamic-views-image-embed.is-zoomed
+  .dynamic-views-viewer-titlebar {
+  display: none;
+}
+
+body:not(.dynamic-views-image-viewer-disabled)
+  > .dynamic-views-image-embed.is-zoomed
+  .dynamic-views-viewer-close {
+  position: absolute;
+  top: var(--size-2-3);
+  inset-inline-end: var(--size-4-3);
+  z-index: var(--dynamic-views-layer-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--size-2-2);
+  border-radius: var(--dynamic-views-clickable-icon-radius);
+  background-color: transparent;
+  color: white;
+  cursor: var(--dynamic-views-cursor);
+  pointer-events: auto;
+}
+
+body:not(.dynamic-views-image-viewer-disabled)
+  > .dynamic-views-image-embed.is-zoomed
+  .dynamic-views-viewer-close
+  .svg-icon {
+  width: var(--dynamic-views-icon-m);
+  height: var(--dynamic-views-icon-m);
+  stroke-width: var(--dynamic-views-icon-s-stroke-width);
+  opacity: var(--dynamic-views-icon-opacity);
+  transition: opacity var(--dynamic-views-anim-duration-fast) ease-in-out;
+}
+
+/* Native keeps the icon white on hover — `.lightbox .modal-close-button`'s
+   `color` wins over `.clickable-icon:hover` on source order. Only the backing
+   plate and the svg opacity change, which is what reads as "lighten". */
+@media (any-hover: hover) {
+  body:not(.dynamic-views-image-viewer-disabled)
+    > .dynamic-views-image-embed.is-zoomed
+    .dynamic-views-viewer-close:hover {
+    background-color: var(--dynamic-views-background-modifier-hover);
+  }
+
+  body:not(.dynamic-views-image-viewer-disabled)
+    > .dynamic-views-image-embed.is-zoomed
+    .dynamic-views-viewer-close:hover
+    .svg-icon {
+    opacity: var(--dynamic-views-icon-opacity-hover);
+  }
+}
+
+body.is-mobile:not(.dynamic-views-image-viewer-disabled)
+  > .dynamic-views-image-embed.is-zoomed
+  .dynamic-views-viewer-close {
+  top: max(var(--dynamic-views-safe-area-inset-top), var(--size-4-3));
+  color: var(--dynamic-views-icon-color);
+}
+
+/* Touch-sized target with a blurred backing plate, phone only — native scopes
+   both to `.is-phone` (`.is-phone .modal-close-button`, `.is-phone .mod-raised`).
+   Tablets keep the pointer-sized button and get only the mobile colour and
+   safe-area offset from the `.is-mobile` rule above, exactly as native does. */
+body.is-phone:not(.dynamic-views-image-viewer-disabled)
+  > .dynamic-views-image-embed.is-zoomed
+  .dynamic-views-viewer-close {
+  height: var(--dynamic-views-touch-size-m);
+  width: var(--dynamic-views-touch-size-m);
+  background: var(--dynamic-views-raised-background);
+}
+
 /* Ensure drag ghost appears above image viewer overlay */
 body.dynamic-views-image-zoomed {
   --layer-dragged-item: 51;
@@ -46,14 +177,6 @@ body:not(.dynamic-views-image-viewer-disabled):not(
   transition: background var(--dynamic-views-anim-duration-fast) ease;
 }
 
-/* Constrained mode: solid background when maximized */
-body:not(.dynamic-views-image-viewer-disabled):not(
-    .is-phone
-  ).dynamic-views-image-viewer-constrain-to-pane
-  > .dynamic-views-image-embed.is-zoomed.is-maximized {
-  background: var(--dynamic-views-background-primary);
-}
-
 /* Fullscreen image viewer: phone (always) or desktop/tablet with fullscreen enabled */
 body:not(.dynamic-views-image-viewer-disabled).is-phone
   > .dynamic-views-image-embed.is-zoomed,
@@ -61,57 +184,35 @@ body:not(.dynamic-views-image-viewer-disabled):not(
     .dynamic-views-image-viewer-constrain-to-pane
   ):not(.is-phone)
   > .dynamic-views-image-embed.is-zoomed {
-  background: var(--dynamic-views-background-modifier-cover);
+  /* 0.9 alpha matches Obsidian's native lightbox backdrop opacity */
+  background: color-mix(
+    in srgb,
+    var(--dynamic-views-lightbox-background) 90%,
+    transparent
+  );
   position: fixed;
   transition: background var(--dynamic-views-anim-duration-fast) ease;
-}
-
-/* Fullscreen mode: solid background when maximized */
-body:not(.dynamic-views-image-viewer-disabled).is-phone
-  > .dynamic-views-image-embed.is-zoomed.is-maximized,
-body:not(.dynamic-views-image-viewer-disabled):not(
-    .dynamic-views-image-viewer-constrain-to-pane
-  ):not(.is-phone)
-  > .dynamic-views-image-embed.is-zoomed.is-maximized {
-  background: var(--dynamic-views-background-primary);
-}
-
-/* Scale image when maximized with panzoom disabled (non-phone fullscreen only) */
-body.dynamic-views-zoom-disabled:not(
-    .dynamic-views-image-viewer-constrain-to-pane
-  ):not(.is-phone)
-  > .dynamic-views-image-embed.is-zoomed.is-maximized
-  img {
-  max-height: 100vh;
-  max-width: 100vw;
 }
 
 body:not(.dynamic-views-image-viewer-disabled)
   > .dynamic-views-image-embed.is-zoomed
   img {
-  padding: 0;
+  /* Sizing matches the native lightbox: fill the container inset by 8px, and
+     never upscale — `width/height: auto` leaves smaller images at natural size.
+     Native uses the same padding + border-box on `.lightbox .media-wrapper img`. */
+  padding: var(--size-4-2);
+  box-sizing: border-box;
   margin: 0;
   width: auto;
   height: auto;
-  max-height: 100vh;
-  max-width: 100vw;
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
   opacity: 1;
   border-radius: 0;
   /* Pre-promote to compositor layer so panzoom transform changes
      bypass main-thread Layerize (80ms→<1ms per frame) */
   will-change: transform;
-  transition:
-    max-height var(--dynamic-views-anim-duration-fast) ease,
-    max-width var(--dynamic-views-anim-duration-fast) ease;
-}
-
-/* Limit zoomed images to 90% viewport (desktop/tablet constrained use full viewport via mobile gestures) */
-body:not(.dynamic-views-image-viewer-disabled):not(.is-mobile)
-  > .dynamic-views-image-embed.is-zoomed
-  img {
-  max-height: 90vh;
-  max-width: 90vw;
 }
 
 /* Constrained mode (non-phone, fullscreen disabled): limit to 90% of view */
@@ -124,16 +225,6 @@ body:not(.dynamic-views-image-viewer-disabled):not(
   max-width: 90%;
 }
 
-/* Constrained mode maximized (non-phone, panzoom disabled): scale to 100% */
-body.dynamic-views-zoom-disabled:not(
-    .is-phone
-  ).dynamic-views-image-viewer-constrain-to-pane
-  > .dynamic-views-image-embed.is-zoomed.is-maximized
-  img {
-  max-height: 100%;
-  max-width: 100%;
-}
-
 /* Disable drag in fullscreen mode (desktop only — mobile uses system drag & drop) */
 body:not(.is-mobile):not(.dynamic-views-image-viewer-constrain-to-pane)
   > .dynamic-views-image-embed.is-zoomed
@@ -144,8 +235,16 @@ body:not(.is-mobile):not(.dynamic-views-image-viewer-constrain-to-pane)
   user-select: none;
 }
 
+/* Pan is disabled until zoomed in (Panzoom `panOnlyWhenZoomed`), so suppress the
+   grab cursor at 1x — native only shows it on `.lightbox.is-zoomed`.
+   is-pannable is added by JS from the panzoomchange scale.
+   !important overrides Panzoom's inline cursor: grab */
+.dynamic-views-image-embed.is-zoomed:not(.is-pannable) img {
+  cursor: default !important;
+}
+
 /* Allow drag when Alt is held (is-alt-drag class added by JS) */
-/* !important overrides Panzoom's inline cursor: move */
+/* !important overrides Panzoom's inline cursor: grab */
 .dynamic-views-image-embed.is-zoomed.is-alt-drag img {
   -webkit-user-drag: auto;
   user-drag: auto;

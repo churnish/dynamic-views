@@ -17,6 +17,15 @@ const containerSpacingCache = new Map<HTMLElement, number>();
 const DYNAMIC_VIEWS_CLASS_PATTERN = /\bdynamic-views-\S+/g;
 
 /**
+ * Matches Style Settings classes that change text metrics, and therefore card
+ * height: font size presets, bold, italic, small caps and case transforms.
+ * Longer element stems precede their prefixes so `property-name` is not
+ * consumed by `property`.
+ */
+const TEXT_METRIC_CLASS_PATTERN =
+  /\bdynamic-views-(?:group-property|group-value|group-count|property-name|text-preview|subtitle|property|title|tag)-(?:size-\S+|case-\S+|bold|italic|small-caps)\b/g;
+
+/**
  * Clear the CSS variable cache.
  * Call at start of render cycle to pick up any style changes.
  */
@@ -89,9 +98,15 @@ export function hasBodyClass(className: string): boolean {
 /**
  * Get compact mode breakpoint from CSS variable
  * Cards narrower than this value enter compact mode
+ *
+ * Read as text so a bare number and one carrying a unit both work: Style
+ * Settings quotes text values, and a CSS snippet setting the variable directly
+ * is just as likely to write `390` as `390px`.
  */
 export function getCompactBreakpoint(): number {
-  return getCSSVariableAsNumber('--dynamic-views-compact-breakpoint', 390);
+  const raw = getCSSTextVariable('--dynamic-views-compact-breakpoint', '');
+  const parsed = parseFloat(raw);
+  return isNaN(parsed) ? 390 : parsed;
 }
 
 /**
@@ -126,8 +141,9 @@ export function getHideEmptyMode(): HideEmptyMode {
 
 /**
  * Get card spacing from CSS variable.
- * Reads from containerEl first (picks up per-view cssclasses overrides), then falls back to body.
- * For embeds, returns Obsidian's default spacing.
+ * Reads from containerEl first — the per-view gap setting is written there and
+ * is authoritative everywhere, including embeds. Falls back to Obsidian's own
+ * spacing inside embeds, and to the body-level value otherwise.
  * Any element inside the view container works — CSS variables inherit through the DOM tree.
  */
 export function getCardSpacing(containerEl?: HTMLElement): number {
@@ -135,31 +151,32 @@ export function getCardSpacing(containerEl?: HTMLElement): number {
     const cached = containerSpacingCache.get(containerEl);
     if (cached !== undefined) return cached;
   }
-  // Bases embed: use Obsidian's default spacing (Style Settings doesn't apply)
+  const isPhone = document.body.classList.contains('is-phone');
+  const varName = isPhone
+    ? '--dynamic-views-card-spacing-phone'
+    : '--dynamic-views-card-spacing-desktop';
+
+  // Container-local value wins everywhere, including embeds — the per-view
+  // setting is authoritative and the CSS gap rules already apply in embeds.
+  if (containerEl) {
+    const value = getComputedStyle(containerEl)
+      .getPropertyValue(varName)
+      .trim();
+    const parsed = parseFloat(value);
+    if (value !== '' && !isNaN(parsed)) {
+      containerSpacingCache.set(containerEl, parsed);
+      return parsed;
+    }
+  }
+
+  // Embeds otherwise follow Obsidian's own spacing rather than plugin defaults
   if (containerEl?.closest('.internal-embed')) {
     const result = getCSSVariableAsNumber('--size-4-2', 8);
     containerSpacingCache.set(containerEl, result);
     return result;
   }
-  const isPhone = document.body.classList.contains('is-phone');
-  const varName = isPhone
-    ? '--dynamic-views-card-spacing-phone'
-    : '--dynamic-views-card-spacing-desktop';
-  const defaultVal = isPhone ? 6 : 8;
-  // Container-local override (cssclasses helper classes set the variable on .dynamic-views or .dynamic-views-grid/.dynamic-views-masonry)
-  if (containerEl) {
-    const value = getComputedStyle(containerEl)
-      .getPropertyValue(varName)
-      .trim();
-    if (value !== '') {
-      const parsed = parseFloat(value);
-      if (!isNaN(parsed)) {
-        containerSpacingCache.set(containerEl, parsed);
-        return parsed;
-      }
-    }
-  }
-  const result = getCSSVariableAsNumber(varName, defaultVal);
+
+  const result = getCSSVariableAsNumber(varName, isPhone ? 6 : 8);
   if (containerEl) containerSpacingCache.set(containerEl, result);
   return result;
 }
@@ -257,11 +274,6 @@ export function isSlideshowEnabled(): boolean {
   return !hasBodyClass('dynamic-views-cover-disable-navigation');
 }
 
-/** Returns true when user enables "Disable looping" */
-export function isSlideshowLoopingDisabled(): boolean {
-  return hasBodyClass('dynamic-views-slideshow-disable-looping');
-}
-
 /**
  * Check if slideshow icon should be shown (default behavior)
  * Returns false when user enables "Hide slideshow icon"
@@ -276,11 +288,6 @@ export function isSlideshowIconEnabled(): boolean {
  */
 export function isThumbnailScrubbingDisabled(): boolean {
   return hasBodyClass('dynamic-views-thumbnail-disable-navigation');
-}
-
-/** Returns true when user enables "Do not loop" for thumbnails. */
-export function isThumbnailLoopingDisabled(): boolean {
-  return hasBodyClass('dynamic-views-thumbnail-disable-looping');
 }
 
 /**
@@ -358,6 +365,17 @@ export function getStyleSettingsHash(): string {
 }
 
 /**
+ * Hash of Style Settings that change card geometry but not card content.
+ * Kept separate from getStyleSettingsHash so a size change relayouts without
+ * discarding cached text previews.
+ */
+export function getStyleSettingsLayoutHash(): string {
+  return (document.body.className.match(TEXT_METRIC_CLASS_PATTERN) ?? [])
+    .sort()
+    .join(',');
+}
+
+/**
  * Setup MutationObserver for Dynamic Views settings changes
  * Watches body class changes (plugin + Style Settings) and Style Settings stylesheet changes
  * @returns Cleanup function to disconnect observer
@@ -381,7 +399,7 @@ export function setupStyleSettingsObserver(
   ];
 
   // Hash of JS-relevant Style Settings — only fire callback when actual values change
-  let prevHash = getStyleSettingsHash();
+  let prevHash = getStyleSettingsHash() + '\0' + getStyleSettingsLayoutHash();
 
   // Observer for body class changes (Style Settings class-toggle settings)
   const bodyObserver = new MO((mutations) => {
@@ -420,7 +438,8 @@ export function setupStyleSettingsObserver(
 
         // Only fire if JS-relevant settings actually changed
         clearStyleSettingsCache(); // Must clear before re-hashing
-        const newHash = getStyleSettingsHash();
+        const newHash =
+          getStyleSettingsHash() + '\0' + getStyleSettingsLayoutHash();
         if (newHash !== prevHash) {
           prevHash = newHash;
           onStyleChange();

@@ -719,53 +719,6 @@ describe('setupTouchScrubbing', () => {
     expect(curr.classList.contains('slideshow-exit-left')).toBe(true);
   });
 
-  it('clamps at last image when looping disabled', () => {
-    // Add body class to disable looping
-    document.body.classList.add('dynamic-views-thumbnail-disable-looping');
-
-    imageUrls = ['/img/a.jpg', '/img/b.jpg'];
-    setupTouchScrubbing({
-      thumbEl,
-      cardEl,
-      imageUrls,
-      signal: controller.signal,
-      preloadSignal: controller.signal,
-      preloadGuard,
-      brokenHandler,
-    });
-
-    // Left swipe → advance to index 1
-    firePointer(thumbEl, 'pointerdown', {
-      pointerType: 'touch',
-      clientX: 50,
-    });
-    firePointer(thumbEl, 'pointermove', {
-      pointerType: 'touch',
-      clientX: 38,
-    });
-    firePointer(thumbEl, 'pointerup', { pointerType: 'touch' });
-    vi.runAllTimers();
-
-    // Now at index 1 (last). Left swipe again — should stay at 1
-    firePointer(thumbEl, 'pointerdown', {
-      pointerType: 'touch',
-      clientX: 50,
-    });
-    firePointer(thumbEl, 'pointermove', {
-      pointerType: 'touch',
-      clientX: 38,
-    });
-
-    // No animation — index unchanged
-    const curr = thumbEl.querySelector<HTMLImageElement>(
-      '.slideshow-img-current'
-    )!;
-    expect(curr.classList.contains('slideshow-exit-left')).toBe(false);
-    expect(curr.classList.contains('slideshow-exit-right')).toBe(false);
-
-    document.body.classList.remove('dynamic-views-thumbnail-disable-looping');
-  });
-
   it('sets dataset.scrubbedSrc after animation completes', () => {
     setupTouchScrubbing({
       thumbEl,

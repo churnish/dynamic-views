@@ -9,6 +9,7 @@ body {
   --dynamic-views-font-ui-small: var(--font-ui-small, 13px);
   --dynamic-views-font-ui-smaller: var(--font-ui-smaller, 12px);
   --dynamic-views-font-ui-medium: var(--font-ui-medium, 15px);
+  --dynamic-views-font-ui-large: var(--font-ui-large, 20px);
   --dynamic-views-font-weight: var(--font-weight, 400);
   --dynamic-views-bold-modifier: var(--bold-modifier, 200);
   --dynamic-views-font-semibold: var(--font-semibold, 600);
@@ -34,6 +35,11 @@ body {
     hsl(258, 88%, 66%)
   );
   --dynamic-views-icon-opacity-hover: var(--icon-opacity-hover, 1);
+  --dynamic-views-icon-m: var(--icon-m, 18px);
+  --dynamic-views-icon-s-stroke-width: var(--icon-s-stroke-width, 2px);
+  --dynamic-views-icon-color-hover: var(--icon-color-hover, #5c5c5c);
+  --dynamic-views-icon-opacity: var(--icon-opacity, 0.85);
+  --dynamic-views-clickable-icon-radius: var(--clickable-icon-radius, 4px);
 
   /* Animation */
   --dynamic-views-anim-duration-superfast: var(--anim-duration-superfast, 70ms);
@@ -73,6 +79,9 @@ body {
     --bases-table-border-color,
     #e0e0e0
   );
+  --dynamic-views-touch-size-m: var(--touch-size-m, 44px);
+  --dynamic-views-layer-modal: var(--layer-modal, 50);
+  --dynamic-views-cursor: var(--cursor, default);
 
   /* Colors */
   --dynamic-views-color-base-100: var(--color-base-100, #222222);
@@ -121,6 +130,17 @@ body {
   --dynamic-views-background-modifier-cover: var(
     --background-modifier-cover,
     rgba(220, 220, 220, 0.4)
+  );
+  --dynamic-views-raised-background: var(--raised-background, transparent);
+  /* Obsidian's native lightbox chrome — absent before 1.13, hence the fallbacks */
+  --dynamic-views-lightbox-background: var(--lightbox-background, black);
+  --dynamic-views-lightbox-titlebar-color: var(
+    --lightbox-titlebar-color,
+    white
+  );
+  --dynamic-views-lightbox-titlebar-display: var(
+    --lightbox-titlebar-display,
+    flex
   );
 
   /* Text */
@@ -198,6 +218,36 @@ body {
     calc(var(--dynamic-views-tag-color-custom-l) * 1.15)
   );
 }
+
+/* Font size presets — class-select body classes resolve to one size variable per element. */
+/* No class (Style Settings absent) leaves --…-size-value unset, so consumers fall through
+   to their theme default via the var() fallback. */
+@mixin font-size-setting($stem, $default-token) {
+  @each $variant,
+    $token
+      in (large: ui-large, medium: ui-medium, small: ui-small, tiny: ui-smaller)
+  {
+    body.dynamic-views-#{$stem}-size-#{$variant} {
+      --dynamic-views-#{$stem}-size-value: var(--dynamic-views-font-#{$token});
+    }
+  }
+
+  body.dynamic-views-#{$stem}-size-custom {
+    --dynamic-views-#{$stem}-size-value: var(
+      --dynamic-views-#{$stem}-size-custom,
+      var(--dynamic-views-font-#{$default-token})
+    );
+  }
+}
+
+@include font-size-setting(title, ui-medium);
+@include font-size-setting(subtitle, ui-small);
+@include font-size-setting(text-preview, ui-small);
+@include font-size-setting(property, ui-small);
+@include font-size-setting(property-name, ui-smaller);
+@include font-size-setting(group-property, ui-small);
+@include font-size-setting(group-value, ui-small);
+@include font-size-setting(group-count, ui-smaller);
 
 /* Resolve title hover color to a single variable for all presets.
    Named colors (red-pink) already set --dynamic-views-title-hover-color-value

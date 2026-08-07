@@ -203,20 +203,6 @@ body.dynamic-views-slideshow-arrows-hide .dynamic-views .slideshow-nav-right {
   display: none;
 }
 
-/* Dim boundary arrows when looping disabled */
-@media (any-hover: hover) {
-  body.dynamic-views-slideshow-disable-looping
-    .dynamic-views
-    .card.interact
-    .card-cover-slideshow {
-    &.slideshow-at-first .slideshow-nav-left,
-    &.slideshow-at-last .slideshow-nav-right {
-      opacity: 0.6;
-      cursor: default;
-    }
-  }
-}
-
 .dynamic-views {
   /* Slideshow icon */
   .slideshow-icon {

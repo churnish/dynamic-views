@@ -2,6 +2,7 @@ import { vi } from 'vitest';
 import {
   isExternalUrl,
   getVaultPathFromResourceUrl,
+  getImageDisplayName,
   stripWikilinkSyntax,
   processImagePaths,
   resolveInternalImagePaths,
@@ -359,6 +360,52 @@ describe('image', () => {
 
     it('should return null for empty string', () => {
       expect(getVaultPathFromResourceUrl('')).toBeNull();
+    });
+  });
+
+  describe('getImageDisplayName', () => {
+    it('should return the basename of a vault resource URL', () => {
+      expect(
+        getImageDisplayName('app://abc123/Users/me/vault/Assets/photo.png')
+      ).toBe('photo.png');
+    });
+
+    it('should ignore the query string appended to vault resource URLs', () => {
+      expect(
+        getImageDisplayName('app://abc123/vault/photo.png?1712345678')
+      ).toBe('photo.png');
+    });
+
+    it('should return the basename of an external URL', () => {
+      expect(getImageDisplayName('https://example.com/a/b/cover.jpg')).toBe(
+        'cover.jpg'
+      );
+    });
+
+    it('should ignore the query string on an external URL', () => {
+      expect(
+        getImageDisplayName('https://example.com/cover.jpg?w=800&h=600')
+      ).toBe('cover.jpg');
+    });
+
+    it('should decode percent-encoded file names', () => {
+      expect(getImageDisplayName('app://abc123/vault/my%20photo%202.png')).toBe(
+        'my photo 2.png'
+      );
+    });
+
+    it('should return empty string for data URIs', () => {
+      expect(getImageDisplayName('data:image/png;base64,iVBORw0KGgo=')).toBe(
+        ''
+      );
+    });
+
+    it('should return empty string for blob URLs with no path basename', () => {
+      expect(getImageDisplayName('not-a-url')).toBe('');
+    });
+
+    it('should return empty string for empty input', () => {
+      expect(getImageDisplayName('')).toBe('');
     });
   });
 });

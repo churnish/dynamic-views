@@ -9,7 +9,6 @@ import {
   SCROLL_THROTTLE_MS,
 } from './constants';
 import { isExternalUrl } from './image';
-import { isSlideshowLoopingDisabled } from '../utils/style-settings';
 import { canHover, setupHoverIntent } from './hover-and-touch';
 import { brokenImageUrls, markImageBroken } from './image-loader';
 import { getOwnerWindow } from '../utils/owner-window';
@@ -256,10 +255,10 @@ export function createSlideshowNavigator(
   }
 
   // Track all pending timeouts for consolidated cleanup on abort
-  const pendingTimeouts = new Set<ReturnType<typeof setTimeout>>();
+  const pendingTimeouts = new Set<number>();
 
   // Track active animation state for cancel-and-restart
-  let activeAnimationTimeout: ReturnType<typeof setTimeout> | null = null;
+  let activeAnimationTimeout: number | null = null;
   let activeExitClass = '';
   let activeEnterClass = '';
   let activeNewIndex = 0;
@@ -280,7 +279,7 @@ export function createSlideshowNavigator(
 
     // Clear the animation timeout
     if (activeAnimationTimeout !== null) {
-      clearTimeout(activeAnimationTimeout);
+      window.clearTimeout(activeAnimationTimeout);
       activeAnimationTimeout = null;
     }
 
@@ -299,18 +298,6 @@ export function createSlideshowNavigator(
 
     currentIndex = activeNewIndex;
     isAnimating = false;
-    updateBoundaryClasses();
-  };
-
-  // Mark first/last slide on the slideshow wrapper (CSS gates visual effect via body class)
-  const updateBoundaryClasses = () => {
-    const el = getElements()?.imageEmbed.parentElement;
-    if (!el) return;
-    el.classList.toggle('slideshow-at-first', currentIndex === 0);
-    el.classList.toggle(
-      'slideshow-at-last',
-      currentIndex === imageUrls.length - 1
-    );
   };
 
   signal.addEventListener(
@@ -338,16 +325,11 @@ export function createSlideshowNavigator(
       finishAnimation();
     }
 
-    // Calculate next index (wrap or clamp based on looping setting)
+    // Calculate next index — navigation always wraps
     const current = currentIndex;
-    const noLoop = isSlideshowLoopingDisabled();
     let newIndex = current + direction;
-    if (noLoop) {
-      if (newIndex < 0 || newIndex >= imageUrls.length) return;
-    } else {
-      if (newIndex < 0) newIndex = imageUrls.length - 1;
-      if (newIndex >= imageUrls.length) newIndex = 0;
-    }
+    if (newIndex < 0) newIndex = imageUrls.length - 1;
+    if (newIndex >= imageUrls.length) newIndex = 0;
 
     // Skip known-failed indices — local (this navigator) + global (cross-card)
     let skipped = 0;
@@ -357,12 +339,8 @@ export function createSlideshowNavigator(
       skipped < imageUrls.length
     ) {
       newIndex += direction;
-      if (noLoop) {
-        if (newIndex < 0 || newIndex >= imageUrls.length) return;
-      } else {
-        if (newIndex < 0) newIndex = imageUrls.length - 1;
-        if (newIndex >= imageUrls.length) newIndex = 0;
-      }
+      if (newIndex < 0) newIndex = imageUrls.length - 1;
+      if (newIndex >= imageUrls.length) newIndex = 0;
       skipped++;
     }
     // All alternatives exhausted or landed back on current index
@@ -434,7 +412,6 @@ export function createSlideshowNavigator(
       currImg.removeClass('dynamic-views-hidden');
       currentIndex = newIndex;
       isAnimating = false;
-      updateBoundaryClasses();
       if (callbacks?.onSlideChange) {
         currImg.addEventListener(
           'load',
@@ -471,7 +448,7 @@ export function createSlideshowNavigator(
         nextImg.addClass('dynamic-views-hidden');
 
         // After animation completes, try to advance to next slide
-        const timeoutId = setTimeout(() => {
+        const timeoutId = window.setTimeout(() => {
           pendingTimeouts.delete(timeoutId);
           if (!signal.aborted) {
             nextImg.removeClass('dynamic-views-hidden');
@@ -527,7 +504,7 @@ export function createSlideshowNavigator(
     currImg.classList.add(activeExitClass);
     nextImg.classList.add(activeEnterClass);
 
-    activeAnimationTimeout = setTimeout(() => {
+    activeAnimationTimeout = window.setTimeout(() => {
       activeAnimationTimeout = null;
       if (signal.aborted) return;
 
@@ -570,11 +547,7 @@ export function createSlideshowNavigator(
         );
       }
     }
-    updateBoundaryClasses();
   };
-
-  // Set initial boundary state (always starts at index 0)
-  updateBoundaryClasses();
 
   return { navigate, reset };
 }
@@ -591,7 +564,7 @@ export function setupSwipeGestures(
   let accumulatedDeltaX = 0;
   let lastDeltaX = 0;
   let navigatedThisGesture = false;
-  let gestureResetTimeout: ReturnType<typeof setTimeout> | null = null;
+  let gestureResetTimeout: number | null = null;
   // Peak + decay tracking for gesture boundary detection
   let peakSinceNav = 0;
   let inDecayPhase = false;
@@ -609,7 +582,7 @@ export function setupSwipeGestures(
   signal.addEventListener(
     'abort',
     () => {
-      if (gestureResetTimeout) clearTimeout(gestureResetTimeout);
+      if (gestureResetTimeout) window.clearTimeout(gestureResetTimeout);
     },
     { once: true }
   );
@@ -630,7 +603,7 @@ export function setupSwipeGestures(
         navigatedThisGesture = false;
         lastDeltaX = 0;
         if (gestureResetTimeout) {
-          clearTimeout(gestureResetTimeout);
+          window.clearTimeout(gestureResetTimeout);
           gestureResetTimeout = null;
         }
         resetGestureState();
@@ -644,8 +617,8 @@ export function setupSwipeGestures(
       const absDelta = Math.abs(deltaX);
 
       // Quiet period: no wheel events for 150ms = gesture ended
-      if (gestureResetTimeout) clearTimeout(gestureResetTimeout);
-      gestureResetTimeout = setTimeout(() => {
+      if (gestureResetTimeout) window.clearTimeout(gestureResetTimeout);
+      gestureResetTimeout = window.setTimeout(() => {
         accumulatedDeltaX = 0;
         navigatedThisGesture = false;
         resetGestureState();

@@ -560,11 +560,6 @@ settings:
         description: Do not cycle through cover images.
         type: class-toggle
     -
-        id: dynamic-views-slideshow-disable-looping
-        title: Do not loop
-        description: Stop at last image instead of wrapping back to first.
-        type: class-toggle
-    -
         id: dynamic-views-slideshow-arrows
         title: Navigation arrows
         description: Visibility of left/right arrows on slideshow covers.
@@ -632,26 +627,433 @@ settings:
         type: class-toggle
     -
         id: groups-heading
-        title: Group header
+        title: Groups
         type: heading
         level: 2
         collapsed: true
-    -
-        id: dynamic-views-hide-group-count
-        title: Hide result count
-        description: Hide number of results for group.
-        type: class-toggle
-    -
-        id: dynamic-views-hide-group-property-names
-        title: Hide property names
-        description: Hide names of properties.
-        type: class-toggle
     -
         id: dynamic-views-disable-sticky-group-header
         title: Disable sticky group header
         description: Do not freeze group headers when scrolling.
         type: class-toggle
         default: false
+    -
+        id: dynamic-views-hide-group-separator
+        title: Hide divider line
+        description: Do not show horizontal line between groups.
+        type: class-toggle
+    -
+        id: group-value-heading
+        title: Property value
+        type: heading
+        level: 3
+        collapsed: false
+    -
+        id: dynamic-views-group-value-font
+        title: Property value font
+        description: Font name as it appears on your system.
+        type: variable-text
+        default: ''
+    -
+        id: dynamic-views-group-value-size
+        title: Property value size
+        description: Font size for group header property values.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-group-value-size-small
+        options:
+            -
+                label: Large
+                value: dynamic-views-group-value-size-large
+            -
+                label: Medium
+                value: dynamic-views-group-value-size-medium
+            -
+                label: Small
+                value: dynamic-views-group-value-size-small
+            -
+                label: Tiny
+                value: dynamic-views-group-value-size-tiny
+            -
+                label: Custom
+                value: dynamic-views-group-value-size-custom
+    -
+        id: dynamic-views-group-value-size-custom
+        title: Custom property value size
+        description: Set custom font size for group header property values (e.g., 0.9em, 14px, 0.875rem).
+        type: variable-text
+        default: ''
+    -
+        id: dynamic-views-group-value-bold
+        title: Property value bold
+        description: Make group header property values bold.
+        type: class-toggle
+        default: true
+    -
+        id: dynamic-views-group-value-italic
+        title: Property value italic
+        description: Make group header property values italic.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-group-value-small-caps
+        title: Property value small caps
+        description: Display group header property values in small caps.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-group-value-case
+        title: Property value case
+        description: Text case transformation for group header property values.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-group-value-case-preserve
+        options:
+            -
+                label: Preserve
+                value: dynamic-views-group-value-case-preserve
+            -
+                label: Lowercase
+                value: dynamic-views-group-value-case-lowercase
+            -
+                label: Uppercase
+                value: dynamic-views-group-value-case-uppercase
+            -
+                label: Title case
+                value: dynamic-views-group-value-case-title
+    -
+        id: dynamic-views-group-value-color
+        title: Property value color
+        description: Theme color preset for group header property values.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-group-value-color-normal
+        options:
+            -
+                label: Faint
+                value: dynamic-views-group-value-color-faint
+            -
+                label: Muted
+                value: dynamic-views-group-value-color-muted
+            -
+                label: Normal
+                value: dynamic-views-group-value-color-normal
+            -
+                label: Accent
+                value: dynamic-views-group-value-color-accent
+            -
+                label: Red
+                value: dynamic-views-group-value-color-red
+            -
+                label: Orange
+                value: dynamic-views-group-value-color-orange
+            -
+                label: Yellow
+                value: dynamic-views-group-value-color-yellow
+            -
+                label: Green
+                value: dynamic-views-group-value-color-green
+            -
+                label: Cyan
+                value: dynamic-views-group-value-color-cyan
+            -
+                label: Blue
+                value: dynamic-views-group-value-color-blue
+            -
+                label: Purple
+                value: dynamic-views-group-value-color-purple
+            -
+                label: Pink
+                value: dynamic-views-group-value-color-pink
+            -
+                label: Custom
+                value: dynamic-views-group-value-color-custom
+    -
+        id: dynamic-views-group-value-color-custom
+        title: Custom property value color
+        description: Set custom color for group header property values.
+        type: variable-themed-color
+        format: hex
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: group-property-heading
+        title: Property name
+        type: heading
+        level: 3
+        collapsed: false
+    -
+        id: dynamic-views-hide-group-property-names
+        title: Hide property names
+        description: Hide names of properties.
+        type: class-toggle
+    -
+        id: dynamic-views-group-property-font
+        title: Property name font
+        description: Font name as it appears on your system.
+        type: variable-text
+        default: ''
+    -
+        id: dynamic-views-group-property-size
+        title: Property name size
+        description: Font size for group header property names.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-group-property-size-small
+        options:
+            -
+                label: Large
+                value: dynamic-views-group-property-size-large
+            -
+                label: Medium
+                value: dynamic-views-group-property-size-medium
+            -
+                label: Small
+                value: dynamic-views-group-property-size-small
+            -
+                label: Tiny
+                value: dynamic-views-group-property-size-tiny
+            -
+                label: Custom
+                value: dynamic-views-group-property-size-custom
+    -
+        id: dynamic-views-group-property-size-custom
+        title: Custom property name size
+        description: Set custom font size for group header property names (e.g., 0.8em, 13px, 0.8125rem).
+        type: variable-text
+        default: ''
+    -
+        id: dynamic-views-group-property-bold
+        title: Property name bold
+        description: Make group header property names bold.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-group-property-italic
+        title: Property name italic
+        description: Make group header property names italic.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-group-property-small-caps
+        title: Property name small caps
+        description: Display group header property names in small caps.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-group-property-case
+        title: Property name case
+        description: Text case transformation for group header property names.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-group-property-case-preserve
+        options:
+            -
+                label: Preserve
+                value: dynamic-views-group-property-case-preserve
+            -
+                label: Lowercase
+                value: dynamic-views-group-property-case-lowercase
+            -
+                label: Uppercase
+                value: dynamic-views-group-property-case-uppercase
+            -
+                label: Title case
+                value: dynamic-views-group-property-case-title
+    -
+        id: dynamic-views-group-property-color
+        title: Property name color
+        description: Theme color preset for group header property names.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-group-property-color-muted
+        options:
+            -
+                label: Faint
+                value: dynamic-views-group-property-color-faint
+            -
+                label: Muted
+                value: dynamic-views-group-property-color-muted
+            -
+                label: Normal
+                value: dynamic-views-group-property-color-normal
+            -
+                label: Accent
+                value: dynamic-views-group-property-color-accent
+            -
+                label: Red
+                value: dynamic-views-group-property-color-red
+            -
+                label: Orange
+                value: dynamic-views-group-property-color-orange
+            -
+                label: Yellow
+                value: dynamic-views-group-property-color-yellow
+            -
+                label: Green
+                value: dynamic-views-group-property-color-green
+            -
+                label: Cyan
+                value: dynamic-views-group-property-color-cyan
+            -
+                label: Blue
+                value: dynamic-views-group-property-color-blue
+            -
+                label: Purple
+                value: dynamic-views-group-property-color-purple
+            -
+                label: Pink
+                value: dynamic-views-group-property-color-pink
+            -
+                label: Custom
+                value: dynamic-views-group-property-color-custom
+    -
+        id: dynamic-views-group-property-color-custom
+        title: Custom property name color
+        description: Set custom color for group header property names.
+        type: variable-themed-color
+        format: hex
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: group-count-heading
+        title: Result count
+        type: heading
+        level: 3
+        collapsed: false
+    -
+        id: dynamic-views-hide-group-count
+        title: Hide result count
+        description: Hide number of results for group.
+        type: class-toggle
+    -
+        id: dynamic-views-group-count-font
+        title: Result count font
+        description: Font name as it appears on your system.
+        type: variable-text
+        default: ''
+    -
+        id: dynamic-views-group-count-size
+        title: Result count size
+        description: Font size for the group result count.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-group-count-size-tiny
+        options:
+            -
+                label: Large
+                value: dynamic-views-group-count-size-large
+            -
+                label: Medium
+                value: dynamic-views-group-count-size-medium
+            -
+                label: Small
+                value: dynamic-views-group-count-size-small
+            -
+                label: Tiny
+                value: dynamic-views-group-count-size-tiny
+            -
+                label: Custom
+                value: dynamic-views-group-count-size-custom
+    -
+        id: dynamic-views-group-count-size-custom
+        title: Custom result count size
+        description: Set custom font size for the group result count (e.g., 0.8em, 12px, 0.75rem).
+        type: variable-text
+        default: ''
+    -
+        id: dynamic-views-group-count-bold
+        title: Result count bold
+        description: Make the group result count bold.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-group-count-italic
+        title: Result count italic
+        description: Make the group result count italic.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-group-count-small-caps
+        title: Result count small caps
+        description: Display the group result count in small caps.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-group-count-case
+        title: Result count case
+        description: Text case transformation for the group result count.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-group-count-case-preserve
+        options:
+            -
+                label: Preserve
+                value: dynamic-views-group-count-case-preserve
+            -
+                label: Lowercase
+                value: dynamic-views-group-count-case-lowercase
+            -
+                label: Uppercase
+                value: dynamic-views-group-count-case-uppercase
+            -
+                label: Title case
+                value: dynamic-views-group-count-case-title
+    -
+        id: dynamic-views-group-count-color
+        title: Result count color
+        description: Theme color preset for the group result count.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-group-count-color-muted
+        options:
+            -
+                label: Faint
+                value: dynamic-views-group-count-color-faint
+            -
+                label: Muted
+                value: dynamic-views-group-count-color-muted
+            -
+                label: Normal
+                value: dynamic-views-group-count-color-normal
+            -
+                label: Accent
+                value: dynamic-views-group-count-color-accent
+            -
+                label: Red
+                value: dynamic-views-group-count-color-red
+            -
+                label: Orange
+                value: dynamic-views-group-count-color-orange
+            -
+                label: Yellow
+                value: dynamic-views-group-count-color-yellow
+            -
+                label: Green
+                value: dynamic-views-group-count-color-green
+            -
+                label: Cyan
+                value: dynamic-views-group-count-color-cyan
+            -
+                label: Blue
+                value: dynamic-views-group-count-color-blue
+            -
+                label: Purple
+                value: dynamic-views-group-count-color-purple
+            -
+                label: Pink
+                value: dynamic-views-group-count-color-pink
+            -
+                label: Custom
+                value: dynamic-views-group-count-color-custom
+    -
+        id: dynamic-views-group-count-color-custom
+        title: Custom result count color
+        description: Set custom color for the group result count.
+        type: variable-themed-color
+        format: hex
+        default-light: '#'
+        default-dark: '#'
     -
         id: image-viewer-heading
         title: Image viewer
@@ -664,14 +1066,14 @@ settings:
         description: Do not enlarge image when pressing on thumbnail or cover.
         type: class-toggle
     -
+        id: dynamic-views-image-viewer-hide-filename
+        title: Hide file name
+        description: Do not show the image file name at the top of the image viewer.
+        type: class-toggle
+    -
         id: dynamic-views-zoom-disabled
         title: Disable pan & zoom
         description: Disable pan and pinch-to-zoom gestures.
-        type: class-toggle
-    -
-        id: dynamic-views-image-viewer-disable-dismiss-on-press
-        title: Do not dismiss on press
-        description: Prevent image viewer from closing when pressing on image.
         type: class-toggle
     -
         id: dynamic-views-image-viewer-constrain-to-pane
@@ -827,11 +1229,72 @@ settings:
         type: variable-text
         default: ''
     -
-        id: dynamic-views-property-font-size
+        id: dynamic-views-property-size
         title: Size
-        description: Font size of property values (e.g., 0.8em, 13px, 0.8125rem).
+        description: Font size of property values.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-property-size-small
+        options:
+            -
+                label: Large
+                value: dynamic-views-property-size-large
+            -
+                label: Medium
+                value: dynamic-views-property-size-medium
+            -
+                label: Small
+                value: dynamic-views-property-size-small
+            -
+                label: Tiny
+                value: dynamic-views-property-size-tiny
+            -
+                label: Custom
+                value: dynamic-views-property-size-custom
+    -
+        id: dynamic-views-property-size-custom
+        title: Custom size
+        description: Custom font size of property values (e.g., 0.8em, 13px, 0.8125rem).
         type: variable-text
         default: ''
+    -
+        id: dynamic-views-property-bold
+        title: Bold
+        description: Make property values bold.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-property-italic
+        title: Italic
+        description: Make property values italic.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-property-small-caps
+        title: Small caps
+        description: Display property values in small caps.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-property-case
+        title: Case
+        description: Text case transformation for property values.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-property-case-preserve
+        options:
+            -
+                label: Preserve
+                value: dynamic-views-property-case-preserve
+            -
+                label: Lowercase
+                value: dynamic-views-property-case-lowercase
+            -
+                label: Uppercase
+                value: dynamic-views-property-case-uppercase
+            -
+                label: Title case
+                value: dynamic-views-property-case-title
     -
         id: dynamic-views-property-color-with-names
         title: Color (names shown)
@@ -983,9 +1446,11 @@ settings:
         id: dynamic-views-compact-breakpoint
         title: Compact breakpoint
         description: Card width in pixels at which paired properties stack vertically. Set to 0 to disable.
-        type: variable-number
+        type: variable-number-slider
         default: 390
-        format: px
+        min: 0
+        max: 800
+        step: 10
     -
         id: property-names-heading
         title: Property names
@@ -999,11 +1464,72 @@ settings:
         type: variable-text
         default: ''
     -
-        id: dynamic-views-property-name-font-size
+        id: dynamic-views-property-name-size
         title: Size
-        description: Font size for property names (e.g., 0.8em, 13px, 0.8125rem).
+        description: Font size for property names.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-property-name-size-tiny
+        options:
+            -
+                label: Large
+                value: dynamic-views-property-name-size-large
+            -
+                label: Medium
+                value: dynamic-views-property-name-size-medium
+            -
+                label: Small
+                value: dynamic-views-property-name-size-small
+            -
+                label: Tiny
+                value: dynamic-views-property-name-size-tiny
+            -
+                label: Custom
+                value: dynamic-views-property-name-size-custom
+    -
+        id: dynamic-views-property-name-size-custom
+        title: Custom size
+        description: Custom font size for property names (e.g., 0.8em, 13px, 0.8125rem).
         type: variable-text
         default: ''
+    -
+        id: dynamic-views-property-name-bold
+        title: Bold
+        description: Make property names bold.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-property-name-italic
+        title: Italic
+        description: Make property names italic.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-property-name-small-caps
+        title: Small caps
+        description: Use small caps for property names.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-property-name-case
+        title: Case
+        description: Text case transformation for property names.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-property-name-case-preserve
+        options:
+            -
+                label: Preserve
+                value: dynamic-views-property-name-case-preserve
+            -
+                label: Lowercase
+                value: dynamic-views-property-name-case-lowercase
+            -
+                label: Uppercase
+                value: dynamic-views-property-name-case-uppercase
+            -
+                label: Title case
+                value: dynamic-views-property-name-case-title
     -
         id: dynamic-views-property-name-color
         title: Color
@@ -1060,35 +1586,6 @@ settings:
         default-light: '#'
         default-dark: '#'
     -
-        id: dynamic-views-property-name-case
-        title: Case
-        description: Text case transformation for property names.
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-property-name-case-preserve
-        options:
-            -
-                label: Preserve
-                value: dynamic-views-property-name-case-preserve
-            -
-                label: Lowercase
-                value: dynamic-views-property-name-case-lowercase
-            -
-                label: Uppercase
-                value: dynamic-views-property-name-case-uppercase
-    -
-        id: dynamic-views-property-name-bold
-        title: Bold
-        description: Make property names bold.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-property-name-small-caps
-        title: Small caps
-        description: Use small caps for property names.
-        type: class-toggle
-        default: false
-    -
         id: subtitle
         title: Subtitle
         type: heading
@@ -1101,9 +1598,32 @@ settings:
         type: variable-text
         default: ''
     -
-        id: dynamic-views-subtitle-font-size
+        id: dynamic-views-subtitle-size
         title: Size
-        description: Subtitle font size (e.g., 0.9em, 14px).
+        description: Subtitle font size.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-subtitle-size-small
+        options:
+            -
+                label: Large
+                value: dynamic-views-subtitle-size-large
+            -
+                label: Medium
+                value: dynamic-views-subtitle-size-medium
+            -
+                label: Small
+                value: dynamic-views-subtitle-size-small
+            -
+                label: Tiny
+                value: dynamic-views-subtitle-size-tiny
+            -
+                label: Custom
+                value: dynamic-views-subtitle-size-custom
+    -
+        id: dynamic-views-subtitle-size-custom
+        title: Custom size
+        description: Custom subtitle font size (e.g., 0.9em, 14px).
         type: variable-text
         default: ''
     -
@@ -1124,6 +1644,26 @@ settings:
         description: Display subtitle text in small caps.
         type: class-toggle
         default: false
+    -
+        id: dynamic-views-subtitle-case
+        title: Case
+        description: Text case transformation for subtitle.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-subtitle-case-preserve
+        options:
+            -
+                label: Preserve
+                value: dynamic-views-subtitle-case-preserve
+            -
+                label: Lowercase
+                value: dynamic-views-subtitle-case-lowercase
+            -
+                label: Uppercase
+                value: dynamic-views-subtitle-case-uppercase
+            -
+                label: Title case
+                value: dynamic-views-subtitle-case-title
     -
         id: dynamic-views-subtitle-color
         title: Color
@@ -1211,19 +1751,10 @@ settings:
                 label: Right
                 value: dynamic-views-subtitle-align-right
     -
-        id: dynamic-views-subtitle-overflow
-        title: Overflow behavior
-        description: How to handle long subtitle text.
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-subtitle-overflow-wrap
-        options:
-            -
-                label: Wrap
-                value: dynamic-views-subtitle-overflow-wrap
-            -
-                label: Scroll
-                value: dynamic-views-subtitle-overflow-scroll
+        id: dynamic-views-subtitle-overflow-scroll
+        title: Scroll one-line subtitles
+        description: Scroll long subtitles horizontally instead of truncating them. Applies only where subtitle lines is set to 1 in view settings.
+        type: class-toggle
     -
         id: dynamic-views-subtitle-hyphenate
         title: Hyphenate
@@ -1255,6 +1786,44 @@ settings:
             -
                 label: Theme default
                 value: dynamic-views-tag-style-theme
+    -
+        id: dynamic-views-tag-bold
+        title: Bold
+        description: Make tags bold.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-tag-italic
+        title: Italic
+        description: Make tags italic.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-tag-small-caps
+        title: Small caps
+        description: Display tags in small caps.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-tag-case
+        title: Case
+        description: Text case transformation for tags.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-tag-case-preserve
+        options:
+            -
+                label: Preserve
+                value: dynamic-views-tag-case-preserve
+            -
+                label: Lowercase
+                value: dynamic-views-tag-case-lowercase
+            -
+                label: Uppercase
+                value: dynamic-views-tag-case-uppercase
+            -
+                label: Title case
+                value: dynamic-views-tag-case-title
     -
         id: dynamic-views-tag-color
         title: Color
@@ -1329,11 +1898,71 @@ settings:
         type: variable-text
         default: ''
     -
-        id: dynamic-views-text-preview-font-size
+        id: dynamic-views-text-preview-size
         title: Size
-        description: Font size for text preview (e.g., 0.9em, 14px, 0.875rem).
+        description: Font size for text preview.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-text-preview-size-small
+        options:
+            -
+                label: Large
+                value: dynamic-views-text-preview-size-large
+            -
+                label: Medium
+                value: dynamic-views-text-preview-size-medium
+            -
+                label: Small
+                value: dynamic-views-text-preview-size-small
+            -
+                label: Tiny
+                value: dynamic-views-text-preview-size-tiny
+            -
+                label: Custom
+                value: dynamic-views-text-preview-size-custom
+    -
+        id: dynamic-views-text-preview-size-custom
+        title: Custom size
+        description: Custom font size for text preview (e.g., 0.9em, 14px, 0.875rem).
         type: variable-text
         default: ''
+    -
+        id: dynamic-views-text-preview-bold
+        title: Bold
+        description: Make text preview bold.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-text-preview-italic
+        title: Italic
+        description: Italicize text preview.
+        type: class-toggle
+    -
+        id: dynamic-views-text-preview-small-caps
+        title: Small caps
+        description: Display text preview in small caps.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-text-preview-case
+        title: Case
+        description: Text case transformation for text preview.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-text-preview-case-preserve
+        options:
+            -
+                label: Preserve
+                value: dynamic-views-text-preview-case-preserve
+            -
+                label: Lowercase
+                value: dynamic-views-text-preview-case-lowercase
+            -
+                label: Uppercase
+                value: dynamic-views-text-preview-case-uppercase
+            -
+                label: Title case
+                value: dynamic-views-text-preview-case-title
     -
         id: dynamic-views-text-preview-color
         title: Color
@@ -1390,11 +2019,6 @@ settings:
         default-light: '#'
         default-dark: '#'
     -
-        id: dynamic-views-text-preview-italic
-        title: Italic
-        description: Italicize text preview.
-        type: class-toggle
-    -
         id: dynamic-views-text-preview-alignment
         title: Alignment
         description: Horizontal alignment of text preview.
@@ -1438,7 +2062,7 @@ settings:
                 value: dynamic-views-omit-first-line-never
     -
         id: dynamic-views-text-preview-keep-headings
-        title: Preserve heading text
+        title: Preserve headings
         description: Show heading text in text preview rather than omit it.
         type: class-toggle
     -
@@ -1492,12 +2116,6 @@ settings:
         type: class-toggle
         default: false
     -
-        id: dynamic-views-thumbnail-disable-looping
-        title: Do not loop
-        description: Stop at last image instead of wrapping back to first.
-        type: class-toggle
-        default: false
-    -
         id: dynamic-views-hide-thumbnail-icon
         title: Hide icon
         description: Do not show icon on thumbnails with multiple images.
@@ -1539,11 +2157,72 @@ settings:
         type: variable-text
         default: ''
     -
-        id: dynamic-views-title-font-size
+        id: dynamic-views-title-size
         title: Size
-        description: Font size for title (e.g., 1em, 16px, 1.2rem).
+        description: Font size for title.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-title-size-medium
+        options:
+            -
+                label: Large
+                value: dynamic-views-title-size-large
+            -
+                label: Medium
+                value: dynamic-views-title-size-medium
+            -
+                label: Small
+                value: dynamic-views-title-size-small
+            -
+                label: Tiny
+                value: dynamic-views-title-size-tiny
+            -
+                label: Custom
+                value: dynamic-views-title-size-custom
+    -
+        id: dynamic-views-title-size-custom
+        title: Custom size
+        description: Custom font size for title (e.g., 1em, 16px, 1.2rem).
         type: variable-text
         default: ''
+    -
+        id: dynamic-views-title-bold
+        title: Bold
+        description: Make title text bold.
+        type: class-toggle
+        default: true
+    -
+        id: dynamic-views-title-italic
+        title: Italic
+        description: Make title text italic.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-title-small-caps
+        title: Small caps
+        description: Display title text in small caps.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-title-case
+        title: Case
+        description: Text case transformation for title.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-title-case-preserve
+        options:
+            -
+                label: Preserve
+                value: dynamic-views-title-case-preserve
+            -
+                label: Lowercase
+                value: dynamic-views-title-case-lowercase
+            -
+                label: Uppercase
+                value: dynamic-views-title-case-uppercase
+            -
+                label: Title case
+                value: dynamic-views-title-case-title
     -
         id: dynamic-views-title-color
         title: Color
@@ -1675,19 +2354,10 @@ settings:
                 label: Right
                 value: dynamic-views-title-align-right
     -
-        id: dynamic-views-title-overflow
-        title: Overflow behavior
-        description: How to handle long title text.
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-title-overflow-wrap
-        options:
-            -
-                label: Wrap
-                value: dynamic-views-title-overflow-wrap
-            -
-                label: Scroll
-                value: dynamic-views-title-overflow-scroll
+        id: dynamic-views-title-overflow-scroll
+        title: Scroll one-line titles
+        description: Scroll long titles horizontally instead of truncating them. Applies only where title lines is set to 1 in view settings.
+        type: class-toggle
     -
         id: dynamic-views-title-hyphenate
         title: Hyphenate
@@ -1699,26 +2369,6 @@ settings:
         type: heading
         level: 2
         collapsed: true
-    -
-        id: dynamic-views-card-spacing-desktop
-        title: Gap
-        description: Spacing between cards on desktop and tablet.
-        type: variable-number-slider
-        default: 8
-        min: 0
-        max: 32
-        step: 1
-        format: px
-    -
-        id: dynamic-views-card-spacing-phone
-        title: Gap
-        description: Spacing between cards on phone.
-        type: variable-number-slider
-        default: 6
-        min: 0
-        max: 32
-        step: 1
-        format: px
     -
         id: dynamic-views-view-background
         title: Background
@@ -1796,6 +2446,50 @@ body:not(.dynamic-views-cover-bg-custom)
 body:not(.dynamic-views-poster-bg-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-poster-background-color-custom'],
+body:not(.dynamic-views-group-property-size-custom)
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-group-property-size-custom'],
+body:not(.dynamic-views-group-value-size-custom)
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-group-value-size-custom'],
+body:not(.dynamic-views-group-count-size-custom)
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-group-count-size-custom'],
+body:not(.dynamic-views-group-property-color-custom)
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-group-property-color-custom'],
+body:not(.dynamic-views-group-value-color-custom)
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-group-value-color-custom'],
+body:not(.dynamic-views-group-count-color-custom)
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-group-count-color-custom'],
+body.dynamic-views-hide-group-count
+  .style-settings-container
+  .setting-item:is(
+    [data-id='dynamic-views-group-count-font'],
+    [data-id='dynamic-views-group-count-size'],
+    [data-id='dynamic-views-group-count-size-custom'],
+    [data-id='dynamic-views-group-count-bold'],
+    [data-id='dynamic-views-group-count-italic'],
+    [data-id='dynamic-views-group-count-small-caps'],
+    [data-id='dynamic-views-group-count-case'],
+    [data-id='dynamic-views-group-count-color'],
+    [data-id='dynamic-views-group-count-color-custom']
+  ),
+body.dynamic-views-hide-group-property-names
+  .style-settings-container
+  .setting-item:is(
+    [data-id='dynamic-views-group-property-font'],
+    [data-id='dynamic-views-group-property-size'],
+    [data-id='dynamic-views-group-property-size-custom'],
+    [data-id='dynamic-views-group-property-bold'],
+    [data-id='dynamic-views-group-property-italic'],
+    [data-id='dynamic-views-group-property-small-caps'],
+    [data-id='dynamic-views-group-property-case'],
+    [data-id='dynamic-views-group-property-color'],
+    [data-id='dynamic-views-group-property-color-custom']
+  ),
 body.dynamic-views-image-viewer-disabled
   .style-settings-container
   .setting-item[data-id='dynamic-views-image-viewer-disabled']
@@ -1809,6 +2503,12 @@ body:not(.dynamic-views-property-color-without-names-custom)
 body:not(.dynamic-views-property-name-color-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-property-name-color-custom'],
+body:not(.dynamic-views-property-size-custom)
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-property-size-custom'],
+body:not(.dynamic-views-property-name-size-custom)
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-property-name-size-custom'],
 body.dynamic-views-slideshow-arrows-show
   .style-settings-container
   .setting-item[data-id='dynamic-views-hide-cover-icon'],
@@ -1819,6 +2519,9 @@ body.dynamic-views-cover-disable-navigation
 body:not(.dynamic-views-subtitle-color-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-subtitle-color-custom'],
+body:not(.dynamic-views-subtitle-size-custom)
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-subtitle-size-custom'],
 body.dynamic-views-tag-style-theme
   .style-settings-container
   .setting-item:is(
@@ -1831,24 +2534,18 @@ body:not(.dynamic-views-tag-color-custom)
 body:not(.dynamic-views-text-preview-color-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-text-preview-color-custom'],
+body:not(.dynamic-views-text-preview-size-custom)
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-text-preview-size-custom'],
 body.dynamic-views-cover-circular
   .style-settings-container
   .setting-item[data-id='dynamic-views-cover-border-radius'],
-body.is-phone
-  .style-settings-container
-  .setting-item[data-id='dynamic-views-card-spacing-desktop'],
-body:not(.is-phone)
-  .style-settings-container
-  .setting-item[data-id='dynamic-views-card-spacing-phone'],
 body.is-phone
   .style-settings-container
   .setting-item[data-id='dynamic-views-image-viewer-constrain-to-pane'],
 body.is-phone
   .style-settings-container
   .setting-item[data-id='dynamic-views-zoom-sensitivity'],
-body.dynamic-views-thumbnail-disable-navigation
-  .style-settings-container
-  .setting-item[data-id='dynamic-views-thumbnail-disable-looping'],
 body.dynamic-views-thumbnail-disable-navigation
   .style-settings-container
   .setting-item[data-id='dynamic-views-hide-thumbnail-icon'],
@@ -1858,6 +2555,9 @@ body:not(.dynamic-views-title-color-custom)
 body:not(.dynamic-views-title-hover-color-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-title-hover-color-custom'],
+body:not(.dynamic-views-title-size-custom)
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-title-size-custom'],
 body.dynamic-views-poster-theme-dark
   .style-settings-container
   .setting-item[data-id='dynamic-views-poster-overlay-light'],
@@ -1874,22 +2574,46 @@ body.dynamic-views-poster-theme-light
 // :nth-child(... of S) counts DOM position, not visibility — hidden items steal radius from visible neighbors.
 // When adding a new display:none rule for a setting that can be first or last in its group, add a compensating border-radius rule here.
 
-// View: card-spacing-desktop hidden on phone → card-spacing-phone becomes visually first
+// Image viewer: constrain-to-pane and zoom-sensitivity hidden on phone → zoom-disabled becomes visually last
 body.is-phone
   .style-settings-container
-  .setting-item[data-id='dynamic-views-card-spacing-phone'] {
-  border-top-right-radius: var(--setting-items-radius);
-  border-top-left-radius: var(--setting-items-radius);
-
-  &::before {
-    display: none;
-  }
+  .setting-item[data-id='dynamic-views-zoom-disabled'] {
+  border-bottom-right-radius: var(--setting-items-radius);
+  border-bottom-left-radius: var(--setting-items-radius);
 }
 
-// Image viewer: constrain-to-pane and zoom-sensitivity hidden on phone → disable-dismiss-on-press becomes visually last
-body.is-phone
+// Each Groups sub-heading is its own container, so each needs its own visually-last row.
+// Every sub-section ends with a Custom color row that is hidden unless Custom is selected;
+// the two with a hide toggle collapse to the toggle itself when everything below it goes.
+body:not(.dynamic-views-group-value-color-custom)
   .style-settings-container
-  .setting-item[data-id='dynamic-views-image-viewer-disable-dismiss-on-press'] {
+  .setting-item[data-id='dynamic-views-group-value-color'],
+body.dynamic-views-hide-group-property-names
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-hide-group-property-names'],
+body:not(
+    .dynamic-views-hide-group-property-names,
+    .dynamic-views-group-property-color-custom
+  )
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-group-property-color'],
+body.dynamic-views-hide-group-count
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-hide-group-count'],
+body:not(
+    .dynamic-views-hide-group-count,
+    .dynamic-views-group-count-color-custom
+  )
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-group-count-color'] {
+  border-bottom-right-radius: var(--setting-items-radius);
+  border-bottom-left-radius: var(--setting-items-radius);
+}
+
+// Property names: Custom text color is now the last row and stays hidden unless Custom is selected → Color becomes visually last
+body:not(.dynamic-views-property-name-color-custom)
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-property-name-color'] {
   border-bottom-right-radius: var(--setting-items-radius);
   border-bottom-left-radius: var(--setting-items-radius);
 }

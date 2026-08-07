@@ -11,7 +11,6 @@ import {
   SCROLL_THROTTLE_MS,
   SLIDESHOW_ANIMATION_MS,
 } from './constants';
-import { isThumbnailLoopingDisabled } from '../utils/style-settings';
 
 // ── Pure helpers ──────────────────────────────────────────────────────────
 
@@ -199,18 +198,9 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
         indicator.classList.add('dynamic-views-icon-hidden');
       }
       const len = imageUrls.length;
-      let newIndex: number;
-      if (isThumbnailLoopingDisabled()) {
-        newIndex =
-          deltaX > 0
-            ? Math.max(currentIndex - 1, 0)
-            : Math.min(currentIndex + 1, len - 1);
-      } else {
-        newIndex =
-          deltaX > 0
-            ? (currentIndex - 1 + len) % len
-            : (currentIndex + 1) % len;
-      }
+      // Scrubbing always wraps
+      const newIndex =
+        deltaX > 0 ? (currentIndex - 1 + len) % len : (currentIndex + 1) % len;
       if (newIndex !== currentIndex) {
         // Cancel any in-flight animation before starting a new one
         if (animState.isAnimating) {

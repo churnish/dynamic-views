@@ -33,6 +33,21 @@ export function getVaultPathFromResourceUrl(src: string): string | null {
   }
 }
 
+/**
+ * Extract the display name for an image, matching Obsidian's native lightbox titlebar:
+ * the basename of the URL's decoded path. Works for both `app://` and external URLs.
+ * @returns File name, or empty string for data URIs and unparseable input
+ */
+export function getImageDisplayName(src: string): string {
+  if (src.startsWith('data:')) return '';
+  try {
+    const path = decodeURIComponent(new URL(src).pathname);
+    return path.slice(path.lastIndexOf('/') + 1);
+  } catch {
+    return '';
+  }
+}
+
 // Generate regex from VALID_IMAGE_EXTENSIONS to ensure they stay in sync
 // Combines jpeg/jpg as jpe?g for efficiency (order-independent)
 const IMAGE_EXTENSION_REGEX = new RegExp(

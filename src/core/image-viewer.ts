@@ -2,29 +2,68 @@
  * Shared image viewer handler - eliminates code duplication across card renderers
  */
 
-import { Notice, Platform, TFile, type App } from 'obsidian';
+import { Notice, Platform, TFile, setIcon, type App } from 'obsidian';
 import Panzoom, { PanzoomObject } from '@panzoom/panzoom';
 
 import { GESTURE_TIMEOUT_MS } from './constants';
 import { getZoomSensitivityDesktop } from '../utils/style-settings';
-import { getVaultPathFromResourceUrl, isExternalUrl } from './image';
+import {
+  getImageDisplayName,
+  getVaultPathFromResourceUrl,
+  isExternalUrl,
+} from './image';
+import { brokenImageUrls, markImageBroken } from './image-loader';
 import { getCachedBlobUrl } from './slideshow';
 import { deferContainerHoverDrop } from './hover-and-touch';
+import { getNextImageIndex } from './viewer-navigation';
 import { getOwnerWindow } from '../utils/owner-window';
 
 /** Wheel event listener options (stored for proper cleanup) */
 const WHEEL_OPTIONS: AddEventListenerOptions = { passive: false };
 
-/** Movement threshold in pixels to distinguish click from pan/drag */
-const MOVE_THRESHOLD = 5;
-
 type GestureMode = 'mobile' | 'desktop';
+
+/**
+ * `Platform.hasPhysicalKeyboard` is undocumented and absent from the typings,
+ * which declare `Platform` as a const object literal — not an interface, so it
+ * cannot be reached by module augmentation. Resolved asynchronously from
+ * Capacitor at startup and **false on desktop**: it is a mobile-only signal, so
+ * it may only widen a mobile case, never gate a desktop one. `emulateMobile()`
+ * forces it false, so it cannot be exercised through desktop mobile emulation.
+ */
+function hasPhysicalKeyboard(): boolean {
+  return (
+    (Platform as unknown as { hasPhysicalKeyboard?: boolean })
+      .hasPhysicalKeyboard === true
+  );
+}
 
 // Store cleanup functions for event listeners (Map for explicit lifecycle control)
 const viewerListenerCleanups = new Map<HTMLElement, () => void>();
 
 // Map for wheel handlers (keyed by container element, uses explicit lifecycle control)
 const containerWheelHandlers = new Map<HTMLElement, (e: WheelEvent) => void>();
+
+/** The set of images the viewer can arrow through for one card embed. */
+export interface ViewerImageSet {
+  urls: string[];
+  format: 'slideshow' | 'thumbnail';
+}
+
+// DOM-keyed, so entries are collected when cards unmount — no explicit cleanup
+const viewerImageSets = new WeakMap<HTMLElement, ViewerImageSet>();
+
+/**
+ * Registers the navigable image set for a card embed.
+ * Stores a snapshot: the renderer's arrays are spliced in place by broken-URL
+ * recovery, which would otherwise shift indices while the viewer is open.
+ */
+export function setViewerImageSet(
+  embedEl: HTMLElement,
+  set: ViewerImageSet
+): void {
+  viewerImageSets.set(embedEl, { urls: [...set.urls], format: set.format });
+}
 
 /**
  * Force cleanup all viewers - call on view destruction
@@ -241,6 +280,10 @@ interface ViewerGestureControls {
   cleanup: () => void;
   /** Exclude image from Panzoom event handling so native drag can proceed. */
   setAltDragMode: (enabled: boolean) => void;
+  /** Drop zoom/pan instantly so a newly navigated image starts at 1x. */
+  resetZoom: () => void;
+  /** Attach gestures that initial load never got (first image was broken). */
+  ensureGestures: () => void;
 }
 
 /** Constrained viewer: returns true when the key event should be ignored (viewer's leaf is not active). */
@@ -269,110 +312,19 @@ function setupImageViewerGestures(
 ): ViewerGestureControls {
   const isMobileMode = mode === 'mobile';
   let panzoomInstance: PanzoomObject | null = null;
-  let imageViewerKeyHandler: ((e: KeyboardEvent) => void) | null = null;
   let errorHandler: (() => void) | null = null;
-  let contextmenuHandler: ((e: MouseEvent) => void) | null = null;
+  let panzoomChangeHandler: ((e: Event) => void) | null = null;
+  let panzoomStartHandler: (() => void) | null = null;
+  let panzoomEndHandler: (() => void) | null = null;
   let mobileTouchHandler: ((e: TouchEvent) => void) | null = null;
   let mobileAnimFrame = 0;
   let mobileLoadHandler: (() => void) | null = null;
-  let isMaximized = false;
+  let mobileResetTransform: (() => void) | null = null;
   const gestureDoc = container.ownerDocument;
   const gestureWin = gestureDoc.defaultView ?? window;
-  let containerResizeObserver: ResizeObserver | null = null;
-
-  // Cache container dimensions (updated on resize for desktop maximized mode)
-  let cachedContainerWidth = container.clientWidth;
-  let cachedContainerHeight = container.clientHeight;
-
-  // Desktop maximized mode: pan state for edge-gluing (reset when toggling maximized)
-  let desktopPanX = 0;
-  let desktopPanY = 0;
-  let desktopLastScale = 1;
-  // Delta tracking for desktop transform (outer scope so resetDesktopPan can clear it)
-  let desktopLastX: number | undefined;
-  let desktopLastY: number | undefined;
-  // Cached image layout dimensions (avoid forced reflow on every panzoom frame)
-  let cachedImgWidth = 0;
-  let cachedImgHeight = 0;
-
-  /** Reset desktop pan tracking (called when entering/exiting maximized) */
-  function resetDesktopPan(): void {
-    desktopPanX = 0;
-    desktopPanY = 0;
-    desktopLastScale = 1;
-    desktopLastX = undefined;
-    desktopLastY = undefined;
-    cachedImgWidth = 0;
-    cachedImgHeight = 0;
-  }
 
   function attachDesktopGestures(): void {
     const zoomSensitivity = getZoomSensitivityDesktop();
-
-    // Update container dimensions via ResizeObserver (avoids stale bounds in maximized mode)
-    containerResizeObserver = new gestureWin.ResizeObserver((entries) => {
-      for (const entry of entries) {
-        cachedContainerWidth = entry.contentRect.width;
-        cachedContainerHeight = entry.contentRect.height;
-      }
-      // Invalidate image dimension cache (layout may change on resize)
-      cachedImgWidth = 0;
-      cachedImgHeight = 0;
-    });
-    containerResizeObserver.observe(container);
-
-    // Custom transform that applies edge-gluing when maximized
-    const desktopSetTransform = (
-      elem: HTMLElement,
-      { scale, x, y }: { scale: number; x: number; y: number }
-    ) => {
-      // Non-maximized: default panzoom behavior
-      if (!isMaximized) {
-        elem.style.transform = `scale(${scale}) translate(${x}px, ${y}px)`;
-        return;
-      }
-
-      // Maximized: clamp pan so edges stay at container boundaries
-      // Cache image dimensions on first call (avoids forced reflow on every transform)
-      if (cachedImgWidth === 0) {
-        cachedImgWidth = elem.offsetWidth;
-        cachedImgHeight = elem.offsetHeight;
-      }
-      const imgWidth = cachedImgWidth;
-      const imgHeight = cachedImgHeight;
-
-      const scaledWidth = imgWidth * scale;
-      const scaledHeight = imgHeight * scale;
-
-      // Max pan: image edges stay at container edges (no empty space on glued axis)
-      const maxPanX = Math.max(
-        0,
-        (scaledWidth - cachedContainerWidth) / 2 / scale
-      );
-      const maxPanY = Math.max(
-        0,
-        (scaledHeight - cachedContainerHeight) / 2 / scale
-      );
-
-      // On scale change, clamp existing pan to new bounds
-      if (scale !== desktopLastScale) {
-        desktopPanX = Math.max(-maxPanX, Math.min(maxPanX, desktopPanX));
-        desktopPanY = Math.max(-maxPanY, Math.min(maxPanY, desktopPanY));
-        desktopLastScale = scale;
-      }
-
-      // Calculate delta from panzoom's accumulated values
-      const deltaX = x - (desktopLastX ?? x);
-      const deltaY = y - (desktopLastY ?? y);
-      desktopLastX = x;
-      desktopLastY = y;
-
-      // Apply delta with clamping
-      desktopPanX = Math.max(-maxPanX, Math.min(maxPanX, desktopPanX + deltaX));
-      desktopPanY = Math.max(-maxPanY, Math.min(maxPanY, desktopPanY + deltaY));
-
-      elem.style.transform = `scale(${scale}) translate(${desktopPanX}px, ${desktopPanY}px)`;
-    };
 
     // Panzoom's isAttached walks up to module-scope `document`, which fails
     // for elements in popout windows (separate V8 isolate). Temporarily
@@ -392,9 +344,33 @@ function setupImageViewerGestures(
       startScale: 1,
       step: zoomSensitivity,
       canvas: false,
-      cursor: 'move',
-      setTransform: desktopSetTransform,
+      // Open-hand cursor, matching the native lightbox's `cursor: grab`
+      cursor: 'grab',
+      // Nothing to pan at 1x — native only pans once zoomed in
+      panOnlyWhenZoomed: true,
     });
+
+    // Panzoom sets its cursor once at init, so drive the grab/default swap from
+    // the zoom level ourselves — otherwise 1x advertises a pan that cannot happen
+    panzoomChangeHandler = (e: Event) => {
+      const { scale } = (e as CustomEvent<{ scale: number }>).detail;
+      container.classList.toggle('is-pannable', scale > 1);
+    };
+    imgEl.addEventListener('panzoomchange', panzoomChangeHandler);
+
+    // Closed-fist cursor while dragging. Obsidian's own `is-grabbing` body class
+    // already carries `cursor: grabbing !important` app-wide, and the native
+    // lightbox drives it the same way — Panzoom only applies its one configured
+    // cursor, so the drag state has to be tracked separately. Gated on
+    // `.is-pannable` to mirror native's `zoomLevel <= 1` bail.
+    panzoomStartHandler = () => {
+      if (container.classList.contains('is-pannable')) {
+        gestureDoc.body.classList.add('is-grabbing');
+      }
+    };
+    panzoomEndHandler = () => gestureDoc.body.classList.remove('is-grabbing');
+    imgEl.addEventListener('panzoomstart', panzoomStartHandler);
+    imgEl.addEventListener('panzoomend', panzoomEndHandler);
     reparentBack?.();
 
     // Panzoom also binds handleMove/handleUp to module-scope `document`.
@@ -426,69 +402,6 @@ function setupImageViewerGestures(
     };
     container.addEventListener('wheel', wheelHandler, WHEEL_OPTIONS);
     containerWheelHandlers.set(container, wheelHandler);
-
-    // Helper to update maximized state and class
-    function setMaximized(value: boolean, containScale?: number): void {
-      isMaximized = value;
-      container.classList.toggle('is-maximized', value);
-      // Reset desktop pan tracking for fresh start in new mode
-      resetDesktopPan();
-      // When maximized, prevent zooming out below contain scale
-      if (value && containScale) {
-        panzoomInstance?.setOptions({ minScale: containScale });
-      } else {
-        panzoomInstance?.setOptions({ minScale: 1 });
-      }
-    }
-
-    // Calculate scale to fill container without cropping
-    function getContainScale(): number {
-      const containerWidth = container.clientWidth;
-      const containerHeight = container.clientHeight;
-      const imgWidth = imgEl.clientWidth || 1; // Avoid division by zero
-      const imgHeight = imgEl.clientHeight || 1;
-      return Math.min(containerWidth / imgWidth, containerHeight / imgHeight);
-    }
-
-    // Keyboard shortcuts — desktop only
-    imageViewerKeyHandler = (e: KeyboardEvent) => {
-      if (isConstrainedViewerInactive(container as CloneElement, gestureDoc))
-        return;
-      if (e.code === 'Space') {
-        e.preventDefault();
-        e.stopPropagation();
-        if (isMaximized) {
-          setMaximized(false);
-          panzoomInstance?.reset();
-        } else {
-          const containScale = getContainScale();
-          setMaximized(true, containScale);
-          panzoomInstance?.zoom(containScale, { animate: true });
-        }
-        container.dataset.lastKeyTime = String(Date.now());
-      } else if (e.key === 'r' || e.key === 'R' || e.key === 'ArrowDown') {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        if (isMaximized) setMaximized(false);
-        panzoomInstance?.reset();
-        container.dataset.lastKeyTime = String(Date.now());
-      }
-    };
-    gestureDoc.addEventListener('keydown', imageViewerKeyHandler, true);
-
-    // Right-click to reset zoom/pan
-    contextmenuHandler = (e: MouseEvent) => {
-      if (e.target !== imgEl) return;
-      e.preventDefault();
-
-      if (isMaximized) {
-        resetDesktopPan();
-        panzoomInstance?.zoom(getContainScale(), { animate: true });
-      } else {
-        panzoomInstance?.reset();
-      }
-    };
-    container.addEventListener('contextmenu', contextmenuHandler, true);
   }
 
   /**
@@ -510,6 +423,18 @@ function setupImageViewerGestures(
     let panY = 0;
     let scale = 1;
 
+    // Mirrors the desktop panzoomchange listener so the zoom-dependent styling
+    // (titlebar hide) works on touch too. Guarded — applyTransform runs every
+    // gesture frame, and the container has `contain: strict`, so a needless
+    // class write would invalidate style on each one.
+    let wasPannable = false;
+    const syncPannable = () => {
+      const pannable = scale > 1;
+      if (pannable === wasPannable) return;
+      wasPannable = pannable;
+      container.classList.toggle('is-pannable', pannable);
+    };
+
     /** Apply clamped transform — native formula: maxPan = imgDim * (scale-1)/scale/2 */
     const applyTransform = () => {
       const panFactor = (scale - 1) / scale / 2;
@@ -519,6 +444,7 @@ function setupImageViewerGestures(
       panY = Math.max(-maxPanY, Math.min(maxPanY, panY));
       scale = Math.max(1, Math.min(maxScale, scale));
       imgEl.style.transform = `scale(${scale}) translate(${panX}px, ${panY}px)`;
+      syncPannable();
     };
 
     // Momentum state
@@ -539,6 +465,18 @@ function setupImageViewerGestures(
         lastTime = now;
         mobileAnimFrame = gestureWin.requestAnimationFrame(momentumTick);
       }
+    };
+
+    // Arrow navigation must drop zoom/pan on the mobile backend too — the load
+    // handler below refreshes bounds but deliberately preserves scale, so
+    // without this a navigated image would inherit the previous zoom
+    mobileResetTransform = () => {
+      cancelAnimationFrame(mobileAnimFrame);
+      velocity = 0;
+      scale = 1;
+      panX = 0;
+      panY = 0;
+      applyTransform();
     };
 
     // Recalculate dimensions on subsequent loads (e.g. src changes)
@@ -718,18 +656,21 @@ function setupImageViewerGestures(
         }
         panzoomInstance.destroy();
       }
-      if (imageViewerKeyHandler) {
-        gestureDoc.removeEventListener('keydown', imageViewerKeyHandler, true);
-      }
-      if (contextmenuHandler) {
-        container.removeEventListener('contextmenu', contextmenuHandler, true);
-      }
       if (errorHandler) {
         imgEl.removeEventListener('error', errorHandler);
       }
-      if (containerResizeObserver) {
-        containerResizeObserver.disconnect();
+      if (panzoomChangeHandler) {
+        imgEl.removeEventListener('panzoomchange', panzoomChangeHandler);
       }
+      if (panzoomStartHandler) {
+        imgEl.removeEventListener('panzoomstart', panzoomStartHandler);
+      }
+      if (panzoomEndHandler) {
+        imgEl.removeEventListener('panzoomend', panzoomEndHandler);
+      }
+      // Never leave the app-wide grabbing cursor behind if the viewer is torn
+      // down mid-drag — panzoomend would not fire
+      gestureDoc.body.classList.remove('is-grabbing');
       if (mobileTouchHandler) {
         container.removeEventListener(
           'touchstart',
@@ -755,6 +696,19 @@ function setupImageViewerGestures(
     },
     setAltDragMode: (enabled: boolean) => {
       panzoomInstance?.setOptions({ exclude: enabled ? [imgEl] : [] });
+    },
+    resetZoom: () => {
+      // Panzoom's default animates the reset, so the incoming image would be
+      // shown inheriting the outgoing zoom and then scaling down
+      panzoomInstance?.reset({ animate: false });
+      // Tablets with a keyboard can arrow-navigate while on the mobile backend
+      mobileResetTransform?.();
+    },
+    ensureGestures: () => {
+      if (panzoomInstance || mobileTouchHandler) return;
+      if (!(imgEl.complete && imgEl.naturalWidth > 0)) return;
+      if (isMobileMode) attachMobileGestures();
+      else attachDesktopGestures();
     },
   };
 }
@@ -809,10 +763,40 @@ function openImageViewer(
     nextImg.remove();
   }
 
+  // Resolve the titlebar name before the blob swap below — blob: URLs have no basename
+  const displayName =
+    imgEl.title || imgEl.alt || getImageDisplayName(imgEl.src);
+
+  // Locate the opened image within the card's navigable set. Cards render raw
+  // src values, but a slideshow/scrub step may already have swapped in a blob:
+  // URL, and imgEl.src returns the percent-encoded form — match all four.
+  const imageSet = viewerImageSets.get(embedEl);
+  const rawSrc = imgEl.getAttribute('src') ?? '';
+  let currentIndex = imageSet
+    ? imageSet.urls.findIndex(
+        (u) =>
+          u === imgEl.src ||
+          u === rawSrc ||
+          getCachedBlobUrl(u) === imgEl.src ||
+          getCachedBlobUrl(u) === rawSrc
+      )
+    : -1;
+  if (currentIndex < 0) currentIndex = 0;
+
   // Use cached blob URL for external images to avoid re-fetching
   if (isExternalUrl(imgEl.src)) {
     imgEl.src = getCachedBlobUrl(imgEl.src);
   }
+
+  // Overlay chrome — mirrors the native lightbox titlebar and close button
+  const titlebarEl = cloneEl.createDiv('dynamic-views-viewer-titlebar');
+  const titlebarTextEl = titlebarEl.createDiv({
+    cls: 'dynamic-views-viewer-titlebar-text',
+    text: displayName,
+  });
+  // No aria-label — Obsidian derives tooltips from it, and the native close button has none
+  const closeEl = cloneEl.createDiv('dynamic-views-viewer-close');
+  setIcon(closeEl, 'x');
 
   // Append clone to appropriate container based on fullscreen setting
   // Phone: always fullscreen. Desktop/tablet: fullscreen unless explicitly disabled
@@ -898,10 +882,6 @@ function openImageViewer(
       'dynamic-views-zoom-disabled'
     );
 
-    // Check dismiss setting once, applies regardless of panzoom state
-    const isDismissDisabled = viewerDoc.body.classList.contains(
-      'dynamic-views-image-viewer-disable-dismiss-on-press'
-    );
     // Track gesture controls for Alt+drag coordination (set when Panzoom active)
     let gestureControls: ViewerGestureControls | null = null;
 
@@ -923,36 +903,6 @@ function openImageViewer(
         viewerCleanupFns.set(cloneEl, gestureControls.cleanup);
       }
     } else if (!isMobile) {
-      // Desktop/tablet: trackpad pinch to maximize/restore (when panzoom disabled)
-      const onPinchWheel = (e: WheelEvent) => {
-        if (!e.ctrlKey) return;
-        e.preventDefault();
-
-        if (e.deltaY < 0) {
-          cloneEl.classList.add('is-maximized');
-        } else if (e.deltaY > 0) {
-          cloneEl.classList.remove('is-maximized');
-        }
-      };
-      cloneEl.addEventListener('wheel', onPinchWheel, { passive: false });
-
-      // Desktop only: spacebar to toggle maximize, R/ArrowDown to reset (when panzoom disabled)
-      const onSpacebar = (e: KeyboardEvent) => {
-        if (isConstrainedViewerInactive(cloneEl, viewerDoc)) return;
-        if (e.code === 'Space') {
-          e.preventDefault();
-          e.stopPropagation();
-          cloneEl.classList.toggle('is-maximized');
-          cloneEl.dataset.lastKeyTime = String(Date.now());
-        } else if (e.key === 'r' || e.key === 'R' || e.key === 'ArrowDown') {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          cloneEl.classList.remove('is-maximized');
-          cloneEl.dataset.lastKeyTime = String(Date.now());
-        }
-      };
-      viewerDoc.addEventListener('keydown', onSpacebar, true);
-
       // Image is always draggable when panzoom is off (no pan to conflict with)
       imgEl.draggable = true;
 
@@ -977,8 +927,6 @@ function openImageViewer(
       const existingGestureCleanup = viewerCleanupFns.get(cloneEl);
       viewerCleanupFns.set(cloneEl, () => {
         existingGestureCleanup?.();
-        cloneEl.removeEventListener('wheel', onPinchWheel);
-        viewerDoc.removeEventListener('keydown', onSpacebar, true);
         imgEl.removeEventListener('dragstart', onPanzoomOffDragStart);
       });
     }
@@ -990,62 +938,13 @@ function openImageViewer(
     };
     imgEl.addEventListener('contextmenu', onContextMenu);
 
-    // Track pointer movement to distinguish click from pan
-    let pointerMoved = false;
-    let startX = 0;
-    let startY = 0;
-
-    const onPointerDown = (e: PointerEvent) => {
-      pointerMoved = false;
-      startX = e.clientX;
-      startY = e.clientY;
-    };
-    const onPointerMove = (e: PointerEvent) => {
-      if (
-        Math.abs(e.clientX - startX) > MOVE_THRESHOLD ||
-        Math.abs(e.clientY - startY) > MOVE_THRESHOLD
-      ) {
-        pointerMoved = true;
-      }
-    };
-
-    // Trackpad ghost clicks arrive up to ~1200ms after keypress (observed range: 179–1162ms)
-    // Disabled: monitoring for false dismissals. May re-enable (1500ms) in the future.
-    const GHOST_CLICK_WINDOW = 0;
-
-    // Click-to-dismiss (unless disabled) - works with or without panzoom
-    if (!isDismissDisabled) {
-      imgEl.addEventListener('pointerdown', onPointerDown);
-      imgEl.addEventListener('pointermove', onPointerMove);
-
-      const onImageClick = (e: MouseEvent) => {
-        if (pointerMoved) return;
-        // Ignore trackpad ghost clicks shortly after keyboard events (R, Space, etc.)
-        if (
-          Date.now() - Number(cloneEl.dataset.lastKeyTime || 0) <
-          GHOST_CLICK_WINDOW
-        )
-          return;
-        e.stopPropagation();
-        closeImageViewer(cloneEl, viewerCleanupFns, viewerClones);
-      };
-      imgEl.addEventListener('click', onImageClick);
-
-      const existingCleanup = viewerCleanupFns.get(cloneEl);
-      viewerCleanupFns.set(cloneEl, () => {
-        existingCleanup?.();
-        imgEl.removeEventListener('pointerdown', onPointerDown);
-        imgEl.removeEventListener('pointermove', onPointerMove);
-        imgEl.removeEventListener('click', onImageClick);
-        imgEl.removeEventListener('contextmenu', onContextMenu);
-      });
-    } else {
-      const existingCleanup = viewerCleanupFns.get(cloneEl);
-      viewerCleanupFns.set(cloneEl, () => {
-        existingCleanup?.();
-        imgEl.removeEventListener('contextmenu', onContextMenu);
-      });
-    }
+    // Pressing the image never dismisses — only the backdrop does, matching the
+    // native lightbox, whose media-container click handler skips image targets.
+    const existingCleanup = viewerCleanupFns.get(cloneEl);
+    viewerCleanupFns.set(cloneEl, () => {
+      existingCleanup?.();
+      imgEl.removeEventListener('contextmenu', onContextMenu);
+    });
 
     // Track multi-touch gesture state to prevent pinch from triggering close
     let gestureInProgress = false;
@@ -1094,25 +993,95 @@ function openImageViewer(
       if (isOpening) return;
       // On mobile, ignore clicks during or immediately after gesture
       if (isMobile && gestureInProgress) return;
-      // Ignore trackpad ghost clicks shortly after keyboard events (R, Space, etc.)
-      if (
-        Date.now() - Number(cloneEl.dataset.lastKeyTime || 0) <
-        GHOST_CLICK_WINDOW
-      )
-        return;
       if (e.target === cloneEl) {
         closeImageViewer(cloneEl, viewerCleanupFns, viewerClones);
       }
     };
 
-    // Desktop only: Escape to close (native mobile viewer has no Esc — tap to dismiss only)
+    // Desktop only: Escape or Space to close (native mobile viewer has no keys — tap to dismiss only)
     let onEscape: ((e: KeyboardEvent) => void) | null = null;
     if (!isMobile) {
       onEscape = (e: KeyboardEvent) => {
-        if (e.key !== 'Escape') return;
+        if (e.key !== 'Escape' && e.code !== 'Space') return;
         if (isConstrainedViewerInactive(cloneEl, viewerDoc)) return;
+        // Space would otherwise scroll the pane or re-activate the card underneath
+        e.preventDefault();
+        e.stopPropagation();
         closeImageViewer(cloneEl, viewerCleanupFns, viewerClones);
       };
+    }
+
+    // Arrow keys step through the card's navigable image set. The viewer index
+    // is independent — the card underneath never advances. Desktop always, plus
+    // tablets with a hardware keyboard; phones are excluded even when one is
+    // attached.
+    const canArrowNavigate =
+      !isMobile || (Platform.isTablet && hasPhysicalKeyboard());
+    let onArrowNav: ((e: KeyboardEvent) => void) | null = null;
+    let pendingNavError: (() => void) | null = null;
+
+    if (canArrowNavigate && imageSet && imageSet.urls.length > 1) {
+      const set = imageSet;
+
+      const clearPendingNavError = (): void => {
+        if (pendingNavError) {
+          imgEl.removeEventListener('error', pendingNavError);
+          pendingNavError = null;
+        }
+      };
+
+      const showIndex = (
+        index: number,
+        direction: 1 | -1,
+        attempts = 0
+      ): void => {
+        // Supersede the previous step — reassigning src fires no error for the
+        // aborted request, so a stale listener would survive and mark a
+        // perfectly good URL broken when a later step genuinely fails
+        clearPendingNavError();
+        currentIndex = index;
+        const url = set.urls[index];
+
+        const onNavError = (): void => {
+          pendingNavError = null;
+          if (!imgEl.isConnected) return; // Viewer closed mid-flight
+          markImageBroken(url);
+          if (attempts >= set.urls.length) return;
+          const retry = getNextImageIndex(index, direction, set.urls, (u) =>
+            brokenImageUrls.has(u)
+          );
+          if (retry !== -1) showIndex(retry, direction, attempts + 1);
+        };
+        const onNavLoad = (): void => {
+          clearPendingNavError();
+          gestureControls?.ensureGestures();
+        };
+
+        pendingNavError = onNavError;
+        imgEl.addEventListener('error', onNavError, { once: true });
+        imgEl.addEventListener('load', onNavLoad, { once: true });
+        gestureControls?.resetZoom();
+        imgEl.src = getCachedBlobUrl(url);
+        // title/alt belong to the initially embedded image — never reapply them
+        titlebarTextEl.setText(getImageDisplayName(url));
+      };
+
+      onArrowNav = (e: KeyboardEvent) => {
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        if (isConstrainedViewerInactive(cloneEl, viewerDoc)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const direction = e.key === 'ArrowRight' ? 1 : -1;
+        const next = getNextImageIndex(
+          currentIndex,
+          direction,
+          set.urls,
+          (url) => brokenImageUrls.has(url)
+        );
+        if (next === -1) return;
+        showIndex(next, direction);
+      };
+      viewerDoc.addEventListener('keydown', onArrowNav, true);
     }
 
     // Desktop only: ⌘+C to copy image
@@ -1222,6 +1191,13 @@ function openImageViewer(
     if (onCopy) viewerDoc.addEventListener('keydown', onCopy, true);
     cloneEl.addEventListener('click', onOverlayClick);
 
+    // stopPropagation keeps the click off the overlay-dismiss path
+    const onCloseClick = (e: MouseEvent) => {
+      e.stopPropagation();
+      closeImageViewer(cloneEl, viewerCleanupFns, viewerClones);
+    };
+    closeEl.addEventListener('click', onCloseClick);
+
     // Desktop-only: Alt+drag to drag image out of viewer
     let onAltKeyDown: ((e: KeyboardEvent) => void) | null = null;
     let onAltKeyUp: ((e: KeyboardEvent) => void) | null = null;
@@ -1302,7 +1278,11 @@ function openImageViewer(
       if (onBlockKeys)
         viewerDoc.removeEventListener('keydown', onBlockKeys, true);
       if (onCopy) viewerDoc.removeEventListener('keydown', onCopy, true);
+      if (onArrowNav)
+        viewerDoc.removeEventListener('keydown', onArrowNav, true);
+      if (pendingNavError) imgEl.removeEventListener('error', pendingNavError);
       cloneEl.removeEventListener('click', onOverlayClick);
+      closeEl.removeEventListener('click', onCloseClick);
       if (isMobile) {
         cloneEl.removeEventListener('touchstart', onTouchStart);
         cloneEl.removeEventListener('touchend', onTouchEnd);

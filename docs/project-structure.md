@@ -58,6 +58,7 @@ dynamic-views/
 │   │   ├── text-selection.ts         # Confines drag text selection to the card it started in
 │   │   ├── thumbnail-scrub.ts        # Touch scrubbing with slide animation + shared visibility reset IO for multi-image thumbnails
 │   │   ├── view-validation.ts        # ViewDefaults validation + cleanup
+│   │   ├── viewer-navigation.ts      # Pure index stepper for image viewer arrow navigation
 │   │   ├── virtual-scroll.ts         # Virtual scrolling: VirtualItem, syncVisibleItems
 │   │   └── youtube-preview.ts        # YouTube video ID extraction + thumbnail validation
 │   │
@@ -144,6 +145,7 @@ dynamic-views/
 │   │   ├── text-preview.test.ts
 │   │   ├── text-selection.test.ts
 │   │   ├── thumbnail-scrub.test.ts
+│   │   ├── viewer-navigation.test.ts
 │   │   ├── virtual-scroll.test.ts
 │   │   └── youtube-preview.test.ts
 │   ├── utils/

@@ -2,7 +2,7 @@
 title: Image navigation
 description: Card cover image slideshow — navigation, gesture detection, animation, preloading, failed image recovery, and visibility reset.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-10
+updated: 2026-08-07
 ---
 # Image navigation
 
@@ -11,6 +11,15 @@ See also: [`odkb/webkit-compositor-constraints.md`](https://github.com/churnish/
 ## Overview
 
 The slideshow system enables multi-image navigation on card covers in Grid and Masonry views. It supports arrow clicks, trackpad/wheel gestures, and touch swipes with animated transitions between images. The system spans two files: `src/core/slideshow.ts` (navigator, gesture detection, animation, preload, external blob cache) and `src/core/hover-and-touch.ts` (hover and touch interaction utilities). The renderer (`src/bases/shared-renderer.ts`) wires up the shared slideshow functions and owns the visibility reset IntersectionObserver.
+
+### Relationship to the image viewer
+
+The image viewer has its own desktop-only arrow navigation over the same image sets — see [Arrow navigation](image-viewer.md#arrow-navigation). Two boundaries matter:
+
+- **Indices are independent.** The viewer tracks its own index; stepping in the viewer never advances the card's navigator, and closing the viewer leaves the card where it was.
+- **The viewer holds a snapshot, not the card's live array.** `setViewerImageSet()` copies the array at render time, so the in-place splices this document's failed image handling performs cannot shift the viewer's indices mid-session.
+
+The two share the global `brokenImageUrls` skip set, but not the navigator's closure-private `failedIndices`.
 
 ## Files
 
@@ -90,7 +99,6 @@ If `isAnimating` when `navigate()` is called, `finishAnimation()` snaps the curr
 4. Clear `src` on the now-next element
 5. Update `currentIndex` to `activeNewIndex`
 6. Set `isAnimating = false`
-7. Call `updateBoundaryClasses()`
 
 ### Animation classes
 
@@ -141,13 +149,9 @@ Immediate full reset if `sign(deltaX)` changes. Always intentional.
 
 When testing wheel gestures via `dispatchEvent(new WheelEvent(...))` in DevTools, synchronous dispatches share gesture state — `navigatedThisGesture` persists across calls because the 150ms `gestureResetTimeout` never fires between them. Test navigation in isolation or add a 200ms delay between gesture sequences. Additionally, `e.defaultPrevented` is true for ALL horizontal wheel events that pass the hover intent guard (not just navigated ones), so it is not a reliable proxy for "navigation happened." Check `src` changes or animation classes instead.
 
-## noLoop clamping
+## Looping
 
-When `isSlideshowLoopingDisabled()` returns true (Style Settings toggle), navigation clamps at boundaries instead of wrapping:
-
-- `navigate()` returns early if `newIndex` would go out of bounds
-- The skip loop also clamps — if the next non-broken index would exceed bounds, navigation stops
-- Boundary classes (`.slideshow-at-first`, `.slideshow-at-last`) dim the corresponding nav arrow via CSS
+Navigation always wraps — forward past the last image returns to the first, backward past the first goes to the last. The skip loop for broken entries wraps the same way, bounded by an exhaustion guard. There is no opt-out: the former "Do not loop" Style Settings toggles (cover and thumbnail) were removed, along with the boundary classes and dimmed-arrow styling that only existed to signal the clamped ends.
 
 ## Touch swipe
 
@@ -254,16 +258,7 @@ The renderer uses `getOwnerWindow(slideshowEl).IntersectionObserver` to construc
 
 ### `reset()` behavior
 
-`reset()` returns early if `isAnimating` is true. Otherwise it finds the first non-broken image index, sets `currentIndex`, clears `failedIndices`, clears `lastWrapFromFirstTimestamp`, updates the current image `src`, and calls `updateBoundaryClasses()`. It also fires the `onSlideChange` callback via a `load` event listener on the current image after setting the new `src`.
-
-## Boundary classes
-
-| Class                 | Condition                     | Purpose                           |
-| --------------------- | ----------------------------- | --------------------------------- |
-| `.slideshow-at-first` | `currentIndex === 0`          | CSS dims left arrow when no-loop  |
-| `.slideshow-at-last`  | `currentIndex === length - 1` | CSS dims right arrow when no-loop |
-
-Applied to `.card-cover-slideshow` (parent of image embed). Updated by `updateBoundaryClasses()` after every index change. Dimming only activates when `body.dynamic-views-slideshow-disable-looping` is present (Style Settings toggle).
+`reset()` returns early if `isAnimating` is true. Otherwise it finds the first non-broken image index, sets `currentIndex`, clears `failedIndices`, clears `lastWrapFromFirstTimestamp` and updates the current image `src`. It also fires the `onSlideChange` callback via a `load` event listener on the current image after setting the new `src`.
 
 ## External blob cache
 

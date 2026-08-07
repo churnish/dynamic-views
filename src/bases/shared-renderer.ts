@@ -71,6 +71,7 @@ import { findLinksInText, type ParsedLink } from '../utils/link-parser';
 import {
   handleImageViewerTrigger,
   cleanupAllViewers,
+  setViewerImageSet,
 } from '../core/image-viewer';
 import { applyIconOpticalOffset } from '../core/icon-alignment';
 import { getFileExtInfo, getFileTypeIcon } from '../utils/file-extension';
@@ -1893,6 +1894,12 @@ export class SharedCardRenderer {
       'dynamic-views-image-embed'
     );
 
+    // imageUrls is already capped by getSlideshowMaxImages() at the call site
+    setViewerImageSet(imageEmbedContainer, {
+      urls: imageUrls,
+      format: 'slideshow',
+    });
+
     // Add zoom handler
     const cardEl = slideshowEl.closest('.card') as HTMLElement;
     imageEmbedContainer.addEventListener(
@@ -2109,6 +2116,14 @@ export class SharedCardRenderer {
       !isThumbnailScrubbingDisabled()
         ? imageUrls.slice(0, 10)
         : null;
+
+    // scrubbableUrls already encodes the thumbnail + multi-image + scrubbing gate
+    if (scrubbableUrls) {
+      setViewerImageSet(imageEmbedContainer, {
+        urls: scrubbableUrls,
+        format: 'thumbnail',
+      });
+    }
 
     // Fallback to next valid image if current fails (for multi-image cards)
     if (imageUrls.length > 1) {
