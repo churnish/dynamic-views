@@ -281,7 +281,7 @@
   /* Property name (above mode) */
   .property-name {
     font-size: var(
-      --dynamic-views-property-name-font-size,
+      --dynamic-views-property-name-size-value,
       var(--dynamic-views-font-ui-smaller)
     );
     font-family: var(--dynamic-views-property-name-font, inherit);
@@ -294,7 +294,7 @@
   /* Property name inline - as sibling of property-content */
   .property-name-inline {
     font-size: var(
-      --dynamic-views-property-name-font-size,
+      --dynamic-views-property-name-size-value,
       var(--dynamic-views-font-ui-smaller)
     );
     font-family: var(--dynamic-views-property-name-font, inherit);
@@ -315,16 +315,6 @@
 }
 .dynamic-views .card.interact .property a.external-link:is(:hover, :active) {
   color: var(--dynamic-views-link-external-color-hover);
-}
-
-/* Property link hover: list (immediate) */
-@media (any-hover: hover) {
-  .dynamic-views .list-properties .property a.internal-link:hover {
-    color: var(--dynamic-views-link-color-hover);
-  }
-  .dynamic-views .list-properties .property a.external-link:hover {
-    color: var(--dynamic-views-link-external-color-hover);
-  }
 }
 
 /* Right alignment for full-row properties with inline names - value only */
@@ -352,10 +342,23 @@ body.dynamic-views-property-name-case-uppercase
   text-transform: uppercase;
 }
 
+body.dynamic-views-property-name-case-title .dynamic-views .property-name,
+body.dynamic-views-property-name-case-title
+  .dynamic-views
+  .property-name-inline {
+  text-transform: capitalize;
+}
+
 /* Property name bold */
 body.dynamic-views-property-name-bold .dynamic-views .property-name,
 body.dynamic-views-property-name-bold .dynamic-views .property-name-inline {
   font-weight: var(--dynamic-views-font-semibold);
+}
+
+/* Property name italic */
+body.dynamic-views-property-name-italic .dynamic-views .property-name,
+body.dynamic-views-property-name-italic .dynamic-views .property-name-inline {
+  font-style: italic;
 }
 
 /* Property name small caps */
@@ -366,11 +369,63 @@ body.dynamic-views-property-name-small-caps
   font-variant: small-caps;
 }
 
+/* Property value traits are scoped to the property rows. A property-driven
+   subtitle also renders .property-content, and must follow the Subtitle
+   settings rather than these. */
+
+/* Property value bold */
+body.dynamic-views-property-bold
+  .dynamic-views
+  .card-properties
+  .property-content {
+  font-weight: calc(
+    var(--dynamic-views-font-weight) + var(--dynamic-views-bold-modifier)
+  );
+}
+
+/* Property value italic */
+body.dynamic-views-property-italic
+  .dynamic-views
+  .card-properties
+  .property-content {
+  font-style: italic;
+}
+
+/* Property value small caps */
+body.dynamic-views-property-small-caps
+  .dynamic-views
+  .card-properties
+  .property-content {
+  font-variant: small-caps;
+}
+
+/* Property value case transformations */
+body.dynamic-views-property-case-lowercase
+  .dynamic-views
+  .card-properties
+  .property-content {
+  text-transform: lowercase;
+}
+
+body.dynamic-views-property-case-uppercase
+  .dynamic-views
+  .card-properties
+  .property-content {
+  text-transform: uppercase;
+}
+
+body.dynamic-views-property-case-title
+  .dynamic-views
+  .card-properties
+  .property-content {
+  text-transform: capitalize;
+}
+
 .dynamic-views {
   /* Properties container */
   .card-properties {
     font-size: var(
-      --dynamic-views-property-font-size,
+      --dynamic-views-property-size-value,
       var(--dynamic-views-font-ui-small)
     );
     color: var(--dynamic-views-text-faint);
@@ -487,7 +542,7 @@ body.dynamic-views-property-name-small-caps
 /* Segment underline hover: list + group headings (immediate) */
 @media (any-hover: hover) {
   .dynamic-views
-    :is(.list-item, .list-properties, .bases-group-heading)
+    :is(.list-item, .bases-group-heading)
     :is(.folder-segment, .filename-segment):hover {
     text-decoration: underline;
   }

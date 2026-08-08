@@ -4,7 +4,6 @@ import { applyPerParagraphClamp } from './text-preview-dom';
 import { getOwnerWindow } from '../utils/owner-window';
 
 const CLIP_HIDDEN_CLASS = 'poster-clip-hidden';
-const CLIP_CLAMPED_CLASS = 'poster-clip-clamped';
 const HAS_PARAGRAPHS_CLASS = 'has-paragraphs';
 const TEXT_PREVIEW_LINES_VAR = '--dynamic-views-text-preview-lines';
 const TITLE_LINES_VAR = '--dynamic-views-title-lines';
@@ -17,17 +16,22 @@ const TEXT_TARGET_SELECTOR =
 /**
  * Calculates how many full lines fit in the available height and applies
  * a line clamp via CSS variable. Returns true if at least 1 line fits.
+ *
+ * `cap` is the inherited line count from the container — clipping may only ever
+ * reduce a line count, never raise it above what the user configured. `NaN` means
+ * no container value exists, so the fitted count wins.
  */
 function clampToFit(
   el: HTMLElement,
   availableHeight: number,
   lineHeight: number,
-  cssVar: string
+  cssVar: string,
+  cap: number
 ): boolean {
   if (!lineHeight || lineHeight <= 0) return false;
-  const maxLines = Math.floor(availableHeight / lineHeight);
-  if (maxLines < 1) return false;
-  el.setCssProps({ [cssVar]: String(maxLines) });
+  const fits = Math.floor(availableHeight / lineHeight);
+  if (fits < 1) return false;
+  el.setCssProps({ [cssVar]: String(isNaN(cap) ? fits : Math.min(fits, cap)) });
   return true;
 }
 
@@ -89,6 +93,9 @@ interface PosterClipMeasured {
   textPreviewLineHeight: number;
   subtitleLineHeight: number;
   titleLineHeight: number;
+  titleLinesCap: number;
+  subtitleLinesCap: number;
+  textPreviewLinesCap: number;
 }
 
 /** Clears previous clip state and collects clippable elements. Returns null if clipping is inapplicable. */
@@ -112,7 +119,6 @@ function clearPosterClipState(cardEl: HTMLElement): PosterClipPrepared | null {
   if (header) {
     subtitleEl = header.querySelector<HTMLElement>('.card-subtitle');
     if (subtitleEl) {
-      subtitleEl.classList.remove(CLIP_CLAMPED_CLASS);
       subtitleEl.style.removeProperty(SUBTITLE_LINES_VAR);
       clippable.push(subtitleEl);
     }
@@ -187,6 +193,13 @@ function measurePosterClipGeometry(
     ? parseFloat(win.getComputedStyle(titleEl).lineHeight)
     : 0;
 
+  // Inherited line-count caps — read once here (read phase) so the write phase
+  // stays free of style reads. See poster.md invariant 6.
+  const containerEl = cardEl.closest('.dynamic-views');
+  const containerStyle = containerEl ? win.getComputedStyle(containerEl) : null;
+  const readCap = (v: string) =>
+    parseInt(containerStyle?.getPropertyValue(v) ?? '', 10);
+
   return {
     clipBottom,
     rects,
@@ -194,6 +207,9 @@ function measurePosterClipGeometry(
     textPreviewLineHeight,
     subtitleLineHeight,
     titleLineHeight,
+    titleLinesCap: readCap(TITLE_LINES_VAR),
+    subtitleLinesCap: readCap(SUBTITLE_LINES_VAR),
+    textPreviewLinesCap: readCap(TEXT_PREVIEW_LINES_VAR),
   };
 }
 
@@ -211,6 +227,9 @@ function applyPosterClipDecisions(
     textPreviewLineHeight,
     subtitleLineHeight,
     titleLineHeight,
+    titleLinesCap,
+    subtitleLinesCap,
+    textPreviewLinesCap,
   } = measured;
 
   for (let i = clippable.length - 1; i >= 0; i--) {
@@ -229,7 +248,8 @@ function applyPosterClipDecisions(
             textPreviewEl,
             availableHeight,
             textPreviewLineHeight,
-            TEXT_PREVIEW_LINES_VAR
+            TEXT_PREVIEW_LINES_VAR,
+            textPreviewLinesCap
           )
         ) {
           if (textPreviewEl.classList.contains(HAS_PARAGRAPHS_CLASS)) {
@@ -239,18 +259,17 @@ function applyPosterClipDecisions(
         }
       }
 
-      if (el === subtitleEl) {
-        if (
-          clampToFit(
-            el,
-            availableHeight,
-            subtitleLineHeight,
-            SUBTITLE_LINES_VAR
-          )
-        ) {
-          el.classList.add(CLIP_CLAMPED_CLASS);
-          continue;
-        }
+      if (
+        el === subtitleEl &&
+        clampToFit(
+          el,
+          availableHeight,
+          subtitleLineHeight,
+          SUBTITLE_LINES_VAR,
+          subtitleLinesCap
+        )
+      ) {
+        continue;
       }
     }
 
@@ -260,7 +279,13 @@ function applyPosterClipDecisions(
   if (titleEl && titleRect && titleRect.bottom > clipBottom) {
     const availableHeight = clipBottom - titleRect.top;
     if (availableHeight > 0) {
-      clampToFit(titleEl, availableHeight, titleLineHeight, TITLE_LINES_VAR);
+      clampToFit(
+        titleEl,
+        availableHeight,
+        titleLineHeight,
+        TITLE_LINES_VAR,
+        titleLinesCap
+      );
     }
   }
 }
@@ -315,7 +340,6 @@ export function resetPosterClipping(cardEl: HTMLElement): void {
   // Reset subtitle line clamp override
   const subtitleEl = cardEl.querySelector<HTMLElement>('.card-subtitle');
   if (subtitleEl) {
-    subtitleEl.classList.remove(CLIP_CLAMPED_CLASS);
     subtitleEl.style.removeProperty(SUBTITLE_LINES_VAR);
   }
 }
@@ -341,7 +365,7 @@ export function resetPosterScroll(cardEl: HTMLElement): void {
     parseFloat(win.getComputedStyle(contentEl).transitionDuration) * 1000 ||
     300;
   let settled = false;
-  const fallback = setTimeout(() => {
+  const fallback = window.setTimeout(() => {
     if (!settled) {
       settled = true;
       reset();
@@ -352,7 +376,7 @@ export function resetPosterScroll(cardEl: HTMLElement): void {
     if (e.target !== contentEl) return;
     if (settled) return;
     settled = true;
-    clearTimeout(fallback);
+    window.clearTimeout(fallback);
     contentEl.removeEventListener('transitionend', onEnd);
     reset();
   };

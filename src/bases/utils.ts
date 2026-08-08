@@ -958,7 +958,9 @@ export function handleTemplateToggle(
   viewType: 'grid' | 'masonry',
   plugin: DynamicViews,
   initializedRef: { value: boolean },
-  cooldownTimerRef: { value: ReturnType<typeof setTimeout> | null }
+  // Union accommodates callers still holding NodeJS.Timeout-typed refs; this
+  // function only ever writes window.setTimeout's number handle.
+  cooldownTimerRef: { value: ReturnType<typeof setTimeout> | number | null }
 ): void {
   const isTemplate = config.get('isTemplate') === true;
 
@@ -968,7 +970,7 @@ export function handleTemplateToggle(
     initializedRef.value = true;
     if (isTemplate) {
       config.set('isTemplate', undefined);
-      cooldownTimerRef.value = setTimeout(() => {
+      cooldownTimerRef.value = window.setTimeout(() => {
         cooldownTimerRef.value = null;
       }, 3000);
     }
@@ -984,7 +986,7 @@ export function handleTemplateToggle(
   // During cooldown, skip — phantom re-fires from debounced-write/file-reload race
   if (cooldownTimerRef.value !== null) return;
 
-  cooldownTimerRef.value = setTimeout(() => {
+  cooldownTimerRef.value = window.setTimeout(() => {
     cooldownTimerRef.value = null;
   }, 3000);
 

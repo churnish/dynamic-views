@@ -28,6 +28,7 @@ export interface ViewDefaults {
   titleProperty: string;
   titleLines: number;
   subtitleProperty: string;
+  subtitleLines: number;
   // Position-based title/subtitle
   displayFirstAsTitle: boolean;
   displaySecondAsSubtitle: boolean;
@@ -55,6 +56,8 @@ export interface ViewDefaults {
   urlProperty: string;
   // Other
   minimumColumns: 1 | 2;
+  cardGapDesktop: number;
+  cardGapPhone: number;
   cssclasses: string;
 }
 

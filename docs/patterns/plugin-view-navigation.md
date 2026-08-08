@@ -2,7 +2,7 @@
 title: Plugin view navigation
 description: Definitive reference for navigating Dynamic Views plugin views and elements across platforms — view identification, DOM hierarchy, correct selectors, full-screen elements, and platform-specific probing patterns.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-05
+updated: 2026-08-09
 ---
 # Plugin view navigation
 
@@ -140,9 +140,12 @@ leaf.view.containerEl.querySelectorAll('.dynamic-views .card').length
 | `dynamic-views-bases-container` | Bases backend container |
 | `dynamic-views-paired-property-column` | Paired property column layout active |
 | `poster-mode-fade` | Poster fade display mode |
+| `poster-static` | Interact-to-reveal OFF — content is clipped to fit rather than scrollable |
 | `image-fit-crop` | Image fit mode: crop |
 | `image-fit-contain` | Image fit mode: contain |
 | `is-grouped` | View has groupBy enabled |
+| `title-single-line` | `titleLines` is 1 |
+| `subtitle-scroll` | `subtitleLines` is 1 AND the subtitle scroll body class is set — gates both the scroll rules and their wrap counterparts |
 
 ## Toolbar structure
 

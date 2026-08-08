@@ -408,7 +408,7 @@ export function setupHoverKeyboardNavigation(
   // Deferred attach — container ref is null at init for all 3 call sites.
   // Polls until mounted, then binds to the correct document (popout-safe).
   let listenerDoc: Document | null = null;
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  let timeoutId: number | null = null;
 
   const attach = () => {
     const doc = getContainerRef()?.ownerDocument ?? document;
@@ -427,14 +427,14 @@ export function setupHoverKeyboardNavigation(
     if (getContainerRef()) {
       attach();
     } else {
-      timeoutId = setTimeout(waitForContainer, 0);
+      timeoutId = window.setTimeout(waitForContainer, 0);
     }
   };
   waitForContainer();
 
   return {
     cleanup: () => {
-      if (timeoutId !== null) clearTimeout(timeoutId);
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
       if (listenerDoc)
         listenerDoc.removeEventListener('keydown', handleKeydown, {
           capture: true,

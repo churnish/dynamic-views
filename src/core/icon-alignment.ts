@@ -71,9 +71,9 @@ export function applyIconOpticalOffset(container: HTMLElement): boolean {
   // desktop perceptual correction. CSS 1em = pre-boost SpecifiedFontSize,
   // getComputedStyle().fontSize = boosted value.
   if (Platform.isAndroidApp) {
-    const boostProbe = wrapper.ownerDocument.createElement('span');
-    boostProbe.classList.add('dynamic-views-boost-probe');
-    wrapper.appendChild(boostProbe);
+    const boostProbe = wrapper.createSpan({
+      cls: 'dynamic-views-boost-probe',
+    });
     const preBoost = boostProbe.getBoundingClientRect().width;
     boostProbe.remove();
 

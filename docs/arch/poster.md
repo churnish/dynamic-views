@@ -2,7 +2,7 @@
 title: Poster image format
 description: Poster image format architecture — static content clipping, scroll reset, tap-to-reveal, hover intent, display mode switching, and the CSS-only vs full-render setting boundary.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-12
+updated: 2026-08-09
 ---
 # Poster image format
 
@@ -18,6 +18,22 @@ Poster cards have two visual display modes controlled by the `posterDisplayMode`
 | **Overlay** | `poster-mode-overlay` | Full card height | Image dimmed via `filter: brightness()` |
 
 Both modes are purely CSS. Switching between them changes the available content area, which affects static clipping calculations.
+
+### Fade tint
+
+The fade gradient is a real DOM element (`.poster-gradient`) created in `shared-renderer.ts` — not an `::after` pseudo-element, which forces async compositor layer creation and a 1-3 frame blank flash on WebKit virtual scroll remount.
+
+Its color comes from the `dynamic-views-poster-fade-tint` Style Settings `class-select` (Light / Dark / Match theme, default dark), which is independent of the overlay tint:
+
+| Value | Body class | `--dynamic-views-poster-fade-rgb` | Text |
+|---|---|---|---|
+| Dark (default) | `dynamic-views-poster-fade-dark` | `0 0 0` | `#fafafa` / `#f5f5f5` |
+| Light | `dynamic-views-poster-fade-light` | `255 255 255` | `#0a0a0a` / `#141414` |
+| Match theme | `dynamic-views-poster-fade-match` | follows `body.theme-dark` / `body.theme-light` | follows |
+
+Both the gradient stops and the fade-mode text color overrides (`--text-normal`, `--text-muted`, `--text-faint` and their `--dynamic-views-*` twins) read these variables, so light fade flips the text dark in the same rule. The variables are set on `.card.image-format-poster.has-poster` and inherit down to `.poster-gradient`.
+
+The tint is a repaint-only setting — it is deliberately absent from `getStyleSettingsHash()` so toggling it does not re-render cards or reset scroll.
 
 ## Static vs interactive
 
@@ -41,7 +57,7 @@ clipPosterStaticOverflowBatch(cards)  — batched (1 reflow instead of K)
 ├── clearPosterClipState(cardEl) → PosterClipPrepared | null  [WRITE]
 │   ├── Remove .poster-clip-hidden from all elements
 │   ├── Reset --dynamic-views-title-lines on .card-title
-│   ├── Reset --dynamic-views-subtitle-lines + .poster-clip-clamped on .card-subtitle
+│   ├── Reset --dynamic-views-subtitle-lines on .card-subtitle
 │   ├── Reset --dynamic-views-text-preview-lines on .card-text-preview
 │   │   └── Re-apply per-paragraph clamp if has-paragraphs
 │   ├── No .card-content → return null
@@ -56,7 +72,7 @@ clipPosterStaticOverflowBatch(cards)  — batched (1 reflow instead of K)
     ├── Element fully below clip boundary → add .poster-clip-hidden
     ├── Element partially visible:
     │   ├── Text preview → clampToFit() with --dynamic-views-text-preview-lines
-    │   └── Subtitle → clampToFit() with --dynamic-views-subtitle-lines + .poster-clip-clamped
+    │   └── Subtitle → clampToFit() with --dynamic-views-subtitle-lines
     └── Title (never hidden) → clampToFit() with --dynamic-views-title-lines
 ```
 
@@ -79,7 +95,9 @@ All three clampable text elements (title, subtitle, text preview) use CSS variab
 - `--dynamic-views-subtitle-lines`
 - `--dynamic-views-text-preview-lines`
 
-Subtitle additionally gets the `poster-clip-clamped` class, which provides `display: -webkit-box` (title and text preview already have this in their base CSS rules).
+All three elements carry their own clamp in base CSS, so poster only overwrites the variable. The subtitle's clamp lives on its `.property-content-wrapper` rather than on `.card-subtitle` itself — the subtitle is a flex item and cannot host a `-webkit-box` — but the variable is written on `.card-subtitle` and inherits down.
+
+`clampToFit()` never raises a line count: it caps its result at the container's value for that variable, read once per card during the measure phase. Poster reduces to fit, it does not override the per-view setting.
 
 ### Call sites
 
@@ -208,3 +226,5 @@ The `dynamic-views-poster-uniform-height` body class (class-toggle in Style Sett
 9. `clearPosterClipState` does NOT guard on `has-poster` — callers are responsible for passing the right cards.
 10. New Style Settings body-class toggles that affect rendering MUST be added to `getStyleSettingsHash()` — without hash inclusion, the body class observer's dedup gate silently swallows the change.
 11. `stretchPosterCardsInMixedRows` MUST clear stale stretch state before early-returning for uniform height — otherwise `poster-stretch` class and CSS vars persist from a previous run.
+12. `clampToFit` MUST NOT exceed the container's line-count value. The cap is read in the measure phase, never in the write phase — a `getComputedStyle` call during writes would break invariant 6 and force one style recalc per card in the batch path.
+13. Content is only scrollable outside `poster-static`. Scrolling is gated behind interact-to-reveal on every platform, not just touch, so poster cards do not behave differently by input device — see the rationale comment in `card/_poster.scss`.

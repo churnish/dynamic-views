@@ -25,6 +25,7 @@ import {
   getCardSpacing,
   getCompactBreakpoint,
   clearStyleSettingsCache,
+  getStyleSettingsLayoutHash,
 } from '../utils/style-settings';
 import {
   CSS_ONLY_SETTINGS_KEYS,
@@ -1189,6 +1190,8 @@ export class DynamicViewsGridView extends BasesView {
         groupOrderHash +
         '\0\0' +
         styleSettingsHash +
+        '\0\0' +
+        getStyleSettingsLayoutHash() +
         '\0\0' +
         collapsedHash +
         '\0\0' +

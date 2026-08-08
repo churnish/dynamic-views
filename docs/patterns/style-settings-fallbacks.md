@@ -2,7 +2,7 @@
 title: Style Settings fallback selectors
 description: Patterns for CSS defaults that work with or without the Style Settings plugin installed.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-05
+updated: 2026-08-09
 ---
 # Style Settings fallback selectors
 
@@ -64,7 +64,7 @@ body:not(
 
 This eliminates the need for a body class on the default mode entirely. The plugin JS never adds the default class — Style Settings manages the non-default classes, and the CSS baseline handles the rest.
 
-This pattern also avoids the `initClasses` race: Style Settings' `initClasses` adds the `@settings` `default:` class to body, then applies the stored value without removing the default. Both classes coexist. By not depending on a body class for the default mode, the race is structurally impossible.
+Style Settings v1.0.9 `initClasses()` adds exactly one class per `class-select` — the stored value, else the `@settings` `default:`, else none. There is no window where two classes from the same group coexist. The `:not()` exclusion is still preferred, but on its own merits (works without Style Settings installed, no default class to manage), not as a race workaround.
 
 Prefer `:not()` exclusion over `:is()` + `:not([class*="..."])` when the default mode needs CSS overrides and all non-default modes are known. Use the `:is()` pattern when the default has a named class that Style Settings explicitly manages.
 
@@ -85,6 +85,14 @@ const isFixedHeightActive =
 ```
 
 The positive check returns `false` when Style Settings is absent (no body class), causing JS to take the "off" path while CSS takes the "on" path — a silent disagreement. The inverted check returns `true` for the same state, matching CSS.
+
+## `class-select` — never reuse a `variable-text` id
+
+When converting a `variable-text` setting to a `class-select`, the `class-select` MUST get a **fresh id**. Style Settings' `initClasses()` calls `body.classList.add(storedValue)` for every `class-select` id it finds in its stored config. If a user previously stored a text value under that id (e.g., `0.9em`), `classList.add('0.9em')` throws `InvalidCharacterError` — which aborts `initClasses()` and breaks class initialization for **every** Style Settings option, not just the converted one.
+
+Allocating a new id sidesteps this: `setConfig()` deletes orphaned stored settings on load, so the old text value is discarded without migration code. The trade-off is that the user's old custom value is lost — mention it in the release notes.
+
+Example: `dynamic-views-title-font-size` (`variable-text`) was retired and replaced by `dynamic-views-title-size` (`class-select`) plus `dynamic-views-title-size-custom` (`variable-text`).
 
 ## `class-select` — `allowEmpty` gotcha
 
@@ -177,6 +185,14 @@ The `default:` field in the `@settings` YAML only controls the slider's initial 
 1. Every consumer of the variable MUST include a fallback value matching the `default:` in `@settings`.
 2. If multiple consumers read the same variable, resolve it once into a local variable with the fallback, then reference the local variable downstream.
 
+### Prefer the slider over `variable-number`
+
+Style Settings renders `variable-number` as a bare `<input type="text">` — no `min`, `max`, `step` or `inputMode`, and nothing rejects letters. `variable-number-slider` renders `<input type="range">`, which enforces the numeric range.
+
+- **Use the slider for every numeric option.** `variable-number` only makes sense where arbitrary text is genuinely acceptable.
+- **Read defensively anyway.** A text-typed value, a unit suffix, or a value stored before the type changed can all reach the consumer. Parse with `parseFloat` and fall back to the documented default rather than trusting the field.
+- **Out-of-range stored values survive a type change.** The slider clamps what it *displays*, but the emitted CSS variable keeps the old value until the user moves the control.
+
 ## Body-level variable + attribute selector gate
 
 When multiple `class-select` presets all resolve to a single CSS variable consumed by one rule, use a `[class*=...]` attribute selector gate to prevent IACVT (invalid at computed value time) when no preset class is present.
@@ -241,6 +257,23 @@ Re-renders from Style Settings changes are disruptive — they reset scroll posi
 - **CSS-only toggles** (hover zoom, poster mode, cursor) — body class changes are picked up by CSS automatically.
 - **JS event listener targets** — design listeners to work without rebinding. Example: `setupHoverZoomEligibility` always listens on `cardEl`.
 
+### Geometry-only settings: `getStyleSettingsLayoutHash()`
+
+Some settings change card *geometry* without changing card *content*. Masonry has no per-card `ResizeObserver`, so such a change leaves stale card positions until something forces a relayout.
+
+Everything that alters text metrics qualifies: font size presets, and the Bold / Italic / Small caps / Case toggles on every text element. `TEXT_METRIC_CLASS_PATTERN` matches all of them. Colour, alignment and visibility settings do NOT belong here — they repaint without changing box sizes.
+
+These belong in `getStyleSettingsLayoutHash()` ([style-settings.ts](../../src/utils/style-settings.ts)), NOT in `getStyleSettingsHash()`:
+
+- `getStyleSettingsHash()` gates the text preview cache wipe in [grid-view.ts](../../src/bases/grid-view.ts) and [masonry-view.ts](../../src/bases/masonry-view.ts). Adding a geometric setting there would force re-extraction of every card's text preview from file content.
+- `getStyleSettingsLayoutHash()` is appended to `renderHash` only, so the layout re-runs while cached previews survive.
+
+Both hashes are concatenated in `setupStyleSettingsObserver` so either kind of change fires the callback. The layout hash reads `document.body.className` and regex-matches the classes — no `getComputedStyle` calls per render cycle. Custom values typed into the `-custom` text fields are already covered by the stylesheet observer.
+
+When adding a metric-affecting setting to a new element, extend the element-stem alternation in `TEXT_METRIC_CLASS_PATTERN`. Longer stems MUST precede their own prefixes (`property-name` before `property`, the `group-*` stems before `property`/`title`), otherwise the shorter alternative matches first and the class is missed.
+
+Font *family* settings are still not covered: they are `variable-text`, so they set a CSS variable rather than a body class and are invisible to a `className` match. They reach the plugin through the stylesheet observer, which fires `onStyleChange()` unconditionally.
+
 ## Current fallbacks
 
 ### `class-select` (CSS)
@@ -248,6 +281,7 @@ Re-renders from Style Settings changes are disruptive — they reset scroll posi
 | Setting                   | Default        | Fallback file                                                    |
 | ------------------------- | -------------- | ---------------------------------------------------------------- |
 | Poster overlay tint       | dark           | [_poster.scss](../../styles/card/_poster.scss)                                                   |
+| Poster fade tint          | dark           | [_poster.scss](../../styles/card/_poster.scss) — `:not(-light, -match)` enumeration (fires for `-dark` and no class) |
 | Cover background          | dimmed         | [_cover-placeholders.scss](../../styles/card/_cover-placeholders.scss), [_cover-elements.scss](../../styles/card/_cover-elements.scss)               |
 | Poster background         | dimmed         | [_poster.scss](../../styles/card/_poster.scss)                                                   |
 | Show cover placeholder    | Grid           | [_cover-side.scss](../../styles/card/_cover-side.scss), [_cover-placeholders.scss](../../styles/card/_cover-placeholders.scss)                   |
@@ -259,6 +293,8 @@ Re-renders from Style Settings changes are disruptive — they reset scroll posi
 | Fixed poster height      | Grid (slider)  | [_poster.scss](../../styles/card/_poster.scss) — `:not(-masonry, -none)` exclusion (fires for `-grid`, `-both`, and no class) |
 | Omit first line           | ifMatchesTitle | No CSS fallback needed — JS default via `getOmitFirstLineMode()` |
 | View background           | Default        | No CSS fallback needed — natural baseline (transparent, no rule fires) |
+| Font size (8 settings)    | per element    | No CSS fallback needed — natural baseline, `var(--…-size-value, <theme default>)` resolves when no class is present |
+| Group header color (3 settings) | per element | No CSS fallback needed — natural baseline, `var(--…-color-value, <theme default>)` resolves when no class is present |
 
 Note: "Show cover placeholder" uses the fallback only in Grid sections. Masonry sections intentionally omit the `:not()` arm because Masonry's default is "no placeholders" — the natural CSS baseline (no rule needed).
 
@@ -279,6 +315,7 @@ Note: "Show cover placeholder" uses the fallback only in Grid sections. Masonry 
 | Do not lift (card hover) | `dynamic-views-card-hover-disable-elevate`      | [_hover-and-touch.scss](../../styles/_hover-and-touch.scss) |
 | Poster reveal zoom       | `dynamic-views-poster-disable-reveal-zoom`      | [_poster.scss](../../styles/card/_poster.scss)       |
 | Image viewer fullscreen  | `dynamic-views-image-viewer-constrain-to-pane` | [_image-viewer.scss](../../styles/_image-viewer.scss) |
+| Image viewer file name   | `dynamic-views-image-viewer-hide-filename`      | [_image-viewer.scss](../../styles/_image-viewer.scss) |
 | Cover hover zoom         | `dynamic-views-cover-disable-hover-zoom`        | [_cover-elements.scss](../../styles/card/_cover-elements.scss) |
 
 ### `class-toggle` — `.css-settings-manager` gate (CSS)

@@ -4,7 +4,7 @@
 
 import { getCachedBlobUrl, preloadImageBatch } from './slideshow';
 import { isTouchPointer } from './hover-and-touch';
-import { getOwnerWindow } from '../utils/owner-window';
+import { getOwnerWindow, type OwnerWindow } from '../utils/owner-window';
 import { markImageBroken } from './image-loader';
 import {
   SCRUB_DIRECTION_THRESHOLD,
@@ -46,7 +46,7 @@ export function applyScrubImage(imgEl: HTMLImageElement, rawUrl: string): void {
 
 interface ThumbnailAnimState {
   isAnimating: boolean;
-  timeout: ReturnType<typeof setTimeout> | null;
+  timeout: number | null;
   exitClass: string;
   enterClass: string;
 }
@@ -60,7 +60,7 @@ function finishThumbnailAnimation(
   if (!state.isAnimating) return;
 
   if (state.timeout !== null) {
-    clearTimeout(state.timeout);
+    window.clearTimeout(state.timeout);
     state.timeout = null;
   }
 
@@ -253,7 +253,7 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
 
         currentIndex = newIndex;
 
-        animState.timeout = setTimeout(() => {
+        animState.timeout = window.setTimeout(() => {
           animState.timeout = null;
           finishThumbnailAnimation(animState, thumbEl);
           thumbEl.dataset.scrubbedSrc = getCachedBlobUrl(
@@ -284,7 +284,7 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
           once: true,
           capture: true,
         });
-        setTimeout(
+        window.setTimeout(
           () =>
             opts.cardEl.removeEventListener('click', suppress, {
               capture: true,
@@ -373,9 +373,7 @@ const resetState = new WeakMap<
 >();
 
 /** Get or create a shared per-window IO for thumbnail visibility reset. */
-function getResetObserver(
-  win: Window & typeof globalThis
-): IntersectionObserver {
+function getResetObserver(win: OwnerWindow): IntersectionObserver {
   let observer = resetObservers.get(win);
   if (observer) return observer;
 

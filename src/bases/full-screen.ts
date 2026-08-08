@@ -81,7 +81,7 @@ export interface FullScreenElements {
 
 // Capacitor StatusBar plugin — hides/shows iOS system status bar elements
 const capacitorStatusBar = (
-  globalThis as {
+  window as {
     Capacitor?: {
       Plugins?: {
         StatusBar?: { show(): Promise<void>; hide(): Promise<void> };
@@ -156,16 +156,16 @@ export class FullScreenController {
   // position must subtract viewPadding to land at the correct viewport offset.
   private viewPadding = 12;
   private pendingLayout: (() => void) | null = null;
-  private scrollIdleTimer: ReturnType<typeof setTimeout> | null = null;
-  private spacerResolveTimer: ReturnType<typeof setTimeout> | null = null;
+  private scrollIdleTimer: number | null = null;
+  private spacerResolveTimer: number | null = null;
   private isActiveHider = false;
   private pendingRafId: number | null = null;
   private searchSyncRafId: number | null = null;
   private lastToggleTime = 0;
   private directionChangeTime = 0;
   private lockedScrollHeight = 0;
-  private resizeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-  private resizeVerifyTimer: ReturnType<typeof setTimeout> | null = null;
+  private resizeDebounceTimer: number | null = null;
+  private resizeVerifyTimer: number | null = null;
   // True during orientation change debounce — suppresses show/hide decisions
   // in the scroll handler to prevent transitions with stale CSS var values.
   private safeAreaSettling = false;
@@ -205,7 +205,7 @@ export class FullScreenController {
   private touchActive = false;
   private touchStartY = 0;
   private touchStartTime = 0;
-  private pendingRevealTimer: ReturnType<typeof setTimeout> | null = null;
+  private pendingRevealTimer: number | null = null;
   private lastFastScrollTime = 0;
 
   constructor(elements: FullScreenElements) {
@@ -378,14 +378,15 @@ export class FullScreenController {
   private onResize(): void {
     if (!this.mounted) return;
     if (this.resizeDebounceTimer != null)
-      clearTimeout(this.resizeDebounceTimer);
-    if (this.resizeVerifyTimer != null) clearTimeout(this.resizeVerifyTimer);
+      window.clearTimeout(this.resizeDebounceTimer);
+    if (this.resizeVerifyTimer != null)
+      window.clearTimeout(this.resizeVerifyTimer);
     this.safeAreaSettling = true;
 
     // Cancel pending settle — stale totalShift/originalMarginTop would
     // produce wrong scroll compensation. Re-settles after remeasure.
     if (this.scrollIdleTimer != null) {
-      clearTimeout(this.scrollIdleTimer);
+      window.clearTimeout(this.scrollIdleTimer);
       this.scrollIdleTimer = null;
     }
     this.pendingLayout = null;
@@ -401,7 +402,7 @@ export class FullScreenController {
     // Single write after all reads
     setStyle(this.scrollEl, 'height', `${this.lockedScrollHeight}px`);
 
-    this.resizeDebounceTimer = setTimeout(() => {
+    this.resizeDebounceTimer = window.setTimeout(() => {
       this.resizeDebounceTimer = null;
       this.safeAreaSettling = false;
       if (!this.mounted) return;
@@ -409,7 +410,7 @@ export class FullScreenController {
 
       // Verification pass: CSS safe area variables can oscillate back after
       // initial settling (0→28 at ~800ms). Re-measure at 2.5s total.
-      this.resizeVerifyTimer = setTimeout(() => {
+      this.resizeVerifyTimer = window.setTimeout(() => {
         this.resizeVerifyTimer = null;
         if (!this.mounted) return;
         this.remeasureAfterResize();
@@ -587,6 +588,8 @@ export class FullScreenController {
   private ensureSpacerChrome(): void {
     if (this.spacerEl) return;
     const doc = this.scrollEl.ownerDocument;
+    // Detached creation — the spacer is inserted before the container, not
+    // appended, so createDiv() (which always appends) cannot be used.
     this.spacerEl = doc.createElement('div');
     this.spacerEl.className = 'dynamic-views-spacer';
     this.scrollEl.insertBefore(this.spacerEl, this.container);
@@ -644,14 +647,13 @@ export class FullScreenController {
     // the toolbar (29) and header (30). Guard prevents double-create on
     // rapid show→hide→show re-entry before clearShowOverlays fires.
     if (!this.toolbarBgEl) {
-      const doc = this.scrollEl.ownerDocument;
-      this.toolbarBgEl = doc.createElement('div');
-      this.toolbarBgEl.className = 'dynamic-views-toolbar-bg';
+      this.toolbarBgEl = this.leafContent.createDiv({
+        cls: 'dynamic-views-toolbar-bg',
+      });
       setStyles(this.toolbarBgEl, [
         ['top', toolbarTopCalc],
         ['height', `${toolbarH}px`],
       ]);
-      this.leafContent.appendChild(this.toolbarBgEl);
     }
 
     this.viewHeaderEl?.classList.add('dynamic-views-header-show');
@@ -797,7 +799,7 @@ export class FullScreenController {
 
     if (this.searchSyncRafId != null)
       cancelAnimationFrame(this.searchSyncRafId);
-    this.searchSyncRafId = requestAnimationFrame(() => {
+    this.searchSyncRafId = window.requestAnimationFrame(() => {
       this.searchSyncRafId = null;
       if (!this.mounted || !this.spacerActive || this.barsHidden) return;
 
@@ -836,7 +838,7 @@ export class FullScreenController {
 
   private commitSpacerResolve(): void {
     if (this.spacerResolveTimer != null) {
-      clearTimeout(this.spacerResolveTimer);
+      window.clearTimeout(this.spacerResolveTimer);
       this.spacerResolveTimer = null;
     }
     this.programmaticScroll = true;
@@ -861,7 +863,7 @@ export class FullScreenController {
     this.settled = false;
     this.barsHidden = false;
 
-    this.pendingRafId = requestAnimationFrame(() => {
+    this.pendingRafId = window.requestAnimationFrame(() => {
       this.programmaticScroll = false;
       this.prevScrollTop = this.scrollEl.scrollTop;
       this.accumulatedDelta = 0;
@@ -900,23 +902,23 @@ export class FullScreenController {
 
     // Clear timers
     if (this.scrollIdleTimer != null) {
-      clearTimeout(this.scrollIdleTimer);
+      window.clearTimeout(this.scrollIdleTimer);
       this.scrollIdleTimer = null;
     }
     if (this.spacerResolveTimer != null) {
-      clearTimeout(this.spacerResolveTimer);
+      window.clearTimeout(this.spacerResolveTimer);
       this.spacerResolveTimer = null;
     }
     if (this.pendingRevealTimer != null) {
-      clearTimeout(this.pendingRevealTimer);
+      window.clearTimeout(this.pendingRevealTimer);
       this.pendingRevealTimer = null;
     }
     if (this.resizeDebounceTimer != null) {
-      clearTimeout(this.resizeDebounceTimer);
+      window.clearTimeout(this.resizeDebounceTimer);
       this.resizeDebounceTimer = null;
     }
     if (this.resizeVerifyTimer != null) {
-      clearTimeout(this.resizeVerifyTimer);
+      window.clearTimeout(this.resizeVerifyTimer);
       this.resizeVerifyTimer = null;
     }
     // Remove full screen state only if this instance set it
@@ -985,15 +987,15 @@ export class FullScreenController {
     if (delta > FULL_SCREEN_REVEAL_CANCEL_DELTA) {
       this.lastFastScrollTime = now;
       if (this.pendingRevealTimer != null) {
-        clearTimeout(this.pendingRevealTimer);
+        window.clearTimeout(this.pendingRevealTimer);
         this.pendingRevealTimer = null;
       }
     }
 
     // Idle settle for pending layout (hide settle or show class removal)
-    if (this.scrollIdleTimer != null) clearTimeout(this.scrollIdleTimer);
+    if (this.scrollIdleTimer != null) window.clearTimeout(this.scrollIdleTimer);
     if (this.pendingLayout) {
-      this.scrollIdleTimer = setTimeout(
+      this.scrollIdleTimer = window.setTimeout(
         () => {
           if (this.pendingLayout) {
             this.pendingLayout();
@@ -1010,19 +1012,19 @@ export class FullScreenController {
     if (this.isAndroid && this.spacerActive && !this.barsHidden) {
       if (currentTop <= 1) {
         if (this.spacerResolveTimer == null) {
-          this.spacerResolveTimer = setTimeout(() => {
+          this.spacerResolveTimer = window.setTimeout(() => {
             this.spacerResolveTimer = null;
             if (this.scrollEl.scrollTop > 1) return;
             this.pendingLayout = null;
             if (this.scrollIdleTimer != null) {
-              clearTimeout(this.scrollIdleTimer);
+              window.clearTimeout(this.scrollIdleTimer);
               this.scrollIdleTimer = null;
             }
             this.commitSpacerResolve();
           }, FULL_SCREEN_SPACER_RESOLVE_DELAY_MS);
         }
       } else if (this.spacerResolveTimer != null) {
-        clearTimeout(this.spacerResolveTimer);
+        window.clearTimeout(this.spacerResolveTimer);
         this.spacerResolveTimer = null;
       }
     }
@@ -1161,7 +1163,7 @@ export class FullScreenController {
     this.isActiveHider = true;
 
     if (this.spacerResolveTimer != null) {
-      clearTimeout(this.spacerResolveTimer);
+      window.clearTimeout(this.spacerResolveTimer);
       this.spacerResolveTimer = null;
     }
 
@@ -1250,7 +1252,7 @@ export class FullScreenController {
     const headerFrom =
       this.viewHeaderEl?.style.getPropertyValue('transform') || 'translateY(0)';
 
-    this.pendingRafId = requestAnimationFrame(() => {
+    this.pendingRafId = window.requestAnimationFrame(() => {
       this.programmaticScroll = false;
       this.prevScrollTop = this.scrollEl.scrollTop;
 
@@ -1342,7 +1344,7 @@ export class FullScreenController {
     // Frame 2: anchor has inflated scrollTop. Add class + collapse spacer
     // (net zero), then WAAPI-fade bars out.
     const headerShift = this.headerShift;
-    this.pendingRafId = requestAnimationFrame(() => {
+    this.pendingRafId = window.requestAnimationFrame(() => {
       // Add full-screen-active. External margin collapses (~totalShift),
       // but spacer (totalShift) inside scrollEl replaces it. Anchor
       // already inflated scrollTop between frames. Net visual: zero.
@@ -1479,10 +1481,10 @@ export class FullScreenController {
     // WebKit needs double-rAF — passive scroll listener optimization
     // collapses transition+target into one style recalc if set in same frame.
     const iosNavTransition = `transform ${FULL_SCREEN_ANIM_MS}ms ease-out, opacity ${FULL_SCREEN_FADE_MS}ms ease-in-out`;
-    this.pendingRafId = requestAnimationFrame(() => {
+    this.pendingRafId = window.requestAnimationFrame(() => {
       // Inline: iOS double-rAF timing — transient, cleared by clearNavbarInlines().
       setStyle(this.navbarEl, 'transition', iosNavTransition, 'important');
-      this.pendingRafId = requestAnimationFrame(applyNavbarHide);
+      this.pendingRafId = window.requestAnimationFrame(applyNavbarHide);
     });
 
     // Idle settle: remove bridge + scrollTop -= totalShift
@@ -1506,7 +1508,7 @@ export class FullScreenController {
       // margin-top, z-index, and pointer-events.
       this.viewHeaderEl?.classList.add('dynamic-views-tap-shield');
 
-      this.pendingRafId = requestAnimationFrame(() => {
+      this.pendingRafId = window.requestAnimationFrame(() => {
         this.programmaticScroll = false;
         this.prevScrollTop = this.scrollEl.scrollTop;
         this.lockedScrollHeight = this.scrollEl.offsetHeight;
@@ -1552,7 +1554,7 @@ export class FullScreenController {
         this.viewHeaderEl?.style.getPropertyValue('transform') ||
         `translateY(-${this.headerShift}px)`;
 
-      this.pendingRafId = requestAnimationFrame(() => {
+      this.pendingRafId = window.requestAnimationFrame(() => {
         // 0. Clear persistent hide-spacer cover before applying show overlays
         this.clearHideSpacerCover();
 
@@ -1649,7 +1651,7 @@ export class FullScreenController {
           );
         }
 
-        this.capacitorRafId = requestAnimationFrame(() => {
+        this.capacitorRafId = window.requestAnimationFrame(() => {
           this.capacitorRafId = null;
           void capacitorStatusBar?.show();
         });
@@ -1660,7 +1662,7 @@ export class FullScreenController {
       this.pendingLayout = () => {
         if (this.scrollEl.scrollTop <= 1) {
           if (this.spacerResolveTimer != null) {
-            clearTimeout(this.spacerResolveTimer);
+            window.clearTimeout(this.spacerResolveTimer);
             this.spacerResolveTimer = null;
           }
           this.commitSpacerResolve();
@@ -1731,7 +1733,7 @@ export class FullScreenController {
 
     // Toolbar + search WAAPI fade-in — deferred to rAF.
     // WAAPI is compositor-driven (no continuous main-thread work).
-    this.pendingRafId = requestAnimationFrame(() => {
+    this.pendingRafId = window.requestAnimationFrame(() => {
       if (this.toolbarEl) {
         this.barAnims.push(
           this.toolbarEl.animate(OPACITY_SHOW_FRAMES, UI_FADE_OPTS)
@@ -1796,7 +1798,7 @@ export class FullScreenController {
 
       this.settled = false;
 
-      this.pendingRafId = requestAnimationFrame(() => {
+      this.pendingRafId = window.requestAnimationFrame(() => {
         this.programmaticScroll = false;
         this.prevScrollTop = this.scrollEl.scrollTop;
         this.accumulatedDelta = 0;
@@ -1935,8 +1937,9 @@ export class FullScreenController {
       return;
     }
 
-    if (this.pendingRevealTimer != null) clearTimeout(this.pendingRevealTimer);
-    this.pendingRevealTimer = setTimeout(() => {
+    if (this.pendingRevealTimer != null)
+      window.clearTimeout(this.pendingRevealTimer);
+    this.pendingRevealTimer = window.setTimeout(() => {
       this.pendingRevealTimer = null;
       if (!this.barsHidden) return;
       // Eat the synthesized click from the touch that triggered this

@@ -15,6 +15,6 @@
     "skipLibCheck": true,
     "types": ["vitest/globals", "node"]
   },
-  "include": ["**/*.ts"],
+  "include": ["**/*.ts", "eslint.config.js"],
   "exclude": ["node_modules", "archive"]
 }

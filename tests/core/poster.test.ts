@@ -65,6 +65,21 @@ function makeMouseEvent(target: HTMLElement): MouseEvent {
   return e;
 }
 
+/**
+ * Stubs getComputedStyle with plain style props plus a getPropertyValue backed by
+ * `cssVars`. jsdom does not inherit custom properties, so container-level line-count
+ * caps can only be supplied through this stub.
+ */
+function mockComputedStyle(
+  props: Record<string, string>,
+  cssVars: Record<string, string> = {}
+): void {
+  vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+    ...props,
+    getPropertyValue: (name: string) => cssVars[name] ?? '',
+  } as unknown as CSSStyleDeclaration);
+}
+
 function mockRect(el: HTMLElement, rect: Partial<DOMRect>): void {
   vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
     top: 0,
@@ -338,10 +353,10 @@ describe('resetPosterClipping', () => {
     );
   });
 
-  it('resets subtitle CSS variable + removes poster-clip-clamped class', () => {
+  it('resets subtitle CSS variable', () => {
     const card = document.createElement('div');
     const subtitle = document.createElement('div');
-    subtitle.className = 'card-subtitle poster-clip-clamped';
+    subtitle.className = 'card-subtitle';
     subtitle.style.setProperty('--dynamic-views-subtitle-lines', '1');
     card.appendChild(subtitle);
 
@@ -350,7 +365,6 @@ describe('resetPosterClipping', () => {
     expect(
       subtitle.style.getPropertyValue('--dynamic-views-subtitle-lines')
     ).toBe('');
-    expect(subtitle.classList.contains('poster-clip-clamped')).toBe(false);
   });
 });
 
@@ -421,10 +435,10 @@ describe('clipPosterStaticOverflow', () => {
     subtitle.className = 'card-subtitle';
     // Fully below clipBottom
     mockRect(subtitle, { top: 220, bottom: 240 });
-    vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+    mockComputedStyle({
       lineHeight: '20px',
       transitionDuration: '0.3s',
-    } as unknown as CSSStyleDeclaration);
+    });
     header.appendChild(subtitle);
     content.appendChild(header);
 
@@ -471,10 +485,10 @@ describe('clipPosterStaticOverflow', () => {
     textWrapper.appendChild(textPreview);
     content.appendChild(textWrapper);
 
-    vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+    mockComputedStyle({
       lineHeight: '20px',
       transitionDuration: '0.3s',
-    } as unknown as CSSStyleDeclaration);
+    });
 
     card.appendChild(content);
 
@@ -488,7 +502,7 @@ describe('clipPosterStaticOverflow', () => {
     expect(textWrapper.classList.contains('poster-clip-hidden')).toBe(false);
   });
 
-  it('clamps partially-visible subtitle with poster-clip-clamped class', () => {
+  it('clamps partially-visible subtitle via CSS variable instead of hiding it', () => {
     const card = document.createElement('div');
     card.classList.add('has-poster');
     const content = document.createElement('div');
@@ -513,10 +527,10 @@ describe('clipPosterStaticOverflow', () => {
     header.appendChild(subtitle);
     content.appendChild(header);
 
-    vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+    mockComputedStyle({
       lineHeight: '20px',
       transitionDuration: '0.3s',
-    } as unknown as CSSStyleDeclaration);
+    });
 
     card.appendChild(content);
 
@@ -526,7 +540,6 @@ describe('clipPosterStaticOverflow', () => {
     expect(
       subtitle.style.getPropertyValue('--dynamic-views-subtitle-lines')
     ).toBe('2');
-    expect(subtitle.classList.contains('poster-clip-clamped')).toBe(true);
     expect(subtitle.classList.contains('poster-clip-hidden')).toBe(false);
   });
 
@@ -555,7 +568,6 @@ describe('clipPosterStaticOverflow', () => {
 
     const subtitle = document.createElement('div');
     subtitle.className = 'card-subtitle';
-    subtitle.classList.add('poster-clip-clamped');
     subtitle.style.setProperty('--dynamic-views-subtitle-lines', '1');
     mockRect(subtitle, { top: 40, bottom: 60 });
     header.appendChild(subtitle);
@@ -577,10 +589,10 @@ describe('clipPosterStaticOverflow', () => {
 
     card.appendChild(content);
 
-    vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+    mockComputedStyle({
       lineHeight: '20px',
       transitionDuration: '0.3s',
-    } as unknown as CSSStyleDeclaration);
+    });
 
     clipPosterStaticOverflow(card);
 
@@ -589,7 +601,6 @@ describe('clipPosterStaticOverflow', () => {
     expect(title.style.getPropertyValue('--dynamic-views-title-lines')).toBe(
       ''
     );
-    expect(subtitle.classList.contains('poster-clip-clamped')).toBe(false);
     expect(
       subtitle.style.getPropertyValue('--dynamic-views-subtitle-lines')
     ).toBe('');
@@ -620,10 +631,10 @@ describe('clipPosterStaticOverflow', () => {
     mockRect(title, { top: 0, bottom: 120 });
     content.appendChild(title);
 
-    vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+    mockComputedStyle({
       lineHeight: '24px',
       transitionDuration: '0.3s',
-    } as unknown as CSSStyleDeclaration);
+    });
 
     card.appendChild(content);
 
@@ -633,6 +644,139 @@ describe('clipPosterStaticOverflow', () => {
     expect(title.style.getPropertyValue('--dynamic-views-title-lines')).toBe(
       '4'
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Inherited line-count cap
+// ---------------------------------------------------------------------------
+
+describe('clipPosterStaticOverflow — inherited line-count cap', () => {
+  /** Title overflows by 20px inside a .dynamic-views container. 100px / 24px = 4 lines fit. */
+  function makeTitleOverflowCard(): HTMLElement {
+    const container = document.createElement('div');
+    container.className = 'dynamic-views';
+
+    const card = document.createElement('div');
+    card.classList.add('has-poster');
+
+    const content = document.createElement('div');
+    content.className = 'card-content';
+    Object.defineProperty(content, 'scrollHeight', {
+      value: 500,
+      configurable: true,
+    });
+    Object.defineProperty(content, 'clientHeight', {
+      value: 100,
+      configurable: true,
+    });
+    mockRect(content, { top: 0, bottom: 100, height: 100 });
+
+    const title = document.createElement('div');
+    title.className = 'card-title';
+    mockRect(title, { top: 0, bottom: 120 });
+    content.appendChild(title);
+
+    card.appendChild(content);
+    container.appendChild(card);
+    document.body.appendChild(container);
+    return card;
+  }
+
+  function titleLinesOf(card: HTMLElement): string {
+    return card
+      .querySelector<HTMLElement>('.card-title')!
+      .style.getPropertyValue('--dynamic-views-title-lines');
+  }
+
+  it('cap below the fitted count wins', () => {
+    const card = makeTitleOverflowCard();
+    mockComputedStyle(
+      { lineHeight: '24px', transitionDuration: '0.3s' },
+      { '--dynamic-views-title-lines': '2' }
+    );
+
+    clipPosterStaticOverflow(card);
+
+    expect(titleLinesOf(card)).toBe('2');
+  });
+
+  it('fitted count wins when the cap is higher', () => {
+    const card = makeTitleOverflowCard();
+    mockComputedStyle(
+      { lineHeight: '24px', transitionDuration: '0.3s' },
+      { '--dynamic-views-title-lines': '8' }
+    );
+
+    clipPosterStaticOverflow(card);
+
+    expect(titleLinesOf(card)).toBe('4');
+  });
+
+  it('fitted count wins when the cap is absent', () => {
+    const card = makeTitleOverflowCard();
+    mockComputedStyle({ lineHeight: '24px', transitionDuration: '0.3s' });
+
+    clipPosterStaticOverflow(card);
+
+    expect(titleLinesOf(card)).toBe('4');
+  });
+
+  it('fitted count wins when the cap is unparseable', () => {
+    const card = makeTitleOverflowCard();
+    mockComputedStyle(
+      { lineHeight: '24px', transitionDuration: '0.3s' },
+      { '--dynamic-views-title-lines': 'auto' }
+    );
+
+    clipPosterStaticOverflow(card);
+
+    expect(titleLinesOf(card)).toBe('4');
+  });
+
+  it('still reduces the text preview clamp when a cap is present', () => {
+    const container = document.createElement('div');
+    container.className = 'dynamic-views';
+
+    const card = document.createElement('div');
+    card.classList.add('has-poster');
+
+    const content = document.createElement('div');
+    content.className = 'card-content';
+    Object.defineProperty(content, 'scrollHeight', {
+      value: 500,
+      configurable: true,
+    });
+    Object.defineProperty(content, 'clientHeight', {
+      value: 200,
+      configurable: true,
+    });
+    mockRect(content, { top: 0, bottom: 200, height: 200 });
+
+    const textWrapper = document.createElement('div');
+    textWrapper.className = 'card-text-preview-wrapper';
+    // Partially visible: 50px available / 20px line height = 2 lines
+    mockRect(textWrapper, { top: 150, bottom: 250 });
+    const textPreview = document.createElement('div');
+    textPreview.className = 'card-text-preview';
+    textWrapper.appendChild(textPreview);
+    content.appendChild(textWrapper);
+
+    card.appendChild(content);
+    container.appendChild(card);
+    document.body.appendChild(container);
+
+    mockComputedStyle(
+      { lineHeight: '20px', transitionDuration: '0.3s' },
+      { '--dynamic-views-text-preview-lines': '5' }
+    );
+
+    clipPosterStaticOverflow(card);
+
+    expect(
+      textPreview.style.getPropertyValue('--dynamic-views-text-preview-lines')
+    ).toBe('2');
+    expect(textWrapper.classList.contains('poster-clip-hidden')).toBe(false);
   });
 });
 
@@ -669,10 +813,10 @@ describe('clipPosterStaticOverflowBatch', () => {
       return card;
     }
 
-    vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+    mockComputedStyle({
       lineHeight: '20px',
       transitionDuration: '0.3s',
-    } as unknown as CSSStyleDeclaration);
+    });
 
     const card1 = makePosterCardWithOverflow();
     const card2 = makePosterCardWithOverflow();
@@ -707,9 +851,7 @@ describe('resetPosterScroll', () => {
     content.className = 'card-content';
     card.appendChild(content);
 
-    vi.spyOn(window, 'getComputedStyle').mockReturnValue({
-      transitionDuration: '0.3s',
-    } as unknown as CSSStyleDeclaration);
+    mockComputedStyle({ transitionDuration: '0.3s' });
 
     Object.defineProperty(content, 'scrollTop', {
       value: 150,
@@ -739,9 +881,7 @@ describe('resetPosterScroll', () => {
     card.appendChild(wrapper1);
     card.appendChild(wrapper2);
 
-    vi.spyOn(window, 'getComputedStyle').mockReturnValue({
-      transitionDuration: '0.3s',
-    } as unknown as CSSStyleDeclaration);
+    mockComputedStyle({ transitionDuration: '0.3s' });
 
     Object.defineProperty(wrapper1, 'scrollLeft', {
       value: 50,
@@ -773,9 +913,7 @@ describe('resetPosterScroll', () => {
     content.appendChild(child);
     card.appendChild(content);
 
-    vi.spyOn(window, 'getComputedStyle').mockReturnValue({
-      transitionDuration: '0.3s',
-    } as unknown as CSSStyleDeclaration);
+    mockComputedStyle({ transitionDuration: '0.3s' });
 
     Object.defineProperty(content, 'scrollTop', {
       value: 100,
@@ -800,9 +938,7 @@ describe('resetPosterScroll', () => {
     content.className = 'card-content';
     card.appendChild(content);
 
-    vi.spyOn(window, 'getComputedStyle').mockReturnValue({
-      transitionDuration: '0.3s',
-    } as unknown as CSSStyleDeclaration);
+    mockComputedStyle({ transitionDuration: '0.3s' });
 
     Object.defineProperty(content, 'scrollTop', {
       value: 100,
@@ -824,9 +960,7 @@ describe('resetPosterScroll', () => {
     content.className = 'card-content';
     card.appendChild(content);
 
-    vi.spyOn(window, 'getComputedStyle').mockReturnValue({
-      transitionDuration: 'invalid',
-    } as unknown as CSSStyleDeclaration);
+    mockComputedStyle({ transitionDuration: 'invalid' });
 
     Object.defineProperty(content, 'scrollTop', {
       value: 100,
@@ -849,9 +983,7 @@ describe('resetPosterScroll', () => {
     content.className = 'card-content';
     card.appendChild(content);
 
-    vi.spyOn(window, 'getComputedStyle').mockReturnValue({
-      transitionDuration: '0.3s',
-    } as unknown as CSSStyleDeclaration);
+    mockComputedStyle({ transitionDuration: '0.3s' });
 
     let scrollTopValue = 100;
     Object.defineProperty(content, 'scrollTop', {

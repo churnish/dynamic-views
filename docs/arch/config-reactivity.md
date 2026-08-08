@@ -2,7 +2,7 @@
 title: Config reactivity
 description: How config changes propagate from onDataUpdated through dirty-checking, render hash comparison, and the CSS fast-path to re-render decisions — covers all hash inputs, stale config guards, incremental update paths, and Style Settings reactivity.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-12
+updated: 2026-08-09
 ---
 # Config reactivity
 
@@ -70,7 +70,7 @@ Obsidian calls `onDataUpdated()` on the view instance whenever the `.base` file 
 
 These are excluded from the settings hash so they don't trigger a full DOM rebuild.
 
-`applyCssOnlySettings()` also handles `titleLines` (sets `--dynamic-views-title-lines` + `title-single-line` class) and `posterInteractToReveal` (toggles `poster-static` class with clipping logic). These are NOT in `CSS_ONLY_SETTINGS_KEYS` — they remain in the render hash and trigger a full re-render too, but the CSS is applied eagerly for instant visual feedback.
+`applyCssOnlySettings()` also handles `titleLines` (sets `--dynamic-views-title-lines` + `title-single-line` class), `subtitleLines` (sets `--dynamic-views-subtitle-lines` + `subtitle-scroll` class) and `posterInteractToReveal` (toggles `poster-static` class with clipping logic). These are NOT in `CSS_ONLY_SETTINGS_KEYS` — they remain in the render hash and trigger a full re-render too, but the CSS is applied eagerly for instant visual feedback.
 
 ## Settings reading: `readBasesSettings()`
 

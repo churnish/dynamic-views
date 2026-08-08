@@ -2,7 +2,7 @@
 title: CSS variable wrapping
 description: Plugin-namespaced CSS variable wrappers, variable catalog, JS-set variables, and resolution semantics.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-06
+updated: 2026-08-09
 ---
 # CSS variable wrapping
 
@@ -92,16 +92,23 @@ Defined in `shared-renderer.ts`. Called on every `onDataUpdated()` callback, out
 |---|---|---|
 | `--dynamic-views-text-preview-lines` | `config.get('textPreviewLines')` | Consumed by `-webkit-line-clamp` |
 | `--dynamic-views-title-lines` | `config.get('titleLines')` | Also toggles `title-single-line` class |
+| `--dynamic-views-subtitle-lines` | `config.get('subtitleLines')` | Consumed by `max-height`, not `-webkit-line-clamp` — see `card-dom-structure.md`. Also toggles `subtitle-scroll` class |
 | `--dynamic-views-image-aspect-ratio` | `config.get('imageRatio')` | Fed into `--dynamic-views-thumbnail-aspect-ratio` via `clamp()` in `_variables.scss` |
 | `--dynamic-views-thumbnail-size` | `config.get('thumbnailSize')` | Set with `px` unit |
 
-These are per-view — each Bases leaf's container gets its own values. `textPreviewLines`, `imageRatio`, and `thumbnailSize` are in `CSS_ONLY_SETTINGS_KEYS` (excluded from the render hash — CSS-only changes skip full DOM rebuild). `titleLines` is NOT in that set — it also triggers a full re-render because it toggles the `title-single-line` class which affects card layout. The function also toggles classes for `posterDisplayMode` (`poster-mode-fade`/`poster-mode-overlay`) and `imageFit` (`image-fit-crop`/`image-fit-contain`), which are in `CSS_ONLY_SETTINGS_KEYS` despite being class toggles rather than CSS variables.
+`applyViewContainerStyles()` (same file, called from the render pass rather than the CSS fast-path) sets one more container variable:
+
+| Variable | Source | Notes |
+|---|---|---|
+| `--dynamic-views-card-spacing-desktop` / `-phone` | `settings.cardGapDesktop` / `cardGapPhone` | Only the current platform's variable is written (`Platform.isPhone`). Feeds both the `gap` rules in `_grid-view.scss` and `getCardSpacing()`. Written only when the value changes, because each write must be followed by `clearStyleSettingsCache()` |
+
+These are per-view — each Bases leaf's container gets its own values. `textPreviewLines`, `imageRatio`, and `thumbnailSize` are in `CSS_ONLY_SETTINGS_KEYS` (excluded from the render hash — CSS-only changes skip full DOM rebuild). `titleLines` and `subtitleLines` are NOT in that set — they also trigger a full re-render because they toggle the `title-single-line` and `subtitle-scroll` classes, which affect card layout and, for the subtitle, which scroll gradients get wired up at render time. The function also toggles classes for `posterDisplayMode` (`poster-mode-fade`/`poster-mode-overlay`) and `imageFit` (`image-fit-crop`/`image-fit-contain`), which are in `CSS_ONLY_SETTINGS_KEYS` despite being class toggles rather than CSS variables.
 
 ### `style-settings.ts` (body-level reads)
 
 Functions in `style-settings.ts` read `--dynamic-views-*` variables from `document.body` via `getComputedStyle()` for use in JS layout calculations:
 
-- `getCardSpacing()` — reads `--dynamic-views-card-spacing-desktop` or `--dynamic-views-card-spacing-phone`. First checks the container element (for per-view `cssclasses` overrides), then falls back to `body`.
+- `getCardSpacing()` — reads `--dynamic-views-card-spacing-desktop` or `--dynamic-views-card-spacing-phone`. The container element is authoritative: `applyViewContainerStyles()` writes the per-view gap setting there as an inline style, so the container read comes first and wins everywhere — including embeds, where the CSS `gap` rules also apply. Only when the container carries no value does it fall back to `--size-4-2` (inside `.internal-embed`) or to the `body`-level value.
 - `getCompactBreakpoint()` — reads `--dynamic-views-compact-breakpoint`.
 - `getZoomSensitivityDesktop()` — reads `--dynamic-views-zoom-sensitivity`.
 - `getSlideshowMaxImages()` — reads `--dynamic-views-slideshow-max-images`.

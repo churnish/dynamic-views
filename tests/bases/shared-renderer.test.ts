@@ -1,4 +1,4 @@
-import { vi, describe, it, expect } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import type { CardData } from '../../src/core/card-data';
 
 // Mock all transitive dependencies of shared-renderer.ts
@@ -32,6 +32,7 @@ vi.mock('../../src/core/render-utils', () => ({
 }));
 vi.mock('../../src/utils/style-settings', () => ({
   showTagHashPrefix: vi.fn(),
+  clearStyleSettingsCache: vi.fn(),
   getHideEmptyMode: vi.fn(),
   getEmptyValueMarker: vi.fn(),
   shouldHideMissingProperties: vi.fn(),
@@ -119,9 +120,14 @@ vi.mock('../../src/core/poster', () => ({
 import {
   SharedCardRenderer,
   applyCssOnlySettings,
+  applyViewContainerStyles,
 } from '../../src/bases/shared-renderer';
 import { VISIBLE_BODY_SELECTOR } from '../../src/core/constants';
 import { getOwnerWindow } from '../../src/utils/owner-window';
+import { clearStyleSettingsCache } from '../../src/utils/style-settings';
+import { VIEW_DEFAULTS } from '../../src/constants';
+import type { ResolvedSettings } from '../../src/types';
+import { Platform } from 'obsidian';
 import type { BasesViewConfig } from 'obsidian';
 
 describe('SharedCardRenderer.hasImageChanged', () => {
@@ -623,5 +629,62 @@ describe('applyCssOnlySettings — poster display mode re-clip', () => {
 
     expect(rAF).not.toHaveBeenCalled();
     rAF.mockRestore();
+  });
+});
+
+describe('applyViewContainerStyles — card gap variable', () => {
+  const settings = (overrides: Partial<ResolvedSettings> = {}) =>
+    ({ ...VIEW_DEFAULTS, ...overrides }) as ResolvedSettings;
+
+  beforeEach(() => {
+    vi.mocked(clearStyleSettingsCache).mockClear();
+  });
+
+  afterEach(() => {
+    Platform.isPhone = false;
+  });
+
+  it('writes the desktop variable when not on a phone', () => {
+    const container = document.createElement('div');
+
+    applyViewContainerStyles(container, settings({ cardGapDesktop: 20 }));
+
+    expect(
+      container.style.getPropertyValue('--dynamic-views-card-spacing-desktop')
+    ).toBe('20px');
+    expect(
+      container.style.getPropertyValue('--dynamic-views-card-spacing-phone')
+    ).toBe('');
+    expect(clearStyleSettingsCache).toHaveBeenCalledTimes(1);
+  });
+
+  it('writes the phone variable on a phone', () => {
+    Platform.isPhone = true;
+    const container = document.createElement('div');
+
+    applyViewContainerStyles(container, settings({ cardGapPhone: 14 }));
+
+    expect(
+      container.style.getPropertyValue('--dynamic-views-card-spacing-phone')
+    ).toBe('14px');
+    expect(
+      container.style.getPropertyValue('--dynamic-views-card-spacing-desktop')
+    ).toBe('');
+    expect(clearStyleSettingsCache).toHaveBeenCalledTimes(1);
+  });
+
+  it('writes once and clears the cache once when the gap is unchanged', () => {
+    const container = document.createElement('div');
+    const setProperty = vi.spyOn(container.style, 'setProperty');
+
+    applyViewContainerStyles(container, settings({ cardGapDesktop: 20 }));
+    applyViewContainerStyles(container, settings({ cardGapDesktop: 20 }));
+
+    const gapWrites = setProperty.mock.calls.filter(
+      ([name]) => name === '--dynamic-views-card-spacing-desktop'
+    );
+    expect(gapWrites).toHaveLength(1);
+    expect(clearStyleSettingsCache).toHaveBeenCalledTimes(1);
+    setProperty.mockRestore();
   });
 });

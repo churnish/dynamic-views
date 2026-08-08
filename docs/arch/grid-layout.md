@@ -595,7 +595,7 @@ Cards use CSS Grid for automatic flow-based positioning:
 | `--dynamic-views-grid-columns`       | Layout JS | Column count for `grid-template-columns: repeat(N, 1fr)`.           |
 | `--dynamic-views-image-aspect-ratio` | Layout JS | Cover aspect ratio via `padding-top` trick.                         |
 | `--dynamic-views-preserve-height`    | Layout JS | Temporary `min-height` during DOM wipe to prevent scroll reset.     |
-| `gap`                                | CSS       | Card spacing (`--dynamic-views-card-spacing-desktop/mobile`).       |
+| `gap`                                | CSS       | Card spacing. Reads `--dynamic-views-card-spacing-desktop`/`-phone`, written onto the container by layout JS from the per-view gap setting. |
 | `align-items: stretch`               | CSS       | Cards fill grid cell height (enables `margin-top: auto` alignment). |
 
 **Key CSS classes**:

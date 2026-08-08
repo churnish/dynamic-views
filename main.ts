@@ -37,6 +37,7 @@ import {
 import { installDropTextPatch } from './src/core/drag';
 import { invalidateCacheForFile } from './src/core/image-loader';
 import { getNotebookNavigatorAPI } from './src/core/notebook-navigator';
+import type { OwnerWindow } from './src/utils/owner-window';
 
 /** Undocumented Bases view shape — used only by __slowMount debug utility */
 interface DebugBasesView {
@@ -245,6 +246,9 @@ export default class DynamicViews extends Plugin {
     // Handle editor-drop events for plugin cards
     this.registerEvent(
       this.app.workspace.on('editor-drop', (evt, editor, view) => {
+        // Another handler already claimed this drop — don't double-handle it.
+        if (evt.defaultPrevented) return;
+
         const data = evt.dataTransfer?.getData('text/plain');
 
         // Check if it's an obsidian:// URI from our plugin
@@ -476,7 +480,7 @@ export default class DynamicViews extends Plugin {
     let count = 0;
     docs.forEach((d) =>
       d.querySelectorAll('.dynamic-views .card').forEach((card) => {
-        const badge = d.createElement('div');
+        const badge = card.createDiv();
         badge.setAttribute(ATTR, '');
         Object.assign(badge.style, {
           position: 'absolute',
@@ -494,13 +498,11 @@ export default class DynamicViews extends Plugin {
         const update = () => {
           badge.textContent = `${(card as HTMLElement).offsetWidth}px`;
         };
-        const win = (card.ownerDocument.defaultView ??
-          window) as typeof globalThis;
+        const win: OwnerWindow = card.ownerDocument.defaultView ?? window;
         const ro = new win.ResizeObserver(update);
         ro.observe(card);
         (badge as HTMLElement & { _ro?: ResizeObserver })._ro = ro;
         update();
-        card.appendChild(badge);
         count++;
       })
     );

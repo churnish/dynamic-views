@@ -64,6 +64,22 @@
 }
 
 @include color-setting(
+  'group-property-color',
+  $selector: '.bases-group-property',
+  $fallback: --text-muted
+);
+// .bases-group-heading included to outrank the app.css rule on .bases-group-value
+@include color-setting(
+  'group-value-color',
+  $selector: '.bases-group-heading .bases-group-value',
+  $fallback: --text-normal
+);
+@include color-setting(
+  'group-count-color',
+  $selector: '.bases-group-count',
+  $fallback: --text-muted
+);
+@include color-setting(
   'property-name-color',
   $selector: ':is(.property-name, .property-name-inline)'
 );

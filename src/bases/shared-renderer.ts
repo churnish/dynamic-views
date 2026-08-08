@@ -12,6 +12,7 @@ import {
   TFolder,
   setIcon,
   BasesEntry,
+  Platform,
   Scope,
   Menu,
   Keymap,
@@ -51,6 +52,7 @@ import {
 } from '../core/drag';
 import {
   showTagHashPrefix,
+  clearStyleSettingsCache,
   getHideEmptyMode,
   type HideEmptyMode,
   getEmptyValueMarker,
@@ -205,6 +207,12 @@ const PAIRED_PROPERTY_CLASSES = [
   'dynamic-views-paired-property-column',
 ] as const;
 
+/** Obsidian's own inset variable — the plugin's SCSS seeds it, per-view gap overrides it */
+const VIEW_PADDING_VAR = '--bases-view-padding';
+
+/** Platform-resolved card gap, for CSS that needs the value without an .is-phone branch */
+const CARD_GAP_VAR = '--dynamic-views-card-gap';
+
 /**
  * Apply per-view CSS classes and variables from settings to the view container
  * Replaces body-level Style Settings classes with view-scoped equivalents
@@ -241,6 +249,52 @@ export function applyViewContainerStyles(
     String(settings.titleLines)
   );
   container.classList.toggle('title-single-line', settings.titleLines === 1);
+  container.style.setProperty(
+    '--dynamic-views-subtitle-lines',
+    String(settings.subtitleLines)
+  );
+  // Scroll mode only applies to single-line subtitles — a wrapped subtitle has
+  // nothing to scroll, so the wrap rules must stay live in that state.
+  container.classList.toggle(
+    'subtitle-scroll',
+    settings.subtitleLines === 1 &&
+      document.body.classList.contains('dynamic-views-subtitle-overflow-scroll')
+  );
+
+  // Gap feeds both the CSS `gap` rules and getCardSpacing()'s layout math, so it
+  // is written once here. Compare before writing: clearing the spacing cache on
+  // every render would force getStyleSettingsHash's ~13 body reads to re-run.
+  const gapVar = Platform.isPhone
+    ? '--dynamic-views-card-spacing-phone'
+    : '--dynamic-views-card-spacing-desktop';
+  const gapValue = `${Platform.isPhone ? settings.cardGapPhone : settings.cardGapDesktop}px`;
+  if (container.style.getPropertyValue(gapVar) !== gapValue) {
+    container.style.setProperty(gapVar, gapValue);
+    clearStyleSettingsCache();
+  }
+
+  // Platform-resolved alias. The -desktop/-phone pair above is what the `gap`
+  // declarations and getCardSpacing() read; consumers that only need the resolved
+  // number use this instead of duplicating every rule behind an .is-phone variant.
+  if (container.style.getPropertyValue(CARD_GAP_VAR) !== gapValue) {
+    container.style.setProperty(CARD_GAP_VAR, gapValue);
+  }
+
+  // Edge inset matches the gap so spacing reads evenly from card to card and from
+  // card to pane edge. Scoped to the scroll element because --bases-view-padding
+  // lives there. Skipped inside embeds: an embedded .bases-view keeps a 1px inset
+  // no matter what this variable says, so writing the gap would desync it from the
+  // group heading, whose width and negative margins cancel the inset by reading
+  // the same variable — at gap 64 that overflowed the heading 51px on each side.
+  const scrollEl = container.closest<HTMLElement>('.bases-view');
+  const isEmbedded = !!container.closest('.bases-embed');
+  if (
+    scrollEl &&
+    !isEmbedded &&
+    scrollEl.style.getPropertyValue(VIEW_PADDING_VAR) !== gapValue
+  ) {
+    scrollEl.style.setProperty(VIEW_PADDING_VAR, gapValue);
+  }
 
   // Poster display mode — container class
   container.classList.remove('poster-mode-fade', 'poster-mode-overlay');
@@ -283,6 +337,21 @@ export function applyCssOnlySettings(
       String(titleLines)
     );
     containerEl.classList.toggle('title-single-line', titleLines === 1);
+  }
+
+  const subtitleLines = config.get('subtitleLines');
+  if (typeof subtitleLines === 'number') {
+    containerEl.style.setProperty(
+      '--dynamic-views-subtitle-lines',
+      String(subtitleLines)
+    );
+    containerEl.classList.toggle(
+      'subtitle-scroll',
+      subtitleLines === 1 &&
+        document.body.classList.contains(
+          'dynamic-views-subtitle-overflow-scroll'
+        )
+    );
   }
 
   const imageRatio = config.get('imageRatio');
@@ -1357,8 +1426,11 @@ export class SharedCardRenderer {
         }
       }
 
-      // Setup scroll gradients for title if scroll mode is enabled
+      // Setup scroll gradients for title if scroll mode is enabled. Matches the
+      // CSS, which only scrolls single-line titles — a multi-line title wraps
+      // and has nothing to scroll.
       if (
+        settings.titleLines === 1 &&
         document.body.classList.contains('dynamic-views-title-overflow-scroll')
       ) {
         setupElementScrollGradient(titleEl, signal);

@@ -11,6 +11,7 @@ vi.mock('../../src/constants', () => ({
     titleProperty: 'file.name',
     titleLines: 2,
     subtitleProperty: 'file.folder',
+    subtitleLines: 2,
     displayFirstAsTitle: false,
     displaySecondAsSubtitle: false,
     textPreviewProperty: '',
@@ -55,6 +56,7 @@ const MOCK_VIEW_DEFAULTS: any = {
   titleProperty: 'file.name',
   titleLines: 2,
   subtitleProperty: 'file.folder',
+  subtitleLines: 2,
   displayFirstAsTitle: false,
   displaySecondAsSubtitle: false,
   textPreviewProperty: '',
@@ -225,6 +227,38 @@ describe('readBasesSettings — posterInteractToReveal', () => {
   });
 });
 
+describe('readBasesSettings — subtitleLines', () => {
+  it('should read subtitleLines from config', () => {
+    const config = createMockConfig({ subtitleLines: 1 }, []);
+    const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
+    expect(result.subtitleLines).toBe(1);
+  });
+
+  it('should default subtitleLines to 2', () => {
+    const config = createMockConfig({}, []);
+    const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
+    expect(result.subtitleLines).toBe(2);
+  });
+
+  it('should ignore non-numeric subtitleLines', () => {
+    const config = createMockConfig({ subtitleLines: '3' }, []);
+    const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
+    expect(result.subtitleLines).toBe(2);
+  });
+
+  it('should use templateOverrides for subtitleLines', () => {
+    const config = createMockConfig({}, []);
+    const result = readBasesSettings(
+      config,
+      MOCK_PLUGIN_SETTINGS,
+      'grid',
+      undefined,
+      { subtitleLines: 4 }
+    );
+    expect(result.subtitleLines).toBe(4);
+  });
+});
+
 describe('readBasesSettings — templateOverrides', () => {
   it('should use templateOverrides when config has no value', () => {
     const config = createMockConfig({}, []);
@@ -291,6 +325,18 @@ describe('extractBasesTemplate', () => {
     const config = createMockConfig({ posterDisplayMode: 'overlay' }, []);
     const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS, 'grid');
     expect(result.posterDisplayMode).toBe('overlay');
+  });
+
+  it('should include non-default subtitleLines', () => {
+    const config = createMockConfig({ subtitleLines: 1 }, []);
+    const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS, 'grid');
+    expect(result.subtitleLines).toBe(1);
+  });
+
+  it('should omit default subtitleLines', () => {
+    const config = createMockConfig({ subtitleLines: 2 }, []);
+    const result = extractBasesTemplate(config, MOCK_VIEW_DEFAULTS, 'grid');
+    expect(result.subtitleLines).toBeUndefined();
   });
 
   it('should omit default posterDisplayMode', () => {

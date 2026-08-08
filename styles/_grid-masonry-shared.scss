@@ -117,25 +117,33 @@ body:not(.dynamic-views-disable-sticky-group-header)
   .dynamic-views-group-section
   > .bases-group-heading:not(.collapsed) {
   position: sticky;
-  top: -12px;
+  /* Cancels the scroll port's own inset so the stuck heading sits flush with the
+     pane top. Tracks the inset because it scales with the per-view card gap. */
+  top: calc(-1 * var(--dynamic-views-bases-view-padding));
   overflow: visible;
+  /* Fixed, NOT gap-driven: this padding is inside the sticky box, so the
+     background pseudo (and its stuck border) stretches with it and the border
+     would drift below the text. Gap-driven header-to-cards spacing lives on
+     .dynamic-views-group's margin-top instead, outside the sticky box. */
   padding-bottom: calc(var(--size-2-2) + 1px);
 
   /* Background pseudo-element — spans full pane width behind heading content.
-     Positioned relative to heading (nearest positioned ancestor). */
-  > .bases-group-collapse-region::before {
+     On the heading, NOT the collapse region: the region is a flex item sized to
+     its own content, so negative offsets there only reach a few hundred px and
+     the stuck border stopped well short of the right edge. */
+  &::before {
     content: '';
     position: absolute;
     top: 0;
     bottom: 0;
-    left: calc(-1 * var(--dynamic-views-bases-view-padding));
-    right: calc(-1 * var(--dynamic-views-bases-view-padding));
+    left: calc(-1 * var(--size-4-3));
+    right: calc(-1 * var(--size-4-3));
     background: var(
       --dynamic-views-view-bg-color,
       var(--dynamic-views-background-primary)
     );
     z-index: -1;
-    pointer-events: none; /* Background only — don't expand collapse-region's click target */
+    pointer-events: none; /* Background only — don't expand the heading's click target */
   }
 
   /* Always above cards — z-index only matters when stuck (overlapping cards).
@@ -147,7 +155,7 @@ body:not(.dynamic-views-disable-sticky-group-header)
   /* Hairline border when stuck — added to the existing background pseudo which
      already spans full pane width via negative offsets. Masonry's overflow: clip
      + overflow-clip-margin: bases-view-padding accommodates the extension. */
-  &.stuck > .bases-group-collapse-region::before {
+  &.stuck::before {
     border-bottom: var(--dynamic-views-border-width) solid
       var(--dynamic-views-bases-table-border-color);
   }
@@ -179,9 +187,41 @@ body:not(.dynamic-views-disable-sticky-group-header)
   pointer-events: none;
 }
 
-/* Group headings span full grid width */
+/* Group headings span full grid width.
+   The negative inline margin cancels the scroll container's gap-driven inset so
+   heading text keeps a fixed position at any card gap. Safe as a margin — the
+   heading spans all columns and holds no subgrid of its own, so no card tracks
+   shift (unlike .dynamic-views-group, which needs a pseudo-element instead). */
 .dynamic-views-group-section > .bases-group-heading {
   grid-column: 1 / -1;
+  /* Content height, not row height. As a grid item the heading defaults to
+     align-self: stretch, and the first heading's negative margin-top distorts its
+     row sizing — it rendered 12px taller than the rest, pushing the stuck border
+     that far below the text. */
+  align-self: start;
+  margin-inline: calc(
+    var(--size-4-3) - var(--dynamic-views-bases-view-padding)
+  );
+  /* The negative margins reposition the heading but do not stretch it, leaving it
+     short on the right by both margins. Restore the width so the background pseudo
+     reaches the pane edge. Basis is cqw (the scroll container sets
+     container-type: inline-size), NOT a percentage: for a grid item a percentage
+     resolves against the area reduced by its margins, which cancels the addition.
+     max-width comes from Obsidian and clamps the result back to the track span. */
+  max-width: none;
+  width: calc(
+    100cqw + var(--dynamic-views-bases-view-padding) +
+      var(--dynamic-views-bases-view-padding) - var(--size-4-3) - var(
+        --size-4-3
+      )
+  );
+}
+
+/* Same cancellation vertically, but only for the first heading — it is the one
+   sitting against the scroll container's gap-driven top inset. Applying it to
+   every heading would pull each group up and shrink group-to-group spacing. */
+.dynamic-views-group-section:first-child > .bases-group-heading {
+  margin-top: calc(var(--size-4-3) - var(--dynamic-views-bases-view-padding));
 }
 
 /* Hide group result count when toggle enabled */
@@ -196,15 +236,120 @@ body.dynamic-views-hide-group-property-names
   display: none;
 }
 
-/* Last group section has no border */
+/* Group header bold */
+body.dynamic-views-group-property-bold .dynamic-views .bases-group-property,
+body.dynamic-views-group-count-bold .dynamic-views .bases-group-count {
+  font-weight: calc(
+    var(--dynamic-views-font-weight) + var(--dynamic-views-bold-modifier)
+  );
+}
+
+/* Property values are semibold in Obsidian's own Bases styling, so this toggle
+   defaults ON and the unbold branch must override app.css. Gating on
+   .css-settings-manager distinguishes "user unchecked it" from "Style Settings
+   absent" — without the plugin the rule is inert and the Bases weight stands. */
+body.css-settings-manager:not(.dynamic-views-group-value-bold)
+  .dynamic-views
+  .bases-group-heading
+  .bases-group-value {
+  font-weight: var(--dynamic-views-font-weight);
+}
+
+/* Group header case transformations */
+body.dynamic-views-group-property-case-lowercase
+  .dynamic-views
+  .bases-group-property {
+  text-transform: lowercase;
+}
+
+body.dynamic-views-group-property-case-uppercase
+  .dynamic-views
+  .bases-group-property {
+  text-transform: uppercase;
+}
+
+body.dynamic-views-group-property-case-title
+  .dynamic-views
+  .bases-group-property {
+  text-transform: capitalize;
+}
+
+body.dynamic-views-group-value-case-lowercase
+  .dynamic-views
+  .bases-group-heading
+  .bases-group-value {
+  text-transform: lowercase;
+}
+
+body.dynamic-views-group-value-case-uppercase
+  .dynamic-views
+  .bases-group-heading
+  .bases-group-value {
+  text-transform: uppercase;
+}
+
+body.dynamic-views-group-value-case-title
+  .dynamic-views
+  .bases-group-heading
+  .bases-group-value {
+  text-transform: capitalize;
+}
+
+body.dynamic-views-group-count-case-lowercase
+  .dynamic-views
+  .bases-group-count {
+  text-transform: lowercase;
+}
+
+body.dynamic-views-group-count-case-uppercase
+  .dynamic-views
+  .bases-group-count {
+  text-transform: uppercase;
+}
+
+body.dynamic-views-group-count-case-title .dynamic-views .bases-group-count {
+  text-transform: capitalize;
+}
+
+/* Group header italic */
+body.dynamic-views-group-property-italic .dynamic-views .bases-group-property,
+body.dynamic-views-group-count-italic .dynamic-views .bases-group-count,
+body.dynamic-views-group-value-italic
+  .dynamic-views
+  .bases-group-heading
+  .bases-group-value {
+  font-style: italic;
+}
+
+/* Group header small caps — inherits into value pills */
+body.dynamic-views-group-property-small-caps
+  .dynamic-views
+  .bases-group-property,
+body.dynamic-views-group-count-small-caps .dynamic-views .bases-group-count,
+body.dynamic-views-group-value-small-caps
+  .dynamic-views
+  .bases-group-heading
+  .bases-group-value {
+  font-variant: small-caps;
+}
+
+/* Last group section has no divider */
 .dynamic-views-grid
   > .dynamic-views-group-section:last-child
   > .dynamic-views-group,
 .dynamic-views-masonry
   > .dynamic-views-group-section:last-child
   > .dynamic-views-group {
-  border-bottom: none;
   padding-bottom: 0;
+}
+
+.dynamic-views-grid
+  > .dynamic-views-group-section:last-child
+  > .dynamic-views-group::after,
+.dynamic-views-masonry
+  > .dynamic-views-group-section:last-child
+  > .dynamic-views-group::after {
+  display: none;
 }
 
 .dynamic-views {
@@ -242,17 +387,18 @@ body.dynamic-views-hide-group-property-names
     gap: inherit;
   }
 
-  /* Group headings - flex layout for collapse chevron + content */
+  /* Group headings - flex layout for collapse chevron + content.
+     Baseline so independently sized text runs share a baseline. */
   .bases-group-heading {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     gap: var(--size-2-2);
   }
 
   /* Clickable region: chevron + property + value */
   .bases-group-collapse-region {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     gap: var(--size-2-2);
     cursor: pointer;
   }
@@ -261,6 +407,9 @@ body.dynamic-views-hide-group-property-names
   .bases-group-collapse-btn {
     display: flex;
     align-items: center;
+    /* Opt out of baseline alignment: an icon-only item has no text baseline, so
+       it would otherwise supply the region's baseline from its bottom margin edge. */
+    align-self: center;
     flex-shrink: 0;
     color: var(--dynamic-views-text-muted);
 
@@ -284,15 +433,42 @@ body.dynamic-views-hide-group-property-names
 
   /* Group header property name */
   .bases-group-property {
-    color: var(--dynamic-views-text-muted);
-    font-size: var(--dynamic-views-font-ui-small);
+    color: var(
+      --dynamic-views-group-property-color-value,
+      var(--dynamic-views-text-muted)
+    );
+    font-size: var(
+      --dynamic-views-group-property-size-value,
+      var(--dynamic-views-font-ui-small)
+    );
+    font-family: var(--dynamic-views-group-property-font, inherit);
   }
 
   /* Group header result count - match property name style */
   .bases-group-count {
-    color: var(--dynamic-views-text-muted);
-    font-size: var(--dynamic-views-font-ui-smaller);
+    color: var(
+      --dynamic-views-group-count-color-value,
+      var(--dynamic-views-text-muted)
+    );
+    font-size: var(
+      --dynamic-views-group-count-size-value,
+      var(--dynamic-views-font-ui-smaller)
+    );
+    font-family: var(--dynamic-views-group-count-font, inherit);
     padding-left: var(--size-2-3);
+  }
+
+  /* Group header property value — .bases-group-heading included to outrank the app.css rule */
+  .bases-group-heading .bases-group-value {
+    color: var(
+      --dynamic-views-group-value-color-value,
+      var(--dynamic-views-text-normal)
+    );
+    font-size: var(
+      --dynamic-views-group-value-size-value,
+      var(--dynamic-views-font-ui-small)
+    );
+    font-family: var(--dynamic-views-group-value-font, inherit);
   }
 
   /* Group header value containers - match vanilla Bases structure */

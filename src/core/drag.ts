@@ -5,6 +5,8 @@
 
 import type { App } from 'obsidian';
 
+import type { OwnerWindow } from '../utils/owner-window';
+
 const HOVER_CLASSES = ['interact', 'poster-hover-active'] as const;
 
 /**
@@ -102,12 +104,12 @@ export function createUrlButtonDragHandlers(
     if (pointerEventsSet) {
       iconEl.style.removeProperty('pointer-events');
     } else {
-      setTimeout(() => iconEl.style.removeProperty('pointer-events'), 0);
+      window.setTimeout(() => iconEl.style.removeProperty('pointer-events'), 0);
     }
     // WebKit: Obsidian creates tooltip from aria-label ~1-2s after native drag
     // ends. MutationObserver catches and removes it. Scoped to URL text to
     // avoid removing unrelated tooltips.
-    const win = (doc.defaultView ?? window) as typeof globalThis;
+    const win: OwnerWindow = doc.defaultView ?? window;
     const mo = new win.MutationObserver((mutations) => {
       for (const m of mutations) {
         for (const n of m.addedNodes) {
@@ -121,7 +123,7 @@ export function createUrlButtonDragHandlers(
       }
     });
     mo.observe(body, { childList: true });
-    setTimeout(() => mo.disconnect(), 3000);
+    window.setTimeout(() => mo.disconnect(), 3000);
   };
 
   const onTouchStart = () => {
@@ -170,7 +172,7 @@ export function createUrlButtonDragHandlers(
       // Defer poster-hover-active removal and icon pointer-events —
       // synchronous removal sets pointer-events: none on .card-content,
       // aborting the drag. Deferred runs after drag system takes over.
-      setTimeout(() => {
+      window.setTimeout(() => {
         card?.classList.remove('poster-hover-active');
         iconEl.setCssStyles({ pointerEvents: 'none' });
         pointerEventsSet = true;
@@ -204,7 +206,7 @@ export function createUrlButtonDragHandlers(
  *
  * @returns Cleanup function that restores the original getData for that window.
  */
-function patchWindowDataTransfer(win: Window & typeof globalThis): () => void {
+function patchWindowDataTransfer(win: OwnerWindow): () => void {
   const proto = win.DataTransfer.prototype;
   // eslint-disable-next-line @typescript-eslint/unbound-method -- prototype patching
   const origGetData = proto.getData;
@@ -244,15 +246,13 @@ export function installDropTextPatch(app: App): () => void {
   ).floatingSplit;
   if (floating) {
     for (const child of floating.children) {
-      cleanups.push(
-        patchWindowDataTransfer(child.win as Window & typeof globalThis)
-      );
+      cleanups.push(patchWindowDataTransfer(child.win as OwnerWindow));
     }
   }
 
   // Patch future popout windows
   const ref = app.workspace.on('window-open', (_workspaceWindow, win) => {
-    cleanups.push(patchWindowDataTransfer(win as Window & typeof globalThis));
+    cleanups.push(patchWindowDataTransfer(win as OwnerWindow));
   });
 
   return () => {

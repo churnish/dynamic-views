@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 import type { Mock } from 'vitest';
 import {
+  cleanUpBaseFile,
   serializeGroupKey,
   handleTemplateToggle,
   getSortMethod,
@@ -78,7 +79,7 @@ describe('handleTemplateToggle', () => {
       const plugin = createMockPlugin();
       const initializedRef = { value: false };
       const cooldownRef = {
-        value: null as ReturnType<typeof setTimeout> | null,
+        value: null as number | null,
       };
 
       handleTemplateToggle(
@@ -99,7 +100,7 @@ describe('handleTemplateToggle', () => {
       const plugin = createMockPlugin();
       const initializedRef = { value: false };
       const cooldownRef = {
-        value: null as ReturnType<typeof setTimeout> | null,
+        value: null as number | null,
       };
 
       handleTemplateToggle(
@@ -124,7 +125,7 @@ describe('handleTemplateToggle', () => {
       const plugin = createMockPlugin();
       const initializedRef = { value: false };
       const cooldownRef = {
-        value: null as ReturnType<typeof setTimeout> | null,
+        value: null as number | null,
       };
 
       handleTemplateToggle(
@@ -147,7 +148,7 @@ describe('handleTemplateToggle', () => {
       const plugin = createMockPlugin();
       const initializedRef = { value: true };
       const cooldownRef = {
-        value: null as ReturnType<typeof setTimeout> | null,
+        value: null as number | null,
       };
 
       handleTemplateToggle(
@@ -169,7 +170,7 @@ describe('handleTemplateToggle', () => {
       const plugin = createMockPlugin();
       const initializedRef = { value: true };
       const cooldownRef = {
-        value: null as ReturnType<typeof setTimeout> | null,
+        value: null as number | null,
       };
 
       handleTemplateToggle(
@@ -195,7 +196,7 @@ describe('handleTemplateToggle', () => {
       const plugin = createMockPlugin();
       const initializedRef = { value: true };
       const cooldownRef = {
-        value: null as ReturnType<typeof setTimeout> | null,
+        value: null as number | null,
       };
 
       handleTemplateToggle(
@@ -218,7 +219,7 @@ describe('handleTemplateToggle', () => {
       const plugin = createMockPlugin();
       const initializedRef = { value: true };
       const cooldownRef = {
-        value: setTimeout(() => {}, 9999) as ReturnType<typeof setTimeout>,
+        value: window.setTimeout(() => {}, 9999),
       };
 
       handleTemplateToggle(
@@ -242,7 +243,7 @@ describe('handleTemplateToggle', () => {
       const plugin = createMockPlugin();
       const initializedRef = { value: true };
       const cooldownRef = {
-        value: null as ReturnType<typeof setTimeout> | null,
+        value: null as number | null,
       };
 
       // First toggle — starts cooldown
@@ -282,7 +283,7 @@ describe('handleTemplateToggle', () => {
       const plugin = createMockPlugin();
       const initializedRef = { value: true };
       const cooldownRef = {
-        value: null as ReturnType<typeof setTimeout> | null,
+        value: null as number | null,
       };
 
       // Create a detached container to simulate the stale cache bug
@@ -610,5 +611,77 @@ describe('estimatePaneRange', () => {
       1000
     );
     expect(end).toBe(1000);
+  });
+});
+
+describe('cleanUpBaseFile — card gap keys', () => {
+  /** Run cleanUpBaseFile against an in-memory .base file and return the rewritten view entry */
+  async function cleanView(
+    viewEntry: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    let content = JSON.stringify({ views: [viewEntry] });
+    const app = {
+      vault: {
+        process: vi.fn(
+          async (
+            _file: unknown,
+            fn: (c: string) => string
+          ): Promise<string> => {
+            content = fn(content);
+            return content;
+          }
+        ),
+      },
+    } as any;
+    const file = { path: 'Test.base' } as any;
+    const plugin = {
+      persistenceManager: {
+        getSettingsTemplate: vi.fn(() => undefined),
+        migrateBasesState: vi.fn().mockResolvedValue(undefined),
+      },
+    } as any;
+
+    await cleanUpBaseFile(app, file, plugin, 'Cards');
+    return (JSON.parse(content) as { views: Record<string, unknown>[] })
+      .views[0];
+  }
+
+  const baseView = {
+    type: 'dynamic-views-grid',
+    name: 'Cards',
+    id: 'abc123-Cards',
+  };
+
+  it('preserves non-default numeric gap values for both platforms', async () => {
+    const view = await cleanView({
+      ...baseView,
+      cardGapDesktop: 20,
+      cardGapPhone: 14,
+    });
+
+    expect(view.cardGapDesktop).toBe(20);
+    expect(view.cardGapPhone).toBe(14);
+  });
+
+  it('deletes a non-numeric gap value via the type check', async () => {
+    const view = await cleanView({
+      ...baseView,
+      cardGapDesktop: 'wide',
+      cardGapPhone: 14,
+    });
+
+    expect('cardGapDesktop' in view).toBe(false);
+    expect(view.cardGapPhone).toBe(14);
+  });
+
+  it('drops gap values that match the defaults (sparse YAML)', async () => {
+    const view = await cleanView({
+      ...baseView,
+      cardGapDesktop: 8,
+      cardGapPhone: 6,
+    });
+
+    expect('cardGapDesktop' in view).toBe(false);
+    expect('cardGapPhone' in view).toBe(false);
   });
 });

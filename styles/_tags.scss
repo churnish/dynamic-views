@@ -1,12 +1,14 @@
 /* Tag style: Outline (default) - reset all theme styles, apply only plugin styles */
-body:not(.dynamic-views-tag-style-theme) .dynamic-views .card-properties .tag,
-body:not(.dynamic-views-tag-style-theme) .dynamic-views .card-subtitle .tag,
-body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
+body:not(.dynamic-views-tag-style-theme) .dynamic-views .card-properties .tag {
   all: unset;
   border-radius: var(--dynamic-views-pill-radius);
   border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
   color: var(--tag-text-color);
-  font-size: 0.875em;
+  /* Padding stays em so the pill scales with the property value size */
+  font-size: var(
+    --dynamic-views-property-size-value,
+    var(--dynamic-views-font-ui-small)
+  );
   line-height: 1;
   padding: calc(0.25em - 1px) calc(0.65em - 1px);
   cursor: pointer;
@@ -16,25 +18,13 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
 body:not(.dynamic-views-tag-style-theme):not(.dynamic-views-tag-style-fill)
   .dynamic-views
   .card.interact
-  :is(.card-properties, .card-subtitle)
+  .card-properties
   .tag:is(:hover, :active) {
   color: color-mix(in hsl, var(--tag-text-color), white 15%);
 }
 
-/* Tag outline hover: list (immediate) */
-@media (any-hover: hover) {
-  body:not(.dynamic-views-tag-style-theme):not(.dynamic-views-tag-style-fill)
-    .dynamic-views
-    .list-properties
-    .tag:hover {
-    color: color-mix(in hsl, var(--tag-text-color), white 15%);
-  }
-}
-
 /* Tag style: Fill - colored background based on text color */
-body.dynamic-views-tag-style-fill .dynamic-views .card-properties .tag,
-body.dynamic-views-tag-style-fill .dynamic-views .card-subtitle .tag,
-body.dynamic-views-tag-style-fill .dynamic-views .list-properties .tag {
+body.dynamic-views-tag-style-fill .dynamic-views .card-properties .tag {
   border: none;
   padding: 0.25em 0.65em;
   background-color: color-mix(in srgb, var(--tag-text-color) 10%, transparent);
@@ -45,70 +35,50 @@ body.dynamic-views-tag-style-fill .dynamic-views .list-properties .tag {
 body.dynamic-views-tag-style-fill
   .dynamic-views
   .card.interact
-  :is(.card-properties, .card-subtitle)
+  .card-properties
   .tag:is(:hover, :active) {
   background-color: color-mix(in srgb, var(--tag-text-color) 20%, transparent);
-}
-
-/* Tag fill hover: list (immediate) */
-@media (any-hover: hover) {
-  body.dynamic-views-tag-style-fill .dynamic-views .list-properties .tag:hover {
-    background-color: color-mix(
-      in srgb,
-      var(--tag-text-color) 20%,
-      transparent
-    );
-  }
 }
 
 /* Tag style: Theme style - no overrides, inherits Obsidian's a.tag styles */
 
 /* Tag style: Plaintext */
-body.dynamic-views-tag-style-plaintext .dynamic-views .card-properties .tag,
-body.dynamic-views-tag-style-plaintext .dynamic-views .card-subtitle .tag,
-body.dynamic-views-tag-style-plaintext .dynamic-views .list-properties .tag {
+body.dynamic-views-tag-style-plaintext .dynamic-views .card-properties .tag {
   background-color: transparent;
   border: none;
   padding: 0;
   border-radius: 0;
-  font-size: inherit;
+  font-size: var(
+    --dynamic-views-property-size-value,
+    var(--dynamic-views-font-ui-small)
+  );
 }
 
 /* Tag plaintext hover: card (hover/touch intent) */
 body.dynamic-views-tag-style-plaintext
   .dynamic-views
   .card.interact
-  :is(.card-properties, .card-subtitle)
+  .card-properties
   .tag:is(:hover, :active) {
   text-decoration: underline;
-}
-
-/* Tag plaintext hover: list (immediate) */
-@media (any-hover: hover) {
-  body.dynamic-views-tag-style-plaintext
-    .dynamic-views
-    .list-properties
-    .tag:hover {
-    text-decoration: underline;
-  }
 }
 
 /* Tag color presets - semantic colors applied at element level via semantic color tokens */
 body.dynamic-views-tag-color-faint:not(.dynamic-views-tag-style-theme)
   .dynamic-views
-  :is(.card-properties, .card-subtitle, .list-properties)
+  .card-properties
   .tag {
   --tag-text-color: var(--dynamic-views-text-faint);
 }
 body.dynamic-views-tag-color-muted:not(.dynamic-views-tag-style-theme)
   .dynamic-views
-  :is(.card-properties, .card-subtitle, .list-properties)
+  .card-properties
   .tag {
   --tag-text-color: var(--dynamic-views-text-muted);
 }
 body.dynamic-views-tag-color-normal:not(.dynamic-views-tag-style-theme)
   .dynamic-views
-  :is(.card-properties, .card-subtitle, .list-properties)
+  .card-properties
   .tag {
   --tag-text-color: var(--dynamic-views-text-normal);
 }
@@ -149,7 +119,7 @@ body.dynamic-views-tag-color-custom {
 /* Custom fallback via semantic color tokens */
 body.dynamic-views-tag-color-custom:not(.dynamic-views-tag-style-theme)
   .dynamic-views
-  :is(.card-properties, .card-subtitle, .list-properties)
+  .card-properties
   .tag {
   --tag-text-color: var(
     --dynamic-views-tag-color-custom,
@@ -158,11 +128,61 @@ body.dynamic-views-tag-color-custom:not(.dynamic-views-tag-style-theme)
 }
 
 /* Tag color application (skip when using theme styling) */
-body:not(.dynamic-views-tag-style-theme) .dynamic-views .card-properties .tag,
-body:not(.dynamic-views-tag-style-theme) .dynamic-views .card-subtitle .tag,
-body:not(.dynamic-views-tag-style-theme) .dynamic-views .list-properties .tag {
+body:not(.dynamic-views-tag-style-theme) .dynamic-views .card-properties .tag {
   --tag-text-color: var(
     --dynamic-views-tag-color-value,
     var(--dynamic-views-text-faint)
   );
+}
+
+/* Theme default keeps the theme's colours and pill, but not its size: Obsidian
+   core sets `a.tag { font-size: var(--tag-size) }` (0.875em), which would size
+   tags independently of the property value setting. */
+body.dynamic-views-tag-style-theme .dynamic-views .card-properties .tag {
+  font-size: var(
+    --dynamic-views-property-size-value,
+    var(--dynamic-views-font-ui-small)
+  );
+}
+
+/* Tag typography.
+   The Outline reset above uses `all: unset`, which resets every inherited property
+   (font-weight, font-style, font-variant, text-transform) to `inherit`. These rules
+   match its specificity (0,4,1) and are declared later in this same partial, so the
+   cascade resolves in their favour for all four tag styles. */
+body.dynamic-views-tag-bold .dynamic-views .card-properties .tag {
+  font-weight: calc(
+    var(--dynamic-views-font-weight) + var(--dynamic-views-bold-modifier)
+  );
+}
+
+body.dynamic-views-tag-italic .dynamic-views .card-properties .tag {
+  font-style: italic;
+}
+
+body.dynamic-views-tag-small-caps .dynamic-views .card-properties .tag {
+  font-variant: small-caps;
+}
+
+body.dynamic-views-tag-case-lowercase .dynamic-views .card-properties .tag {
+  text-transform: lowercase;
+}
+
+body.dynamic-views-tag-case-uppercase .dynamic-views .card-properties .tag {
+  text-transform: uppercase;
+}
+
+body.dynamic-views-tag-case-title .dynamic-views .card-properties .tag {
+  text-transform: capitalize;
+}
+
+/* A tag property used as the subtitle is subtitle text, not a tag — the Tags
+   settings must not reach it. Outranks Obsidian's own a.tag styling, so the
+   native pill does not show through once the plugin rules stop applying.
+   Styling only: click and drag are JS-wired and unaffected. The pointer is
+   restored because `all: unset` drops it; _hover-and-touch.scss still gates it
+   back to `default` on non-interact cards, matching property-row tags. */
+.dynamic-views .card-subtitle .tag {
+  all: unset;
+  cursor: pointer;
 }

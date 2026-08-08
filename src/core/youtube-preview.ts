@@ -60,7 +60,7 @@ function validateYouTubeThumbnail(url: string): Promise<boolean> {
     const cleanup = (result: boolean) => {
       if (resolved) return;
       resolved = true;
-      clearTimeout(timeoutId);
+      window.clearTimeout(timeoutId);
       img.onload = null;
       img.onerror = null;
       img.src = '';
@@ -68,7 +68,7 @@ function validateYouTubeThumbnail(url: string): Promise<boolean> {
     };
     img.onload = () => cleanup(img.naturalWidth >= MIN_THUMBNAIL_WIDTH);
     img.onerror = () => cleanup(false);
-    const timeoutId = setTimeout(() => cleanup(false), 5000);
+    const timeoutId = window.setTimeout(() => cleanup(false), 5000);
     img.src = url;
   });
 }

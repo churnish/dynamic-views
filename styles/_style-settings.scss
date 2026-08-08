@@ -1138,6 +1138,23 @@ settings:
         default-light: '#'
         default-dark: '#'
     -
+        id: dynamic-views-poster-fade-tint
+        title: Fade tint
+        description: Shade of poster fade gradient.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-poster-fade-dark
+        options:
+            -
+                label: Light
+                value: dynamic-views-poster-fade-light
+            -
+                label: Dark
+                value: dynamic-views-poster-fade-dark
+            -
+                label: Match theme
+                value: dynamic-views-poster-fade-match
+    -
         id: dynamic-views-poster-overlay-tint
         title: Overlay tint
         description: Shade of poster overlay.
@@ -1758,7 +1775,7 @@ settings:
     -
         id: dynamic-views-subtitle-hyphenate
         title: Hyphenate
-        description: Break words at syllable boundaries when wrapping.
+        description: Break words at syllable boundaries when wrapping. Not available on Windows or Linux.
         type: class-toggle
     -
         id: tags-heading
@@ -2041,7 +2058,7 @@ settings:
     -
         id: dynamic-views-text-preview-hyphenate
         title: Hyphenate
-        description: Break words at syllable boundaries when wrapping.
+        description: Break words at syllable boundaries when wrapping. Not available on Windows or Linux.
         type: class-toggle
     -
         id: dynamic-views-omit-first-line
@@ -2361,7 +2378,7 @@ settings:
     -
         id: dynamic-views-title-hyphenate
         title: Hyphenate
-        description: Break words at syllable boundaries when wrapping.
+        description: Break words at syllable boundaries when wrapping. Not available on Windows or Linux.
         type: class-toggle
     -
         id: layout-heading

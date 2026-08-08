@@ -1,56 +1,30 @@
-/* Appearance group */
-.dynamic-views-appearance-group .setting-item-description {
-  padding-top: 0;
-}
-
-.dynamic-views-appearance-group .setting-item-description:first-child {
-  margin-top: 0;
-}
-
-.dynamic-views-appearance-group .setting-item-description:last-child {
-  margin-bottom: 0;
-}
-
-.dynamic-views-appearance-group .setting-items {
-  margin-bottom: 0;
-  background-color: transparent;
-  border: none;
-  box-shadow: inset 0 0 0 1px var(--dynamic-views-background-modifier-border);
-}
-
-/* Indented sub-settings */
-.setting-sub-items {
-  margin-inline-start: 20px;
-  padding-left: 1em;
-  position: relative;
-
-  &::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 1px;
-    background-color: var(--dynamic-views-background-modifier-border);
+/* Appearance group — a decorative row with no name and no control */
+.dynamic-views-appearance-group {
+  .setting-items {
+    margin-bottom: 0;
+    background-color: transparent;
+    border: none;
+    box-shadow: inset 0 0 0 1px var(--dynamic-views-background-modifier-border);
   }
-}
 
-/* Mobile: scaleX(0.333) produces 1 device pixel on all mobile DPRs
-   (2x: 0.666→1, 2.625x: 0.875→1, 3x: 1.0→1). Without it, the 1px
-   pseudo-element rounds to 2 device pixels at unfavorable x-offsets. */
-.is-phone .setting-sub-items::before {
-  transform: scaleX(0.333);
-  transform-origin: left center;
-}
+  .setting-item-name,
+  .setting-item-control {
+    display: none;
+  }
 
-/* Add padding only when visible and not last.
-   Currently inactive as sub-items is last child; retained for future structure changes. */
-.setting-sub-items:not(.dynamic-views-hidden):has(+ .setting-item) {
-  padding-bottom: var(--size-4-4);
-}
+  .setting-item-description {
+    padding-top: 0;
 
-/* Remove bottom padding from setting when sub-items hidden and last in group */
-.setting-items
-  > .setting-item:has(+ .setting-sub-items.dynamic-views-hidden:last-child) {
-  padding-bottom: 0;
+    p {
+      margin-block: var(--size-4-2);
+
+      &:first-child {
+        margin-top: 0;
+      }
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
 }

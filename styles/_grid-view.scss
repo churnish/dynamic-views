@@ -1,8 +1,14 @@
-/* Card spacing setting - Bases files and embeds */
+/* Card spacing setting - Bases files and embeds.
+   row-gap separates group sections, so it stays fixed rather than tracking the
+   card gap — otherwise the divider sits against the group above at large gaps.
+   Pairs with the group's own padding-bottom (--size-4-3) to centre the divider,
+   and matches Masonry, which separates groups with padding + border, not a gap.
+   column-gap must keep tracking the card gap: sections are subgrid and inherit it. */
 :is(.workspace-leaf-content[data-type='bases'], .bases-embed)
   .dynamic-views
   .dynamic-views-grid {
   gap: var(--dynamic-views-card-spacing-desktop, 8px);
+  row-gap: var(--size-4-3);
 }
 
 .is-phone
@@ -10,6 +16,7 @@
   .dynamic-views
   .dynamic-views-grid {
   gap: var(--dynamic-views-card-spacing-phone, 6px);
+  row-gap: var(--size-4-3);
 }
 
 /* Grid: remove margins (gap handles spacing) and set flexbox layout */
@@ -78,11 +85,48 @@ body.is-ios .dynamic-views-grid .card.dynamic-views-height-locked {
 /* Group divider spacing — .is-grouped prefix overrides Obsidian's
    .is-grouped .bases-cards-container .bases-cards-group padding
    (3 classes, same specificity — last-write wins). */
+/* Cards-to-divider spacing follows the card gap; the divider's own placement and
+   the gap below it stay fixed (see the ::after below and the grid row-gap). */
 .is-grouped .dynamic-views-group-section > .dynamic-views-group {
-  padding: 0 0 var(--size-4-3) 0;
-  border-color: var(--dynamic-views-background-modifier-border);
-  border-width: 0 0 1px 0;
-  border-style: solid;
+  padding: 0 0 var(--dynamic-views-card-gap, var(--size-4-3)) 0;
+  /* Header-to-cards spacing lives here rather than on the heading's padding: the
+     heading is the sticky box, so padding there would stretch its background
+     pseudo and push the stuck border away from the text. Offset by the heading's
+     own fixed padding so the total tracks the gap. Clamped at 0 — below that the
+     margin goes negative and pulls the first card row under the heading, which
+     paints over it at z-index 20. */
+  margin-top: max(
+    0px,
+    calc(var(--dynamic-views-card-gap, var(--size-2-2)) - var(--size-2-2))
+  );
+  position: relative;
+  /* The element also carries Obsidian's .bases-cards-group, which draws its own
+     bottom border. This rule used to override it; now that the divider is an
+     ::after, zero it explicitly or both lines render. */
+  border-bottom: none;
+}
+
+/* Divider is a pseudo-element, not a border, so it can escape the scroll
+   container's inset — that inset tracks the per-view card gap, and the divider
+   must stay a fixed distance from the pane edge at any gap. A negative margin
+   cannot do this: .dynamic-views-group is a subgrid item, so shifting its box
+   would drag its column tracks out of alignment with the cards above. */
+.is-grouped .dynamic-views-group-section > .dynamic-views-group::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: calc(var(--size-4-3) - var(--dynamic-views-bases-view-padding));
+  right: calc(var(--size-4-3) - var(--dynamic-views-bases-view-padding));
+  border-top: 1px solid var(--dynamic-views-background-modifier-border);
+  pointer-events: none;
+}
+
+/* Padding is retained so hiding the line does not also collapse group spacing. */
+body.dynamic-views-hide-group-separator
+  .is-grouped
+  .dynamic-views-group-section
+  > .dynamic-views-group::after {
+  display: none;
 }
 
 /* Card spacing setting - Bases files and embeds */

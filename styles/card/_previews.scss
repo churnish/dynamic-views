@@ -61,7 +61,7 @@
     );
     font-family: var(--dynamic-views-text-preview-font, inherit);
     font-size: var(
-      --dynamic-views-text-preview-font-size,
+      --dynamic-views-text-preview-size-value,
       var(--dynamic-views-font-ui-small)
     );
     display: -webkit-box;
@@ -77,8 +77,34 @@
   }
 }
 
+body.dynamic-views-text-preview-bold .dynamic-views .card-text-preview {
+  font-weight: calc(
+    var(--dynamic-views-font-weight) + var(--dynamic-views-bold-modifier)
+  );
+}
+
 body.dynamic-views-text-preview-italic .dynamic-views .card-text-preview {
   font-style: italic;
+}
+
+body.dynamic-views-text-preview-small-caps .dynamic-views .card-text-preview {
+  font-variant: small-caps;
+}
+
+body.dynamic-views-text-preview-case-lowercase
+  .dynamic-views
+  .card-text-preview {
+  text-transform: lowercase;
+}
+
+body.dynamic-views-text-preview-case-uppercase
+  .dynamic-views
+  .card-text-preview {
+  text-transform: uppercase;
+}
+
+body.dynamic-views-text-preview-case-title .dynamic-views .card-text-preview {
+  text-transform: capitalize;
 }
 
 body.dynamic-views-text-preview-align-center .dynamic-views .card-text-preview {

@@ -44,9 +44,9 @@ export function setupStickyHeaderObserver(scrollContainer: HTMLElement): {
       );
       if (!section || sentinels.has(heading)) return;
 
-      const sentinel = heading.ownerDocument.createElement('div');
-      sentinel.className = 'dynamic-views-sticky-sentinel';
-      section.appendChild(sentinel);
+      const sentinel = section.createDiv({
+        cls: 'dynamic-views-sticky-sentinel',
+      });
       sentinels.set(heading, sentinel);
 
       sentinelToHeading.set(sentinel, heading);

@@ -25,6 +25,7 @@ import {
   getCardSpacing,
   getCompactBreakpoint,
   clearStyleSettingsCache,
+  getStyleSettingsLayoutHash,
   isFixedHeightForMasonry,
 } from '../utils/style-settings';
 import {
@@ -1146,6 +1147,8 @@ export class DynamicViewsMasonryView extends BasesView {
         groupOrderHash +
         '\0\0' +
         styleSettingsHash +
+        '\0\0' +
+        getStyleSettingsLayoutHash() +
         '\0\0' +
         collapsedHash +
         '\0\0' +

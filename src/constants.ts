@@ -34,6 +34,7 @@ export const VIEW_DEFAULTS: ViewDefaults = {
   titleProperty: 'file.name',
   titleLines: 2,
   subtitleProperty: 'file.folder',
+  subtitleLines: 2,
   // Position-based title/subtitle
   displayFirstAsTitle: false,
   displaySecondAsSubtitle: false,
@@ -61,6 +62,8 @@ export const VIEW_DEFAULTS: ViewDefaults = {
   urlProperty: '',
   // Other
   minimumColumns: 1 as const,
+  cardGapDesktop: 8,
+  cardGapPhone: 6,
   cssclasses: '',
 };
 

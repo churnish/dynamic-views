@@ -35,6 +35,13 @@ declare module 'obsidian' {
       ): unknown;
       onDragStart(evt: DragEvent, dragData: unknown): void;
     };
+    /** Settings pane controller (undocumented API) */
+    setting?: {
+      /** Navigate the open settings pane to a core or plugin tab; null when no such tab */
+      openTabById?(id: string): { id: string } | null;
+      /** Close the settings pane */
+      close?(): void;
+    };
     /** Debug: slow mount toggle for mount ordering work (temporary) */
     __slowMount?: (on?: boolean) => string;
     isMobile: boolean;
@@ -63,5 +70,9 @@ declare module 'obsidian' {
   interface DataAdapter {
     /** Get absolute filesystem path (undocumented API) */
     getFullPath(path: string): string | undefined;
+  }
+  interface Vault {
+    /** Read an app preference, e.g. `settingsPopoutWindow` (undocumented API) */
+    getConfig?(key: string): unknown;
   }
 }

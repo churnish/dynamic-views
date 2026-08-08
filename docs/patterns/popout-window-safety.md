@@ -2,7 +2,7 @@
 title: Popout window safety
 description: When and why to use getOwnerWindow(el) instead of bare window/document — covers cross-window pitfalls in Electron popout windows, the safe exceptions, and the setDocumentProvider pattern for module-level code.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-10
+updated: 2026-08-07
 ---
 # Popout window safety
 
@@ -26,10 +26,14 @@ Two patterns cover all cases:
 Defined in `src/utils/owner-window.ts`:
 
 ```ts
-export function getOwnerWindow(el: Element | null | undefined): Window & typeof globalThis {
+export type OwnerWindow = Window & typeof globalThis;
+
+export function getOwnerWindow(el: Element | null | undefined): OwnerWindow {
   return el?.ownerDocument?.defaultView ?? window;
 }
 ```
+
+The exported `OwnerWindow` alias is the single place `typeof globalThis` appears — annotate local window bindings with it (`const win: OwnerWindow = doc.defaultView ?? window;`) rather than repeating the intersection, which trips `obsidianmd/no-global-this`.
 
 Walks `el.ownerDocument.defaultView` to get the window that owns the element. Falls back to the main `window` when the element is null or its window has been closed (`defaultView` returns null after a popout closes).
 
@@ -124,9 +128,32 @@ These bare global usages are safe and do not need the DOM-derived pattern:
 | Usage | Why it's safe |
 |---|---|
 | `document.body.classList` reads for config classes | Style Settings syncs body classes to all documents (main + popouts). The main `document.body` is the canonical source — always available, no popout lifecycle dependency. |
-| `setTimeout` / `setInterval` / `requestIdleCallback` | Process-level timers, not window-scoped. Fire regardless of which window scheduled them. |
+| `window.setTimeout` / `window.setInterval` / `requestIdleCallback` | Process-level timers, not window-scoped. Fire regardless of which window scheduled them. |
 | `new Image()` for network validation | Never inserted into DOM — used only to test whether a URL loads. No document context matters. |
 | Offscreen `document.createElement('canvas')` for measurement | Would be safe if used (never inserted into a visible document), but the codebase currently uses the popout-safe `ownerDoc.createElement('canvas')` pattern instead. |
+
+### Timers must be main-window timers
+
+Bare `setTimeout` is still correct in principle — timers are process-level, not window-scoped. The codebase nonetheless writes them as `window.setTimeout` to satisfy the `obsidianmd/prefer-window-timers` lint rule.
+
+`getOwnerWindow(el).setTimeout(...)` is **prohibited**. A timer scheduled on a popout window is destroyed when that window closes, so any deferred work silently never runs. That is a behavioral change, not a lint fix. Always schedule on the main `window`.
+
+Two consequences for types:
+
+- `window.setTimeout` returns `number`, not `NodeJS.Timeout`. Declare timer handles as `number | null`, not `ReturnType<typeof setTimeout> | null`.
+- `window.clearTimeout` accepts `number`. Mixing the two handle types across a module boundary produces a TS2345 mismatch.
+
+### `createEl` / `createDiv` always append
+
+Obsidian's `createEl`, `createDiv`, and `createSpan` are declared on `Node` and **append** to the node they are called on. They are not detached factories.
+
+This makes them a drop-in replacement for `ownerDocument.createElement` only when the element is unconditionally appended to a parent that is already in scope. Keep `ownerDocument.createElement` when:
+
+- The element is inserted with `insertBefore`, `after`, or `before` rather than appended (`DomElementInfo.prepend` covers the insert-at-index-0 case only).
+- The element is returned or stored detached and parented later.
+- The append is conditional — `createDiv()` would leave empty elements in the DOM.
+
+`doc.win.createDiv()` — the form the lint rule suggests — does **not** typecheck. `Window` carries no such method.
 
 ## Common mistakes
 

@@ -85,7 +85,7 @@ export function deferContainerHoverDrop(cardEl: HTMLElement): void {
     '.masonry-container, .bases-cards-group'
   );
   if (!container) return;
-  setTimeout(() => {
+  window.setTimeout(() => {
     if (!container.querySelector('.card.interact')) {
       container.classList.remove('has-hover-card');
     }
@@ -100,7 +100,7 @@ export function setupTouchPress(
   signal: AbortSignal
 ): void {
   let activatedAt = 0;
-  let timer: ReturnType<typeof setTimeout> | null = null;
+  let timer: number | null = null;
 
   el.addEventListener(
     'pointerdown',
@@ -121,7 +121,7 @@ export function setupTouchPress(
     if (!activatedAt) return;
     const remaining = Math.max(0, 100 - (Date.now() - activatedAt));
     if (remaining > 0) {
-      timer = setTimeout(() => {
+      timer = window.setTimeout(() => {
         onDeactivate();
         activatedAt = 0;
       }, remaining);
@@ -134,6 +134,6 @@ export function setupTouchPress(
   el.addEventListener('pointerup', deactivate, { signal, passive: true });
   el.addEventListener('pointercancel', deactivate, { signal, passive: true });
   signal.addEventListener('abort', () => {
-    if (timer) clearTimeout(timer);
+    if (timer) window.clearTimeout(timer);
   });
 }

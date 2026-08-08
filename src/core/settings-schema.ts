@@ -3,6 +3,7 @@
  * Defines settings structure for Bases views
  */
 
+import { Platform } from 'obsidian';
 import type {
   BasesPropertyId,
   BasesViewConfig,
@@ -183,6 +184,23 @@ export function getBasesViewOptions(
           shouldHide: () =>
             (config?.get('displayFirstAsTitle') ?? d.displayFirstAsTitle) ===
             false,
+        },
+        {
+          // Both toggles gate this: subtitleProperty is position-derived and only
+          // set when both are on, and displaySecondAsSubtitle can stay stored as
+          // true while displayFirstAsTitle is off (its own row is hidden then).
+          type: 'slider',
+          displayName: 'Subtitle lines',
+          key: 'subtitleLines',
+          min: 1,
+          max: 5,
+          step: 1,
+          default: d.subtitleLines,
+          shouldHide: () =>
+            (config?.get('displayFirstAsTitle') ?? d.displayFirstAsTitle) ===
+              false ||
+            (config?.get('displaySecondAsSubtitle') ??
+              d.displaySecondAsSubtitle) === false,
         },
       ],
     },
@@ -415,8 +433,19 @@ export function getBasesViewOptions(
     },
     {
       type: 'group',
-      displayName: 'Other',
+      displayName: 'View',
       items: [
+        {
+          // Both keys persist in the .base file so a synced vault keeps a
+          // separate gap per form factor; only the current one is editable.
+          type: 'slider',
+          displayName: 'Card gap',
+          key: Platform.isPhone ? 'cardGapPhone' : 'cardGapDesktop',
+          min: 0,
+          max: 64,
+          step: 1,
+          default: Platform.isPhone ? d.cardGapPhone : d.cardGapDesktop,
+        },
         {
           type: 'dropdown',
           displayName: 'Minimum columns',
@@ -572,6 +601,7 @@ export function readBasesSettings(
     titleProperty,
     titleLines: getNumber('titleLines', defaults.titleLines),
     subtitleProperty,
+    subtitleLines: getNumber('subtitleLines', defaults.subtitleLines),
     displayFirstAsTitle,
     displaySecondAsSubtitle,
     textPreviewProperty,
@@ -632,6 +662,8 @@ export function readBasesSettings(
       // defaults already has template overrides merged — use it for both view types.
       return defaults.minimumColumns === 1 ? 1 : 2;
     })(),
+    cardGapDesktop: getNumber('cardGapDesktop', defaults.cardGapDesktop),
+    cardGapPhone: getNumber('cardGapPhone', defaults.cardGapPhone),
     cssclasses: getString('cssclasses', defaults.cssclasses),
   };
 
@@ -666,6 +698,7 @@ export function extractBasesTemplate(
     titleProperty: mergedDefaults.titleProperty,
     titleLines: getNumber('titleLines', mergedDefaults.titleLines),
     subtitleProperty: mergedDefaults.subtitleProperty,
+    subtitleLines: getNumber('subtitleLines', mergedDefaults.subtitleLines),
     displayFirstAsTitle: getBool(
       'displayFirstAsTitle',
       mergedDefaults.displayFirstAsTitle
@@ -738,6 +771,8 @@ export function extractBasesTemplate(
       if (value === 'two' || value === 2) return 2;
       return mergedDefaults.minimumColumns;
     })(),
+    cardGapDesktop: getNumber('cardGapDesktop', mergedDefaults.cardGapDesktop),
+    cardGapPhone: getNumber('cardGapPhone', mergedDefaults.cardGapPhone),
     cssclasses: getString('cssclasses', mergedDefaults.cssclasses),
   };
 

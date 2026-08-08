@@ -46,7 +46,7 @@ Plugin-level settings from the settings tab. Not per-view.
 
 ### ViewDefaults (`src/types.ts`)
 
-Per-view visual settings. 27 fields covering card size, title, text preview, image, properties, and layout.
+Per-view visual settings. 29 fields covering card size, title, text preview, image, properties, and layout.
 
 | Field                     | Type                            | Default         | Notes                                                                               |
 | ------------------------- | ------------------------------- | --------------- | ----------------------------------------------------------------------------------- |

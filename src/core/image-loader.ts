@@ -20,7 +20,6 @@ export function filterBrokenUrls(urls: string[]): string[] {
 /** Inject placeholder element when all card images fail at runtime */
 export function handleAllImagesFailed(cardEl: HTMLElement): void {
   cardEl.classList.add('no-valid-images');
-  const doc = cardEl.ownerDocument;
 
   // Thumbnail: remove .card-thumbnail, inject .card-thumbnail-placeholder
   // Removal (not hiding) ensures :only-child CSS collapse rule in _previews.scss works
@@ -29,9 +28,7 @@ export function handleAllImagesFailed(cardEl: HTMLElement): void {
     const parent = thumbEl.parentElement;
     thumbEl.remove();
     if (parent && !parent.querySelector('.card-thumbnail-placeholder')) {
-      const ph = doc.createElement('div');
-      ph.className = 'card-thumbnail-placeholder';
-      parent.appendChild(ph);
+      parent.createDiv({ cls: 'card-thumbnail-placeholder' });
     }
     return;
   }
@@ -43,9 +40,7 @@ export function handleAllImagesFailed(cardEl: HTMLElement): void {
     const coverEl = wrapper.querySelector('.card-cover');
     if (coverEl) coverEl.remove();
     if (!wrapper.querySelector('.card-cover-placeholder')) {
-      const ph = doc.createElement('div');
-      ph.className = 'card-cover-placeholder';
-      wrapper.appendChild(ph);
+      wrapper.createDiv({ cls: 'card-cover-placeholder' });
     }
     return;
   }

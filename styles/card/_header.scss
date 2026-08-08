@@ -6,8 +6,9 @@
     gap: var(--size-4-2);
   }
 
-  /* Clip URL icon's physical overflow (negative margins don't fully offset padding)
-     to prevent it from inflating card-content scroll height in poster mode */
+  /* Keep clamped title/subtitle text from inflating card-content scroll height
+     in poster mode. The URL icon no longer overflows this box — see the
+     margin/padding reset further down. */
   .card.image-format-poster .card-header {
     overflow: hidden;
   }
@@ -26,7 +27,7 @@
     color: var(--dynamic-views-title-color, var(--dynamic-views-text-normal));
     font-family: var(--dynamic-views-title-font, inherit);
     font-size: var(
-      --dynamic-views-title-font-size,
+      --dynamic-views-title-size-value,
       var(--dynamic-views-font-ui-medium)
     );
     max-width: 100%;
@@ -75,12 +76,13 @@
 }
 
 .dynamic-views {
+  /* No negative margins to pull the glyph flush with the header edge: the 4px
+     wrapper padding would then sit outside the header, and poster cards clip
+     that away (card-content is a scroll container there, unlike every other
+     image format). Leaving the icon inside its own box keeps the glyph at a 4px
+     inset — identical across all image formats. */
   .card-title-url-icon {
     flex-shrink: 0;
-    /* Compensate for wrapper padding: (26px wrapper - 18px icon) / 2 = 4px */
-    margin: -4px;
-    /* Extra -1px aligns URL icon top with slideshow icon edge distance */
-    margin-top: -5px;
   }
 
   .card-title-url-icon svg {
@@ -167,7 +169,7 @@ body.dynamic-views-file-type-flair .dynamic-views .card-title-ext::before {
   font-family: var(--dynamic-views-font-interface);
   font-size: var(--dynamic-views-font-ui-smaller);
   line-height: var(
-    --dynamic-views-title-font-size,
+    --dynamic-views-title-size-value,
     var(--dynamic-views-font-ui-medium)
   );
   padding: 0 0.33em 0 0.38em; /* Extra 0.05em left to offset letter-spacing trailing space */
@@ -284,7 +286,7 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
     color: var(--dynamic-views-text-faint);
     font-family: var(--dynamic-views-subtitle-font);
     font-size: var(
-      --dynamic-views-subtitle-font-size,
+      --dynamic-views-subtitle-size-value,
       var(--dynamic-views-font-ui-small)
     );
     max-width: 100%;
@@ -292,6 +294,10 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
     text-align: left;
     margin: 0;
     display: block;
+    /* The clamp lives on the wrapper below, not here: .card-subtitle is a flex
+       item of .card-title-block, and a blockified flex item cannot act as a
+       -webkit-box line-clamp container — it collapses to zero height. */
+    flex-shrink: 0;
     overflow: hidden;
     line-height: var(--dynamic-views-line-height-tight);
   }
@@ -306,6 +312,38 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
   .card-subtitle .property-content {
     min-height: 0;
   }
+}
+
+/* Title bold defaults ON, so only the unbold branch needs a rule. Gating on
+   .css-settings-manager separates "user unchecked it" from "Style Settings absent" —
+   without the plugin the rule is inert and the bold base rule stands. */
+body.css-settings-manager:not(.dynamic-views-title-bold)
+  .dynamic-views
+  .card-title {
+  font-weight: var(--dynamic-views-font-weight);
+}
+
+/* Title italic */
+body.dynamic-views-title-italic .dynamic-views .card-title {
+  font-style: italic;
+}
+
+/* Title small caps */
+body.dynamic-views-title-small-caps .dynamic-views .card-title {
+  font-variant: small-caps;
+}
+
+/* Title case transformations */
+body.dynamic-views-title-case-lowercase .dynamic-views .card-title {
+  text-transform: lowercase;
+}
+
+body.dynamic-views-title-case-uppercase .dynamic-views .card-title {
+  text-transform: uppercase;
+}
+
+body.dynamic-views-title-case-title .dynamic-views .card-title {
+  text-transform: capitalize;
 }
 
 /* Subtitle bold */
@@ -323,6 +361,19 @@ body.dynamic-views-subtitle-italic .dynamic-views .card-subtitle {
 /* Subtitle small caps */
 body.dynamic-views-subtitle-small-caps .dynamic-views .card-subtitle {
   font-variant: small-caps;
+}
+
+/* Subtitle case transformations */
+body.dynamic-views-subtitle-case-lowercase .dynamic-views .card-subtitle {
+  text-transform: lowercase;
+}
+
+body.dynamic-views-subtitle-case-uppercase .dynamic-views .card-subtitle {
+  text-transform: uppercase;
+}
+
+body.dynamic-views-subtitle-case-title .dynamic-views .card-subtitle {
+  text-transform: capitalize;
 }
 
 /* Subtitle alignment */
@@ -354,21 +405,26 @@ body.dynamic-views-subtitle-hyphenate .dynamic-views .card-subtitle {
   }
 }
 
-/* Allow path-wrapper to wrap in subtitle */
-body:not(.dynamic-views-subtitle-overflow-scroll)
-  .dynamic-views
-  .card-subtitle
-  .path-wrapper {
+/* Line clamp sits on the wrapper rather than on .card-subtitle, which is a flex
+   item and cannot host a -webkit-box — it would collapse to zero height. */
+.dynamic-views:not(.subtitle-scroll) .card-subtitle .property-content-wrapper {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--dynamic-views-subtitle-lines, 2);
+}
+
+/* Allow path-wrapper to wrap in subtitle. `inline` is load-bearing: as a flex
+   box the path counts as a single box and escapes the clamp entirely, rendering
+   at full height. Inline, its segments become line boxes the clamp can count,
+   and they still flow horizontally. */
+.dynamic-views:not(.subtitle-scroll) .card-subtitle .path-wrapper {
+  display: inline;
   height: auto;
   white-space: normal;
-  flex-wrap: wrap;
 }
 
 /* Allow path segments to word-break in subtitle */
-body:not(.dynamic-views-subtitle-overflow-scroll)
-  .dynamic-views
-  .card-subtitle
-  .path-segment {
+.dynamic-views:not(.subtitle-scroll) .card-subtitle .path-segment {
   white-space: normal;
   overflow-wrap: break-word;
 }
@@ -388,8 +444,7 @@ body:not(.dynamic-views-subtitle-overflow-scroll)
 }
 
 /* Subtitle wrap: override white-space: pre from text-wrapper span rule (needs higher specificity) */
-body:not(.dynamic-views-subtitle-overflow-scroll)
-  .dynamic-views
+.dynamic-views:not(.subtitle-scroll)
   .card-subtitle
   .text-wrapper
   > span:not(.internal-link):not(.external-link):not(.tag) {
@@ -397,8 +452,7 @@ body:not(.dynamic-views-subtitle-overflow-scroll)
 }
 
 /* Disable fade gradient in wrap mode */
-body:not(.dynamic-views-subtitle-overflow-scroll)
-  .dynamic-views
+.dynamic-views:not(.subtitle-scroll)
   .card-subtitle
   .property-content-wrapper:is(
     .scroll-gradient-left,
@@ -409,26 +463,23 @@ body:not(.dynamic-views-subtitle-overflow-scroll)
   -webkit-mask-image: none !important;
 }
 
-/* Subtitle scroll mode */
-body.dynamic-views-subtitle-overflow-scroll .dynamic-views .card-subtitle {
-  display: block;
-  -webkit-line-clamp: unset;
-  -webkit-box-orient: unset;
+/* Subtitle scroll mode — scoped to single-line subtitles, so the view's subtitle
+   lines setting decides how many lines there are and this only decides what
+   happens to a line that overflows */
+/* The clamp lives on the wrapper and is already excluded in scroll mode, so
+   nothing needs unsetting here. */
+.dynamic-views.subtitle-scroll .card-subtitle {
   white-space: nowrap;
   overflow-x: auto;
   scrollbar-width: none;
 }
 
-body.dynamic-views-subtitle-overflow-scroll
-  .dynamic-views
-  .card-subtitle
-  .property-content-wrapper {
+.dynamic-views.subtitle-scroll .card-subtitle .property-content-wrapper {
   overflow-x: auto;
   flex-wrap: nowrap;
 }
 
-body.dynamic-views-subtitle-overflow-scroll
-  .dynamic-views
+.dynamic-views.subtitle-scroll
   .card-subtitle
   :is(
     .property-content,
@@ -469,8 +520,12 @@ body.dynamic-views-title-align-right .dynamic-views .card-title {
   text-align: right;
 }
 
-/* Title scroll mode */
-body.dynamic-views-title-overflow-scroll .dynamic-views .card-title {
+/* Title scroll mode — scoped to single-line titles, so the view's title lines
+   setting decides how many lines there are and this only decides what happens
+   to a line that overflows */
+body.dynamic-views-title-overflow-scroll
+  .dynamic-views.title-single-line
+  .card-title {
   white-space: nowrap;
   overflow-x: auto;
   scrollbar-width: none;
@@ -478,7 +533,7 @@ body.dynamic-views-title-overflow-scroll .dynamic-views .card-title {
 }
 
 body.dynamic-views-title-overflow-scroll
-  .dynamic-views
+  .dynamic-views.title-single-line
   .card-title
   .card-title-text {
   display: inline;

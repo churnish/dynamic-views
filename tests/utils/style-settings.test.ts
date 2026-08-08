@@ -13,6 +13,8 @@ import {
   getOmitFirstLineMode,
   preserveTextPreviewHeadings,
   preserveTextPreviewNewlines,
+  getStyleSettingsLayoutHash,
+  getCompactBreakpoint,
 } from '../../src/utils/style-settings';
 
 describe('style-settings', () => {
@@ -113,7 +115,7 @@ describe('style-settings', () => {
       expect(getCardSpacing()).toBe(0);
     });
 
-    it('should return Obsidian spacing for embeds', () => {
+    it('should return Obsidian spacing for embeds when the container has no gap', () => {
       const mockContainer = document.createElement('div');
       mockContainer.closest = vi.fn((selector: string) =>
         selector === '.internal-embed' ? document.createElement('div') : null
@@ -124,6 +126,32 @@ describe('style-settings', () => {
       } as CSSStyleDeclaration);
 
       expect(getCardSpacing(mockContainer)).toBe(8);
+    });
+
+    // The per-view gap setting is authoritative — CSS gap rules apply in embeds too,
+    // so the JS layout math must agree with them
+    it('should prefer the container gap over Obsidian spacing inside an embed', () => {
+      const mockContainer = document.createElement('div');
+      mockContainer.closest = vi.fn((selector: string) =>
+        selector === '.internal-embed' ? document.createElement('div') : null
+      );
+
+      mockGetComputedStyle.mockImplementation(
+        (el: Element) =>
+          ({
+            getPropertyValue: (name: string) => {
+              if (
+                name === '--dynamic-views-card-spacing-desktop' &&
+                el === mockContainer
+              ) {
+                return '24px';
+              }
+              return name === '--size-4-2' ? '8' : '';
+            },
+          }) as CSSStyleDeclaration
+      );
+
+      expect(getCardSpacing(mockContainer)).toBe(24);
     });
 
     it('should return custom spacing when container has CSS variable', () => {
@@ -261,6 +289,45 @@ describe('style-settings', () => {
     });
   });
 
+  describe('getCompactBreakpoint', () => {
+    const withValue = (value: string) =>
+      mockGetComputedStyle.mockReturnValue({
+        getPropertyValue: (name: string) =>
+          name === '--dynamic-views-compact-breakpoint' ? value : '',
+      } as CSSStyleDeclaration);
+
+    it('should return 390 when unset', () => {
+      expect(getCompactBreakpoint()).toBe(390);
+    });
+
+    it.each([
+      ['bare number', '420'],
+      ['number with px', '420px'],
+      ['quoted bare number', '"420"'],
+      ['quoted number with px', '"420px"'],
+      ['single-quoted number with px', "'420px'"],
+      ['padded value', '  420px  '],
+    ])('should accept a %s', (_label, value) => {
+      withValue(value);
+      expect(getCompactBreakpoint()).toBe(420);
+    });
+
+    it('should accept other length units', () => {
+      withValue('30rem');
+      expect(getCompactBreakpoint()).toBe(30);
+    });
+
+    it('should accept 0, which disables compact mode', () => {
+      withValue('0');
+      expect(getCompactBreakpoint()).toBe(0);
+    });
+
+    it('should fall back to 390 when unparseable', () => {
+      withValue('"wide"');
+      expect(getCompactBreakpoint()).toBe(390);
+    });
+  });
+
   describe('getEmptyValueMarker', () => {
     it('should return default "—" (em dash)', () => {
       expect(getEmptyValueMarker()).toBe('—');
@@ -374,6 +441,111 @@ describe('style-settings', () => {
 
     it('should return false when class is absent', () => {
       expect(preserveTextPreviewNewlines()).toBe(false);
+    });
+  });
+
+  // getStyleSettingsLayoutHash reads body.className directly, which the shared
+  // classList mock does not cover — set and reset className per test
+  describe('getStyleSettingsLayoutHash', () => {
+    afterEach(() => {
+      document.body.className = '';
+    });
+
+    it('should return an empty string when no preset classes are present', () => {
+      document.body.className = 'theme-dark is-phone';
+      expect(getStyleSettingsLayoutHash()).toBe('');
+    });
+
+    it('should return the single preset class that is present', () => {
+      document.body.className = 'theme-dark dynamic-views-title-size-large';
+      expect(getStyleSettingsLayoutHash()).toBe(
+        'dynamic-views-title-size-large'
+      );
+    });
+
+    it('should return multiple preset classes sorted and comma-joined', () => {
+      document.body.className =
+        'dynamic-views-title-size-large dynamic-views-property-name-size-tiny';
+      expect(getStyleSettingsLayoutHash()).toBe(
+        'dynamic-views-property-name-size-tiny,dynamic-views-title-size-large'
+      );
+    });
+
+    it('should change when a preset is switched', () => {
+      document.body.className = 'dynamic-views-title-size-large';
+      const before = getStyleSettingsLayoutHash();
+      document.body.className = 'dynamic-views-title-size-small';
+      expect(getStyleSettingsLayoutHash()).not.toBe(before);
+    });
+
+    // group-property must not be swallowed by the shorter `property` alternative
+    it('should match group header presets without colliding with the property preset', () => {
+      document.body.className =
+        'dynamic-views-group-property-size-large dynamic-views-group-count-size-tiny';
+      expect(getStyleSettingsLayoutHash()).toBe(
+        'dynamic-views-group-count-size-tiny,dynamic-views-group-property-size-large'
+      );
+    });
+
+    it('should match the group value preset', () => {
+      document.body.className = 'dynamic-views-group-value-size-medium';
+      expect(getStyleSettingsLayoutHash()).toBe(
+        'dynamic-views-group-value-size-medium'
+      );
+    });
+
+    it.each([
+      ['dynamic-views-title-bold'],
+      ['dynamic-views-subtitle-italic'],
+      ['dynamic-views-text-preview-small-caps'],
+      ['dynamic-views-property-bold'],
+      ['dynamic-views-property-name-italic'],
+      ['dynamic-views-tag-small-caps'],
+      ['dynamic-views-group-value-bold'],
+      ['dynamic-views-group-property-italic'],
+      ['dynamic-views-group-count-small-caps'],
+    ])('should match the metric-affecting toggle %s', (cls) => {
+      document.body.className = cls;
+      expect(getStyleSettingsLayoutHash()).toBe(cls);
+    });
+
+    it.each([
+      ['dynamic-views-title-case-uppercase'],
+      ['dynamic-views-property-name-case-title'],
+      ['dynamic-views-tag-case-lowercase'],
+      ['dynamic-views-group-count-case-preserve'],
+    ])('should match the case transform %s', (cls) => {
+      document.body.className = cls;
+      expect(getStyleSettingsLayoutHash()).toBe(cls);
+    });
+
+    // Colour, style and alignment settings do not change text metrics
+    it.each([
+      ['dynamic-views-title-color-red'],
+      ['dynamic-views-title-hover-color-accent'],
+      ['dynamic-views-tag-style-outline'],
+      ['dynamic-views-tag-color-faint'],
+      ['dynamic-views-subtitle-align-left'],
+      ['dynamic-views-hide-group-count'],
+    ])('should ignore the non-metric class %s', (cls) => {
+      document.body.className = cls;
+      expect(getStyleSettingsLayoutHash()).toBe('');
+    });
+
+    it('should combine size, toggle and case classes for one element', () => {
+      document.body.className =
+        'dynamic-views-title-bold dynamic-views-title-size-large dynamic-views-title-case-uppercase';
+      expect(getStyleSettingsLayoutHash()).toBe(
+        'dynamic-views-title-bold,dynamic-views-title-case-uppercase,dynamic-views-title-size-large'
+      );
+    });
+
+    it('should not let the subtitle stem swallow the title toggle', () => {
+      document.body.className =
+        'dynamic-views-subtitle-bold dynamic-views-title-bold';
+      expect(getStyleSettingsLayoutHash()).toBe(
+        'dynamic-views-subtitle-bold,dynamic-views-title-bold'
+      );
     });
   });
 });

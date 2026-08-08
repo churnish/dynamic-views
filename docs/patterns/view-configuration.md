@@ -2,7 +2,7 @@
 title: View configuration
 description: Centralized reference for configuring Dynamic Views per-view settings — setting keys, workflows, and templates.
 author: Generated with Claude Code
-updated: 2026-04-05
+updated: 2026-08-09
 ---
 # View configuration
 
@@ -64,6 +64,7 @@ pm.setPluginSettings(settings);  // Merges sparse — only non-default values pe
 | `titleProperty` | `string` | `'file.name'` | Position-derived when `displayFirstAsTitle` is ON |
 | `titleLines` | `number` | `2` | 1–5 |
 | `subtitleProperty` | `string` | `'file.folder'` | Position-derived when `displaySecondAsSubtitle` is ON |
+| `subtitleLines` | `number` | `2` | 1–5. Slider hidden unless both `displayFirstAsTitle` and `displaySecondAsSubtitle` are ON |
 | `displayFirstAsTitle` | `boolean` | `true` | Derives title from first property in order |
 | `displaySecondAsSubtitle` | `boolean` | `false` | Derives subtitle from second property |
 
@@ -106,7 +107,11 @@ pm.setPluginSettings(settings);  // Merges sparse — only non-default values pe
 | Key | Type | Default (Grid) | Default (Masonry) | Values | Notes |
 |---|---|---|---|---|---|
 | `minimumColumns` | `1 \| 2` | `1` | `2` | `1`, `2` | Bases YAML: `'one'`/`'two'` strings |
+| `cardGapDesktop` | `number` | `8` | `8` | 0–64 px | Gap between cards. Also sets the view edge inset. Slider shown when `!Platform.isPhone` |
+| `cardGapPhone` | `number` | `6` | `6` | 0–64 px | Gap between cards. Also sets the view edge inset. Slider shown when `Platform.isPhone` |
 | `cssclasses` | `string` | `''` | `''` | — | Comma-separated CSS classes |
+
+Both gap keys persist in the `.base` YAML regardless of platform — `.base` files sync across devices, so each form factor keeps its own value. Only the current platform's slider is emitted into the schema.
 
 ## CSS-only settings
 
@@ -118,18 +123,19 @@ These only affect CSS custom properties — changing them does NOT trigger a car
 
 The `cssclasses` setting adds classes to the `.dynamic-views` container. A CSS snippet can define helper classes that set CSS custom properties on this element, enabling per-view overrides of Style Settings values.
 
-**Card spacing example** — a `gap-16` class in a CSS snippet:
+**Card radius example** — a `radius-16` class in a CSS snippet:
 
 ```css
-.gap-16 {
-  --dynamic-views-card-spacing-desktop: 16px;
-  --dynamic-views-card-spacing-phone: 16px;
+.radius-16 {
+  --dynamic-views-card-border-radius: 16px;
 }
 ```
 
-**How it works**: `getCardSpacing()` in `style-settings.ts` reads the CSS variable from `getComputedStyle(containerEl)` first, then falls back to `document.body`. CSS variables inherit through the DOM tree, so the override is visible regardless of which ancestor it's set on. Results are cached per container per render cycle (`Map<HTMLElement, number>`, cleared in `clearStyleSettingsCache()`).
+**How it works**: CSS variables inherit through the DOM tree, so a value set on the container is visible to every card below it and overrides the Style Settings value declared on `body`.
 
 **Limitations**: Only `variable-number-slider` Style Settings options work with this pattern — they use CSS variables that inherit through the DOM. `class-toggle` and `class-select` options use body classes read via `document.body.classList`, which cannot be overridden per-container.
+
+**Card gap is no longer a `cssclasses` case**: `cardGapDesktop`/`cardGapPhone` are per-view settings. `applyViewContainerStyles()` writes `--dynamic-views-card-spacing-desktop|-phone` as an inline style on the container, which beats any `cssclasses` helper class by specificity. Use the Card gap slider instead.
 
 ## Resolution order
 

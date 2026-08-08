@@ -301,13 +301,13 @@ body:not(.dynamic-views-disable-sticky-group-header).is-phone:not(.is-android)
 }
 
 // Sticky group headers: stop below status bar when bars are hidden.
-// Normal top: -12px (grid-masonry-shared) sticks at viewport top — behind
-// the status bar when scroll container starts at screen edge. The -1px
+// The normal negative-inset top (grid-masonry-shared) sticks at viewport top —
+// behind the status bar when scroll container starts at screen edge. The -1px
 // tucks the heading under the ::before scrim to cover the subpixel gap
 // from non-integer safe-area-inset-top (e.g. 46.095px on Pixel 8a).
 // Reverts during show: iOS uses .full-screen-showing class, Android uses
 // data-dynamic-views-show attribute. Either disables the override so headings
-// revert to normal -12px top (grid-masonry-shared) when bars are visible.
+// revert to the normal top (grid-masonry-shared) when bars are visible.
 .is-android.is-phone
   [data-type='bases'].full-screen-active:not([data-dynamic-views-show])
   .dynamic-views.is-grouped

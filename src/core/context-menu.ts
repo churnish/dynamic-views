@@ -3,7 +3,7 @@
  */
 
 import { App, Menu, Notice, Platform, TFile, setIcon } from 'obsidian';
-import { getOwnerWindow } from '../utils/owner-window';
+import { getOwnerWindow, type OwnerWindow } from '../utils/owner-window';
 
 /**
  * Show context menu for external links (URLs)
@@ -17,8 +17,8 @@ export function showExternalLinkContextMenu(
   e.stopPropagation();
   e.preventDefault();
 
-  const win = ((e.target as HTMLElement)?.ownerDocument?.defaultView ??
-    window) as typeof globalThis;
+  const win: OwnerWindow =
+    (e.target as HTMLElement)?.ownerDocument?.defaultView ?? window;
   const menu = new Menu();
 
   menu.addItem((item) =>
@@ -257,25 +257,24 @@ export function showFileContextMenu(
       if (isMobile) {
         const menuScroll = menuEl.querySelector('.menu-scroll');
         if (menuScroll && menuScroll.firstChild) {
-          // Create label group
-          const labelGroup = menuDoc.createElement('div');
-          labelGroup.className = 'menu-group';
+          // Create label group at the top of the menu
+          const labelGroup = menuScroll.createDiv({
+            cls: 'menu-group',
+            prepend: true,
+          });
 
-          const labelItem = menuDoc.createElement('div');
-          labelItem.className = 'menu-item is-label';
-          labelItem.setAttribute('data-section', 'title');
+          const labelItem = labelGroup.createDiv({
+            cls: 'menu-item is-label',
+            attr: { 'data-section': 'title' },
+          });
 
-          const titleDiv = menuDoc.createElement('div');
-          titleDiv.className = 'menu-item-title';
-          titleDiv.textContent = getFilename(path);
+          labelItem.createDiv({
+            cls: 'menu-item-title',
+            text: getFilename(path),
+          });
 
-          labelItem.appendChild(titleDiv);
-          labelGroup.appendChild(labelItem);
-
-          // Insert at beginning
-          menuScroll.insertBefore(labelGroup, menuScroll.firstChild);
-
-          // Add separator after label
+          // Add separator after label. Detached creation — inserted as a
+          // sibling via after(), not appended, so createDiv() cannot be used.
           const separator = menuDoc.createElement('div');
           separator.className = 'menu-separator';
           labelGroup.after(separator);
@@ -310,6 +309,8 @@ export function showFileContextMenu(
           onClick: () => void,
           isWarning = false
         ): HTMLElement => {
+          // Detached creation — the item is returned unparented and appended
+          // later during the rebuild pass, so createDiv() cannot be used.
           const item = menuDoc.createElement('div');
           item.className = isWarning
             ? 'menu-item tappable is-warning'
@@ -472,6 +473,9 @@ export function showFileContextMenu(
 
       // Rebuild menu in order
       for (const group of menuStructure) {
+        // Detached creation — the append is conditional on hasItems. createDiv()
+        // would inject empty .menu-group elements and shift separator placement
+        // in the empty-group cleanup pass below.
         const groupEl = menuDoc.createElement('div');
         groupEl.className = 'menu-group';
         let hasItems = false;
@@ -487,31 +491,23 @@ export function showFileContextMenu(
         if (hasItems) {
           menuScroll.appendChild(groupEl);
           if (group.separator) {
-            const sep = menuDoc.createElement('div');
-            sep.className = 'menu-separator';
-            menuScroll.appendChild(sep);
+            menuScroll.createDiv({ cls: 'menu-separator' });
           }
         }
       }
 
       // Add plugin items
       if (pluginItems.length > 0) {
-        const pluginGroup = menuDoc.createElement('div');
-        pluginGroup.className = 'menu-group';
+        const pluginGroup = menuScroll.createDiv({ cls: 'menu-group' });
         pluginItems.forEach((item) => pluginGroup.appendChild(item));
-        menuScroll.appendChild(pluginGroup);
-        const sep = menuDoc.createElement('div');
-        sep.className = 'menu-separator';
-        menuScroll.appendChild(sep);
+        menuScroll.createDiv({ cls: 'menu-separator' });
       }
 
       // Add Delete file at end
       const deleteItem = itemsByTitle.get('Delete file');
       if (deleteItem) {
-        const deleteGroup = menuDoc.createElement('div');
-        deleteGroup.className = 'menu-group';
+        const deleteGroup = menuScroll.createDiv({ cls: 'menu-group' });
         deleteGroup.appendChild(deleteItem);
-        menuScroll.appendChild(deleteGroup);
       }
 
       // Check menu still exists before cleanup operations
