@@ -76,13 +76,34 @@ Mobile (phone or tablet, `Platform.isMobile`) always uses `'mobile'`. Desktop on
 
 ### Desktop: Panzoom
 
-Library: `@panzoom/panzoom`. Provides scroll-wheel zoom and mouse drag pan with default transform behaviour — no custom `setTransform`.
+Library: `@panzoom/panzoom`. Provides mouse drag pan with default transform behaviour — no custom `setTransform`. Wheel handling is written by hand (see [Wheel behaviour](#wheel-behaviour)).
 
 - **Pan only when zoomed**: `panOnlyWhenZoomed: true` disables panning while scale equals `startScale` (1), matching native, which pans only once zoomed in. The mobile handler needs no equivalent — its `maxPan = imgDim * (scale-1) / scale / 2` is already 0 at 1x.
 - **Cursor**: `cursor: 'grab'` (open hand), matching the native lightbox's `cursor: grab` on `.lightbox.is-zoomed .media-wrapper img`. Panzoom applies its cursor once at init and never varies it, so two listeners drive the rest: `panzoomchange` toggles `.is-pannable` on the container from `detail.scale` (SCSS reverts to `cursor: default !important` while absent, so 1x never advertises a pan that cannot happen), and `panzoomstart`/`panzoomend` add and remove Obsidian's own `is-grabbing` class on the owner document's body for the closed-fist drag cursor. Native drives that same class from its pan handler; `app.css` already carries `cursor: grabbing !important` for it, so the plugin adds no CSS. The start handler is gated on `.is-pannable`, mirroring native's `zoomLevel <= 1` bail. Because `is-grabbing` is app-wide, gesture cleanup removes it unconditionally — `panzoomend` does not fire when the viewer is torn down mid-drag.
 - **No maximize mode**: there is no fill-the-container state, no `.is-maximized` class, and no keyboard or right-click zoom reset. Space closes the viewer (see [Keyboard handlers](#keyboard-handlers)); right-click on the image is suppressed by `onContextMenu` in `openImageViewer`.
 - **Popout quirk**: Panzoom binds pointer events to module-scope `document`. In popout windows, pointer events must be rebound to the popout's document (`gestureDoc`), otherwise drag/release fails. See [popout-window-safety.md](../patterns/popout-window-safety.md) for the canonical `getOwnerWindow()` pattern.
 - **Alt+drag**: `setAltDragMode(true)` excludes the image from Panzoom and sets `imgEl.draggable = true` to allow native drag via `app.dragManager`.
+
+### Wheel behaviour
+
+Replicates native's `handleWheelZoom` exactly. Three branches, on a `{ passive: false }` listener attached to the container — native binds to its whole viewer with no target check, so the backdrop behaves like the image.
+
+| Condition | Behaviour |
+|---|---|
+| `ctrlKey \|\| metaKey` | `preventDefault`, then zoom about the cursor |
+| No modifier, scale > 1 | `preventDefault`, then pan |
+| No modifier, scale = 1 | Ignored — **no `preventDefault`**, so normal scrolling is untouched |
+
+**Zoom is additive, not multiplicative.** `deltaY` is normalised by `deltaMode` (`DOM_DELTA_LINE` ×40, `DOM_DELTA_PAGE` ×800), then the step is `-delta / 150`, doubled when `Platform.isMacOS && !Number.isInteger(e.deltaY)` — fractional deltas mean a trackpad. The result is added to the current scale and clamped to 1–10, so `maxScale` is 10 rather than Panzoom's earlier 4. Trackpad pinch synthesises `ctrlKey` on every platform, so pinch lands in the zoom branch for free. Panzoom's own `step` option is unused; the plugin's `zoomSensitivity` setting is applied as a *relative* multiplier (`step *= sensitivity / 0.08`) so its default reproduces native exactly.
+
+**Transform order is the crux.** Native composes `translate(px, px) scale(z)` — translate applies after the scale, so its pan is in screen pixels. Panzoom composes `scale(s) translate(x, y)`, so its translate is pre-scale. Two consequences:
+
+- **Pan**: dividing by the scale (`1.5 * delta / scale`) keeps on-screen travel at a flat 1.5 × delta at every zoom level. Copying native's constant directly would accelerate as you zoom in.
+- **Focal zoom**: native's `pan' = (pan - f) * (zNew/zOld) + f` reduces, in Panzoom's units, to `pan' = pan + f * (1/zNew - 1/zOld)`, where `f` is the cursor offset from the **container** centre.
+
+Panzoom's `zoomToPoint` is deliberately **not** used: it offsets by half the *element* width, assuming the element sits at its parent's origin. The viewer's image is centred in a full-window container, so that only holds on the axis where the image fills the container — a portrait image tracked the cursor in Y but drifted badly in X.
+
+Returning to 1x clears the pan explicitly (`pan(0, 0, { force: true })`). `panOnlyWhenZoomed` blocks *new* pans at 1x but leaves any accumulated offset applied, which would strand the image off-screen; `force` is required because `constrainXY` otherwise returns the current values untouched.
 
 ### Mobile: native touch handler
 

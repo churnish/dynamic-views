@@ -21,6 +21,19 @@ import { getOwnerWindow } from '../utils/owner-window';
 /** Wheel event listener options (stored for proper cleanup) */
 const WHEEL_OPTIONS: AddEventListenerOptions = { passive: false };
 
+/**
+ * Constants replicating the native lightbox's `handleWheelZoom`. Native
+ * normalises `deltaY` by `deltaMode`, converts it to an **additive** zoom step,
+ * and pans by a flat multiple of the raw delta once zoomed.
+ */
+const WHEEL_DELTA_LINE_SCALE = 40;
+const WHEEL_DELTA_PAGE_SCALE = 800;
+const WHEEL_ZOOM_DIVISOR = 150;
+const WHEEL_PAN_MULTIPLIER = 1.5;
+const VIEWER_MAX_ZOOM = 10;
+/** Zoom sensitivity that reproduces native exactly; other values scale from it */
+const NATIVE_ZOOM_SENSITIVITY = 0.08;
+
 type GestureMode = 'mobile' | 'desktop';
 
 /**
@@ -339,10 +352,11 @@ function setupImageViewerGestures(
       reparentBack = () => origParent?.insertBefore(container, origNext);
     }
     panzoomInstance = Panzoom(imgEl, {
-      maxScale: 4,
+      // Native clamps the wheel zoom to 1–10; the wheel handler owns the step,
+      // so Panzoom's own `step` option is unused
+      maxScale: VIEWER_MAX_ZOOM,
       minScale: 1,
       startScale: 1,
-      step: zoomSensitivity,
       canvas: false,
       // Open-hand cursor, matching the native lightbox's `cursor: grab`
       cursor: 'grab',
@@ -395,10 +409,77 @@ function setupImageViewerGestures(
       });
     }
 
-    // Only zoom when cursor is over the image (not the overlay)
+    // Native's three-branch wheel model (`handleWheelZoom`, app.js:95651):
+    // Ctrl/Cmd zooms about the cursor, a plain wheel pans once zoomed, and a
+    // plain wheel at 1x is ignored outright — not even preventDefault, so the
+    // page keeps its normal scroll. Native binds this to the whole viewer with
+    // no target check, so hovering the backdrop behaves the same as the image.
     const wheelHandler = (e: WheelEvent) => {
-      if (e.target !== imgEl) return;
-      panzoomInstance!.zoomWithWheel(e);
+      const pz = panzoomInstance;
+      if (!pz) return;
+
+      // Trackpad pinch synthesises ctrlKey on every platform, so macOS pinch
+      // lands here too
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        let delta = e.deltaY;
+        if (e.deltaMode === e.DOM_DELTA_LINE) delta *= WHEEL_DELTA_LINE_SCALE;
+        else if (e.deltaMode === e.DOM_DELTA_PAGE)
+          delta *= WHEEL_DELTA_PAGE_SCALE;
+
+        let step = -delta / WHEEL_ZOOM_DIVISOR;
+        // Trackpads emit fractional deltas; native doubles those on macOS only
+        if (Platform.isMacOS && !Number.isInteger(e.deltaY)) step *= 2;
+        // The plugin keeps a sensitivity setting native lacks; scale relative to
+        // the value that reproduces native so the default stays faithful
+        step *= zoomSensitivity / NATIVE_ZOOM_SENSITIVITY;
+
+        const currentScale = pz.getScale();
+        const nextScale = Math.min(
+          VIEWER_MAX_ZOOM,
+          Math.max(1, currentScale + step)
+        );
+        if (nextScale === currentScale) return;
+
+        // Panzoom's own `zoomToPoint` assumes the element sits at its parent's
+        // origin — it offsets by half the *element* width. Our image is centred
+        // in a full-window container, so that only holds on the axis where the
+        // image fills the container: zooming drifts horizontally on a portrait
+        // image. Reproduce native's focal math against the container centre
+        // instead. Native keeps pan in screen pixels while Panzoom's translate is
+        // pre-scale, so native's `(pan - f) * ratio + f` reduces here to
+        // `pan + f * (1/next - 1/current)`.
+        const { x, y } = pz.getPan();
+        const rect = container.getBoundingClientRect();
+        const focalX = e.clientX - rect.left - rect.width / 2;
+        const focalY = e.clientY - rect.top - rect.height / 2;
+        const inverseDelta = 1 / nextScale - 1 / currentScale;
+
+        pz.zoom(nextScale, { animate: false });
+        // Native drops the pan the moment zoom returns to 1x. `panOnlyWhenZoomed`
+        // blocks *new* pans there but leaves the accumulated offset applied, which
+        // would otherwise strand the image off-screen.
+        if (nextScale <= 1) pz.pan(0, 0, { force: true });
+        else
+          pz.pan(x + focalX * inverseDelta, y + focalY * inverseDelta, {
+            force: true,
+          });
+        return;
+      }
+
+      if (pz.getScale() <= 1) return;
+      e.preventDefault();
+      // Panzoom composes `scale(s) translate(x, y)`, so its translate is applied
+      // before the scale and its units are pre-scale. Native's transform order is
+      // the reverse (`translate(...) scale(...)`, screen pixels), so dividing by
+      // the scale keeps the on-screen travel identical at every zoom level —
+      // copying native's flat 1.5x would accelerate as you zoom in.
+      const scale = pz.getScale();
+      const { x, y } = pz.getPan();
+      pz.pan(
+        x - (WHEEL_PAN_MULTIPLIER * e.deltaX) / scale,
+        y - (WHEEL_PAN_MULTIPLIER * e.deltaY) / scale
+      );
     };
     container.addEventListener('wheel', wheelHandler, WHEEL_OPTIONS);
     containerWheelHandlers.set(container, wheelHandler);
