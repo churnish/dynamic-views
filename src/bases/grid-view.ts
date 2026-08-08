@@ -45,6 +45,7 @@ import {
   SharedCardRenderer,
   syncResponsiveClasses,
   applyViewContainerStyles,
+  clearViewContainerStyles,
   applyCssOnlySettings,
   type CardHandle,
 } from './shared-renderer';
@@ -3864,6 +3865,7 @@ export class DynamicViewsGridView extends BasesView {
     this.containerEl
       .closest('.workspace-leaf-content')
       ?.classList.remove('dynamic-views-grouped');
+    clearViewContainerStyles(this.containerEl);
     this.touchAbort?.abort();
     this.renderState.abortController?.abort();
     this.focusCleanup?.();

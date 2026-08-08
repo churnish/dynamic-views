@@ -55,6 +55,7 @@ import {
   SharedCardRenderer,
   syncResponsiveClasses,
   applyViewContainerStyles,
+  clearViewContainerStyles,
   applyCssOnlySettings,
   type CardHandle,
 } from './shared-renderer';
@@ -4607,6 +4608,7 @@ export class DynamicViewsMasonryView extends BasesView {
     this.containerEl
       .closest('.workspace-leaf-content')
       ?.classList.remove('dynamic-views-grouped');
+    clearViewContainerStyles(this.containerEl);
     this.focusCleanup?.();
     this.stickyHeaders?.disconnect();
     this.cardRenderer.cleanup(true); // Force viewer cleanup on view destruction

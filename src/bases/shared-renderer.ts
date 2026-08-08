@@ -306,6 +306,21 @@ export function applyViewContainerStyles(
   container.classList.add(`image-fit-${settings.imageFit}`);
 }
 
+/**
+ * Release the inline --bases-view-padding override at view teardown.
+ *
+ * Obsidian creates .bases-view once per query controller and reuses it for
+ * whatever view type replaces this one, emptying its children but keeping its
+ * inline styles. Inline style outranks the per-view-type rules in app.css, so
+ * leaving the override behind hands this view's gap to a native Table, List or
+ * Cards view as its padding until the leaf is closed and reopened.
+ */
+export function clearViewContainerStyles(container: HTMLElement): void {
+  container
+    .closest<HTMLElement>('.bases-view')
+    ?.style.removeProperty(VIEW_PADDING_VAR);
+}
+
 /** Apply CSS-only settings immediately for instant feedback (bypasses throttle) */
 export function applyCssOnlySettings(
   config: BasesViewConfig,

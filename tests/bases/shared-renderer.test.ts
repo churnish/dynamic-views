@@ -121,6 +121,7 @@ import {
   SharedCardRenderer,
   applyCssOnlySettings,
   applyViewContainerStyles,
+  clearViewContainerStyles,
 } from '../../src/bases/shared-renderer';
 import { VISIBLE_BODY_SELECTOR } from '../../src/core/constants';
 import { getOwnerWindow } from '../../src/utils/owner-window';
@@ -686,5 +687,56 @@ describe('applyViewContainerStyles — card gap variable', () => {
     expect(gapWrites).toHaveLength(1);
     expect(clearStyleSettingsCache).toHaveBeenCalledTimes(1);
     setProperty.mockRestore();
+  });
+});
+
+describe('applyViewContainerStyles — view padding override', () => {
+  const settings = (overrides: Partial<ResolvedSettings> = {}) =>
+    ({ ...VIEW_DEFAULTS, ...overrides }) as ResolvedSettings;
+
+  const mountInScrollEl = () => {
+    const scrollEl = document.createElement('div');
+    scrollEl.className = 'bases-view';
+    const container = document.createElement('div');
+    scrollEl.appendChild(container);
+    return { scrollEl, container };
+  };
+
+  it('writes the gap onto the scroll element', () => {
+    const { scrollEl, container } = mountInScrollEl();
+
+    applyViewContainerStyles(container, settings({ cardGapDesktop: 20 }));
+
+    expect(scrollEl.style.getPropertyValue('--bases-view-padding')).toBe(
+      '20px'
+    );
+  });
+
+  it('skips the write inside an embed', () => {
+    const embed = document.createElement('div');
+    embed.className = 'bases-embed';
+    const { scrollEl, container } = mountInScrollEl();
+    embed.appendChild(scrollEl);
+
+    applyViewContainerStyles(container, settings({ cardGapDesktop: 20 }));
+
+    expect(scrollEl.style.getPropertyValue('--bases-view-padding')).toBe('');
+  });
+
+  // .bases-view outlives the view — a leftover override becomes the next view
+  // type's padding, so teardown must release it.
+  it('releases the override on teardown', () => {
+    const { scrollEl, container } = mountInScrollEl();
+    applyViewContainerStyles(container, settings({ cardGapDesktop: 20 }));
+
+    clearViewContainerStyles(container);
+
+    expect(scrollEl.style.getPropertyValue('--bases-view-padding')).toBe('');
+  });
+
+  it('is a no-op when the container has no scroll element', () => {
+    const container = document.createElement('div');
+
+    expect(() => clearViewContainerStyles(container)).not.toThrow();
   });
 });
