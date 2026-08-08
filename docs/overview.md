@@ -10,7 +10,7 @@ updated: 2026-04-10
 
 - Dynamic Views renders card views (Grid, Masonry) in Obsidian's built-in [Bases](https://obsidian.md/help/bases) plugin.
 - Cards can display images in multiple formats (cover, thumbnail, poster, backdrop), markup-stripped text previews, and configurable property rows.
-- The plugin also provides a panzoom image viewer, multi-image navigation, and keyboard navigation.
+- The plugin also provides a zoom/pan image viewer, multi-image navigation, and keyboard navigation.
 - See the [README](../README.md) for key features and documentation.
 - The plugin entry point is [main.ts](../main.ts) — it registers Bases view types, commands, and the settings tab.
 - Core type definitions live in [types.ts](../src/types.ts) and default values in [constants.ts](../src/constants.ts).
@@ -74,7 +74,7 @@ updated: 2026-04-10
 | Content loading | [content-loader.ts](../src/core/content-loader.ts)<br>[image-loader.ts](../src/core/image-loader.ts) | Async image/text loading with in-flight dedup and two-tier caching. |
 | Virtual scroll | [virtual-scroll.ts](../src/core/virtual-scroll.ts) | Masonry-only card mount/unmount by viewport position. |
 | Content visibility | [content-visibility.ts](../src/core/content-visibility.ts) | IntersectionObserver-based render gating for Grid. |
-| Image viewer | [image-viewer.ts](../src/core/image-viewer.ts) | Panzoom zoom/pan in constrained and fullscreen modes. |
+| Image viewer | [image-viewer.ts](../src/core/image-viewer.ts) | Zoom/pan gestures in constrained and fullscreen modes. |
 | Slideshow | [slideshow.ts](../src/core/slideshow.ts) | Multi-image card navigation, gesture detection, external blob cache. |
 | Property layout | [property-measure.ts](../src/core/property-measure.ts)<br>[scroll-gradient.ts](../src/core/scroll-gradient.ts) | Property field width measurement, paired layout, horizontal scroll gradients. |
 | Context menus | [context-menu.ts](../src/core/context-menu.ts) | Right-click menus for cards and links. |

@@ -59,12 +59,13 @@ Until **Dynamic Views** is [approved](https://github.com/obsidianmd/obsidian-rel
 <details>
 <summary>Install manually</summary>
 
-1. Download `dynamic-views.zip` in the `Assets` of the [latest release](https://github.com/churnish/dynamic-views/releases).
+1. Download `main.js`, `manifest.json`, and `styles.css` from the `Assets` of the [latest release](https://github.com/churnish/dynamic-views/releases).
 2. Open the vault folder in the system file manager.
 3. Navigate to your Obsidian config folder (`.obsidian` by default, hidden on most OSes).
-4. Unzip `dynamic-views.zip` and place it in the `plugins` folder.
-5. Reload plugins or app.
-6. Enable **Dynamic Views** in **Obsidian settings → Community plugins → Installed plugins**.
+4. Create a `dynamic-views` folder inside the `plugins` folder.
+5. Place all three downloaded files in the `dynamic-views` folder.
+6. Reload plugins or app.
+7. Enable **Dynamic Views** in **Obsidian settings → Community plugins → Installed plugins**.
 
 **Tip:** To be notified about new **Dynamic Views** releases, press **Watch** at the top of the repository page then select **Custom → Releases → Apply**.
 
@@ -153,7 +154,7 @@ The image viewer can be disabled in Style Settings, along with individual featur
 | Reset pan & zoom | R / ↓ / Right-click |
 | Copy image | Ctrl/Cmd+C |
 | Drag & drop | Hold Alt+drag |
-| Drag & drop (panzoom disabled) | Drag |
+| Drag & drop (zoom disabled) | Drag |
 | Open file | Enter |
 | Close | Click / Esc |
 

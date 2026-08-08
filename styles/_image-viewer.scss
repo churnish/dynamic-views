@@ -210,7 +210,7 @@ body:not(.dynamic-views-image-viewer-disabled)
   object-fit: contain;
   opacity: 1;
   border-radius: 0;
-  /* Pre-promote to compositor layer so panzoom transform changes
+  /* Pre-promote to compositor layer so gesture transform changes
      bypass main-thread Layerize (80ms→<1ms per frame) */
   will-change: transform;
 }
@@ -235,20 +235,21 @@ body:not(.is-mobile):not(.dynamic-views-image-viewer-constrain-to-pane)
   user-select: none;
 }
 
-/* Pan is disabled until zoomed in (Panzoom `panOnlyWhenZoomed`), so suppress the
-   grab cursor at 1x — native only shows it on `.lightbox.is-zoomed`.
-   is-pannable is added by JS from the panzoomchange scale.
-   !important overrides Panzoom's inline cursor: grab */
-.dynamic-views-image-embed.is-zoomed:not(.is-pannable) img {
-  cursor: default !important;
+/* Open-hand cursor only once zoomed in, matching native's
+   `.lightbox.is-zoomed .media-wrapper img`. `.is-pannable` is added by JS from
+   the gesture backends' scale; at 1x the img inherits `cursor: default` from the
+   overlay, so 1x never advertises a pan that cannot happen.
+   Full selector on purpose — (0,3,1) ties with the alt-drag rule below, which
+   then wins on source order. */
+.dynamic-views-image-embed.is-zoomed.is-pannable img {
+  cursor: grab;
 }
 
 /* Allow drag when Alt is held (is-alt-drag class added by JS) */
-/* !important overrides Panzoom's inline cursor: grab */
 .dynamic-views-image-embed.is-zoomed.is-alt-drag img {
   -webkit-user-drag: auto;
   user-drag: auto;
-  cursor: default !important;
+  cursor: default;
 }
 
 /* Image viewer cursor — requires hover intent (.interact) */

@@ -63,7 +63,7 @@ Structural rules for view containers: container queries, view padding, group hea
 
 ### Overlays (`_image-viewer`)
 
-The panzoom image viewer overlay — fixed-position, full-screen, appended to `body`. Loaded between view layout and card internals because it sits above the card layer but below Obsidian's notice layer.
+The image viewer overlay — fixed-position, full-screen, appended to `body`. Loaded between view layout and card internals because it sits above the card layer but below Obsidian's notice layer.
 
 ### Card internals (`card/_core`, `card/_previews`, `card/_header`)
 

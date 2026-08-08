@@ -37,7 +37,7 @@ dynamic-views/
 │   │   ├── image.ts                  # Image path processing, wikilink stripping, URL validation
 │   │   ├── image-extraction.ts       # Image embed extraction from file content (wikilinks, Markdown, cardlink)
 │   │   ├── image-loader.ts           # Image aspect ratio caching + fallbacks
-│   │   ├── image-viewer.ts           # Panzoom image viewer
+│   │   ├── image-viewer.ts           # Image viewer (hand-rolled zoom/pan gestures)
 │   │   ├── keyboard-nav.ts           # Keyboard focus management for cards
 │   │   ├── notebook-navigator.ts     # Notebook Navigator plugin integration
 │   │   ├── poster.ts                 # Poster format utilities (static clipping, scroll reset)
@@ -96,7 +96,7 @@ dynamic-views/
 │   ├── _grid-masonry-shared.scss     # Shared card views layout: groups, sticky headers, card foundation, content-visibility
 │   ├── _grid-view.scss               # Grid: CSS Grid columns, subgrid, grid spacing
 │   ├── _hover-and-touch.scss          # Hover and touch visual feedback, cursor gating
-│   ├── _image-viewer.scss            # Image viewer overlay, panzoom, cursor rules
+│   ├── _image-viewer.scss            # Image viewer overlay, chrome, cursor rules
 │   ├── _masonry-view.scss            # Masonry: absolute positioning, container rules, transitions
 │   ├── _plugin-settings.scss         # Plugin settings tab styling
 │   ├── _properties.scss              # Property row system, labels, timestamps, paths, paired property layout

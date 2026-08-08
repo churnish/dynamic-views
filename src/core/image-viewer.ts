@@ -3,7 +3,6 @@
  */
 
 import { Notice, Platform, TFile, setIcon, type App } from 'obsidian';
-import Panzoom, { PanzoomObject } from '@panzoom/panzoom';
 
 import { GESTURE_TIMEOUT_MS } from './constants';
 import { getZoomSensitivityDesktop } from '../utils/style-settings';
@@ -291,7 +290,7 @@ export function handleImageViewerTrigger(
 
 interface ViewerGestureControls {
   cleanup: () => void;
-  /** Exclude image from Panzoom event handling so native drag can proceed. */
+  /** Suspend pointer-drag panning so native drag can proceed. */
   setAltDragMode: (enabled: boolean) => void;
   /** Drop zoom/pan instantly so a newly navigated image starts at 1x. */
   resetZoom: () => void;
@@ -324,11 +323,14 @@ function setupImageViewerGestures(
   mode: GestureMode
 ): ViewerGestureControls {
   const isMobileMode = mode === 'mobile';
-  let panzoomInstance: PanzoomObject | null = null;
   let errorHandler: (() => void) | null = null;
-  let panzoomChangeHandler: ((e: Event) => void) | null = null;
-  let panzoomStartHandler: (() => void) | null = null;
-  let panzoomEndHandler: (() => void) | null = null;
+  // The desktop backend keeps its transform state in `attachDesktopGestures`'s
+  // closure; these bridges expose it to the returned controls, mirroring the
+  // `mobileResetTransform` pattern below
+  let desktopAttached = false;
+  let desktopResetTransform: (() => void) | null = null;
+  let desktopSetAltDrag: ((enabled: boolean) => void) | null = null;
+  let desktopCleanup: (() => void) | null = null;
   let mobileTouchHandler: ((e: TouchEvent) => void) | null = null;
   let mobileAnimFrame = 0;
   let mobileLoadHandler: (() => void) | null = null;
@@ -336,78 +338,76 @@ function setupImageViewerGestures(
   const gestureDoc = container.ownerDocument;
   const gestureWin = gestureDoc.defaultView ?? window;
 
+  /**
+   * Desktop gesture backend — wheel zoom/pan plus pointer-drag panning, written
+   * against native's transform order: `translate(Ppx) scale(z)`, so the pan is
+   * in **screen** pixels. The mobile backend below deliberately keeps the
+   * opposite order (`scale(s) translate(x, y)`, pre-scale pan).
+   */
   function attachDesktopGestures(): void {
     const zoomSensitivity = getZoomSensitivityDesktop();
 
-    // Panzoom's isAttached walks up to module-scope `document`, which fails
-    // for elements in popout windows (separate V8 isolate). Temporarily
-    // reparent the container to the main document for the init check —
-    // imgEl.parentNode (container) stays correct throughout.
-    const inPopout = container.ownerDocument !== document;
-    let reparentBack: (() => void) | null = null;
-    if (inPopout) {
-      const origParent = container.parentElement;
-      const origNext = container.nextSibling;
-      document.body.appendChild(container);
-      reparentBack = () => origParent?.insertBefore(container, origNext);
-    }
-    panzoomInstance = Panzoom(imgEl, {
-      // Native clamps the wheel zoom to 1–10; the wheel handler owns the step,
-      // so Panzoom's own `step` option is unused
-      maxScale: VIEWER_MAX_ZOOM,
-      minScale: 1,
-      startScale: 1,
-      canvas: false,
-      // Open-hand cursor, matching the native lightbox's `cursor: grab`
-      cursor: 'grab',
-      // Nothing to pan at 1x — native only pans once zoomed in
-      panOnlyWhenZoomed: true,
-    });
+    let scale = 1;
+    let panX = 0;
+    let panY = 0;
+    let rafId = 0;
+    let wasPannable = false;
+    let altDragMode = false;
+    let activePointerId: number | null = null;
+    let lastX = 0;
+    let lastY = 0;
 
-    // Panzoom sets its cursor once at init, so drive the grab/default swap from
-    // the zoom level ourselves — otherwise 1x advertises a pan that cannot happen
-    panzoomChangeHandler = (e: Event) => {
-      const { scale } = (e as CustomEvent<{ scale: number }>).detail;
-      container.classList.toggle('is-pannable', scale > 1);
+    /**
+     * Commit the pending transform on the next frame. Native coalesces the same
+     * way (`applyZoom`), and a single-slot guard keeps a burst of wheel or
+     * pointer events to one write per frame.
+     */
+    const applyDesktopTransform = () => {
+      if (rafId) return;
+      rafId = gestureWin.requestAnimationFrame(() => {
+        rafId = 0;
+        // Clamp against live dimensions, as native's `getMaxPanBounds` does.
+        // Caching them would go stale: the container resizes without a `load`
+        // event on window resize (fullscreen) and via the `.workspace-leaf`
+        // ResizeObserver that rewrites the clone's inline size (constrained).
+        // It would also buy nothing — `imgEl.offsetWidth` is read in the same
+        // expression, and the clone's `contain: strict` keeps the read cheap.
+        const maxPanX = Math.max(
+          0,
+          (imgEl.offsetWidth * scale - container.offsetWidth) / 2
+        );
+        const maxPanY = Math.max(
+          0,
+          (imgEl.offsetHeight * scale - container.offsetHeight) / 2
+        );
+        panX = Math.max(-maxPanX, Math.min(maxPanX, panX));
+        panY = Math.max(-maxPanY, Math.min(maxPanY, panY));
+        imgEl.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+
+        // Guarded like the mobile backend's `syncPannable` — this runs every
+        // gesture frame and the container has `contain: strict`, so a needless
+        // class write would invalidate style on each one
+        const pannable = scale > 1;
+        if (pannable !== wasPannable) {
+          wasPannable = pannable;
+          container.classList.toggle('is-pannable', pannable);
+        }
+      });
     };
-    imgEl.addEventListener('panzoomchange', panzoomChangeHandler);
 
-    // Closed-fist cursor while dragging. Obsidian's own `is-grabbing` body class
-    // already carries `cursor: grabbing !important` app-wide, and the native
-    // lightbox drives it the same way — Panzoom only applies its one configured
-    // cursor, so the drag state has to be tracked separately. Gated on
-    // `.is-pannable` to mirror native's `zoomLevel <= 1` bail.
-    panzoomStartHandler = () => {
-      if (container.classList.contains('is-pannable')) {
-        gestureDoc.body.classList.add('is-grabbing');
-      }
+    desktopResetTransform = () => {
+      scale = 1;
+      panX = 0;
+      panY = 0;
+      applyDesktopTransform();
     };
-    panzoomEndHandler = () => gestureDoc.body.classList.remove('is-grabbing');
-    imgEl.addEventListener('panzoomstart', panzoomStartHandler);
-    imgEl.addEventListener('panzoomend', panzoomEndHandler);
-    reparentBack?.();
 
-    // Panzoom also binds handleMove/handleUp to module-scope `document`.
-    // In popouts, pointer events fire on the popout's document. Rebind.
-    if (inPopout) {
-      const pz = panzoomInstance;
-      document.removeEventListener('pointermove', pz.handleMove);
-      document.removeEventListener('pointerup', pz.handleUp);
-      document.removeEventListener('pointerleave', pz.handleUp);
-      document.removeEventListener('pointercancel', pz.handleUp);
-      gestureDoc.addEventListener('pointermove', pz.handleMove, {
-        passive: true,
-      });
-      gestureDoc.addEventListener('pointerup', pz.handleUp, {
-        passive: true,
-      });
-      gestureDoc.addEventListener('pointerleave', pz.handleUp, {
-        passive: true,
-      });
-      gestureDoc.addEventListener('pointercancel', pz.handleUp, {
-        passive: true,
-      });
-    }
+    desktopSetAltDrag = (enabled: boolean) => {
+      altDragMode = enabled;
+      imgEl.draggable = enabled;
+    };
+
+    const pointerController = new AbortController();
 
     // Native's three-branch wheel model (`handleWheelZoom`, app.js:95651):
     // Ctrl/Cmd zooms about the cursor, a plain wheel pans once zoomed, and a
@@ -415,9 +415,6 @@ function setupImageViewerGestures(
     // page keeps its normal scroll. Native binds this to the whole viewer with
     // no target check, so hovering the backdrop behaves the same as the image.
     const wheelHandler = (e: WheelEvent) => {
-      const pz = panzoomInstance;
-      if (!pz) return;
-
       // Trackpad pinch synthesises ctrlKey on every platform, so macOS pinch
       // lands here too
       if (e.ctrlKey || e.metaKey) {
@@ -434,60 +431,98 @@ function setupImageViewerGestures(
         // the value that reproduces native so the default stays faithful
         step *= zoomSensitivity / NATIVE_ZOOM_SENSITIVITY;
 
-        const currentScale = pz.getScale();
-        const nextScale = Math.min(
-          VIEWER_MAX_ZOOM,
-          Math.max(1, currentScale + step)
-        );
-        if (nextScale === currentScale) return;
+        const nextScale = Math.min(VIEWER_MAX_ZOOM, Math.max(1, scale + step));
+        if (nextScale === scale) return;
 
-        // Panzoom's own `zoomToPoint` assumes the element sits at its parent's
-        // origin — it offsets by half the *element* width. Our image is centred
-        // in a full-window container, so that only holds on the axis where the
-        // image fills the container: zooming drifts horizontally on a portrait
-        // image. Reproduce native's focal math against the container centre
-        // instead. Native keeps pan in screen pixels while Panzoom's translate is
-        // pre-scale, so native's `(pan - f) * ratio + f` reduces here to
-        // `pan + f * (1/next - 1/current)`.
-        const { x, y } = pz.getPan();
+        // Native's focal update, verbatim: the cursor offset from the container
+        // centre stays fixed on screen while everything else scales around it
         const rect = container.getBoundingClientRect();
         const focalX = e.clientX - rect.left - rect.width / 2;
         const focalY = e.clientY - rect.top - rect.height / 2;
-        const inverseDelta = 1 / nextScale - 1 / currentScale;
-
-        pz.zoom(nextScale, { animate: false });
-        // Native drops the pan the moment zoom returns to 1x. `panOnlyWhenZoomed`
-        // blocks *new* pans there but leaves the accumulated offset applied, which
-        // would otherwise strand the image off-screen.
-        if (nextScale <= 1) pz.pan(0, 0, { force: true });
-        else
-          pz.pan(x + focalX * inverseDelta, y + focalY * inverseDelta, {
-            force: true,
-          });
+        const ratio = nextScale / scale;
+        panX = (panX - focalX) * ratio + focalX;
+        panY = (panY - focalY) * ratio + focalY;
+        scale = nextScale;
+        // Native drops the pan the moment zoom returns to 1x, so the image is
+        // never stranded off-screen at a zoom level that cannot pan it back
+        if (scale <= 1) {
+          panX = 0;
+          panY = 0;
+        }
+        applyDesktopTransform();
         return;
       }
 
-      if (pz.getScale() <= 1) return;
+      if (scale <= 1) return;
       e.preventDefault();
-      // Panzoom composes `scale(s) translate(x, y)`, so its translate is applied
-      // before the scale and its units are pre-scale. Native's transform order is
-      // the reverse (`translate(...) scale(...)`, screen pixels), so dividing by
-      // the scale keeps the on-screen travel identical at every zoom level —
-      // copying native's flat 1.5x would accelerate as you zoom in.
-      const scale = pz.getScale();
-      const { x, y } = pz.getPan();
-      pz.pan(
-        x - (WHEEL_PAN_MULTIPLIER * e.deltaX) / scale,
-        y - (WHEEL_PAN_MULTIPLIER * e.deltaY) / scale
-      );
+      // Pan is in screen pixels, so native's flat multiplier applies as-is
+      panX -= WHEEL_PAN_MULTIPLIER * e.deltaX;
+      panY -= WHEEL_PAN_MULTIPLIER * e.deltaY;
+      applyDesktopTransform();
     };
     container.addEventListener('wheel', wheelHandler, WHEEL_OPTIONS);
     containerWheelHandlers.set(container, wheelHandler);
+
+    // Armed the moment anything is registered — a throw further down would
+    // otherwise make `cleanup()` skip desktop teardown and leak the wheel
+    // listener along with its `containerWheelHandlers` entry
+    desktopAttached = true;
+    desktopCleanup = () => {
+      pointerController.abort();
+      if (rafId) {
+        gestureWin.cancelAnimationFrame(rafId);
+        rafId = 0;
+      }
+    };
+
+    // All four listeners live on `imgEl`: `setPointerCapture` retargets the
+    // stream to the capture element, so document-level listeners are
+    // unnecessary and container-level ones would never fire.
+    const onPointerDown = (e: PointerEvent) => {
+      // Native's `handleMouseDown` bails on non-primary buttons and at 1x
+      if (e.button !== 0 || scale <= 1 || altDragMode) return;
+      activePointerId = e.pointerId;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      imgEl.setPointerCapture(e.pointerId);
+      // Obsidian's own `is-grabbing` body class carries `cursor: grabbing
+      // !important` app-wide; the native lightbox drives it the same way, so
+      // the plugin needs no CSS of its own
+      gestureDoc.body.classList.add('is-grabbing');
+    };
+
+    // The listeners are permanently attached, so without the id gate merely
+    // hovering a zoomed image would pan it
+    const onPointerMove = (e: PointerEvent) => {
+      if (e.pointerId !== activePointerId) return;
+      panX += e.clientX - lastX;
+      panY += e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      applyDesktopTransform();
+    };
+
+    const onPointerUp = (e: PointerEvent) => {
+      if (e.pointerId !== activePointerId) return;
+      if (imgEl.hasPointerCapture(e.pointerId)) {
+        imgEl.releasePointerCapture(e.pointerId);
+      }
+      activePointerId = null;
+      gestureDoc.body.classList.remove('is-grabbing');
+    };
+
+    const pointerOptions = { signal: pointerController.signal };
+    imgEl.addEventListener('pointerdown', onPointerDown, pointerOptions);
+    imgEl.addEventListener('pointermove', onPointerMove, pointerOptions);
+    imgEl.addEventListener('pointerup', onPointerUp, pointerOptions);
+    imgEl.addEventListener('pointercancel', onPointerUp, pointerOptions);
   }
 
   /**
    * Native mobile touch handler — behavior modeled after Obsidian's built-in `mobile-image-viewer`.
-   * No Panzoom — direct touch events with focal-point pinch zoom and momentum.
+   * Direct touch events with focal-point pinch zoom and momentum. Keeps its own
+   * `scale(s) translate(x, y)` order, so its pan is pre-scale — the desktop
+   * backend above uses native's opposite order.
    */
   function attachMobileGestures(): void {
     let imgWidth = imgEl.width;
@@ -504,8 +539,8 @@ function setupImageViewerGestures(
     let panY = 0;
     let scale = 1;
 
-    // Mirrors the desktop panzoomchange listener so the zoom-dependent styling
-    // (titlebar hide) works on touch too. Guarded — applyTransform runs every
+    // Mirrors the desktop backend's `.is-pannable` toggle so the zoom-dependent
+    // styling (titlebar hide) works on touch too. Guarded — applyTransform runs every
     // gesture frame, and the container has `contain: strict`, so a needless
     // class write would invalidate style on each one.
     let wasPannable = false;
@@ -713,44 +748,19 @@ function setupImageViewerGestures(
 
   return {
     cleanup: () => {
-      if (panzoomInstance) {
+      if (desktopAttached) {
         const wheelHandler = containerWheelHandlers.get(container);
         if (wheelHandler) {
           container.removeEventListener('wheel', wheelHandler, WHEEL_OPTIONS);
           containerWheelHandlers.delete(container);
         }
-        // Remove popout document listeners (destroy() only removes from main document)
-        if (gestureDoc !== document) {
-          gestureDoc.removeEventListener(
-            'pointermove',
-            panzoomInstance.handleMove
-          );
-          gestureDoc.removeEventListener('pointerup', panzoomInstance.handleUp);
-          gestureDoc.removeEventListener(
-            'pointerleave',
-            panzoomInstance.handleUp
-          );
-          gestureDoc.removeEventListener(
-            'pointercancel',
-            panzoomInstance.handleUp
-          );
-        }
-        panzoomInstance.destroy();
+        desktopCleanup?.();
       }
       if (errorHandler) {
         imgEl.removeEventListener('error', errorHandler);
       }
-      if (panzoomChangeHandler) {
-        imgEl.removeEventListener('panzoomchange', panzoomChangeHandler);
-      }
-      if (panzoomStartHandler) {
-        imgEl.removeEventListener('panzoomstart', panzoomStartHandler);
-      }
-      if (panzoomEndHandler) {
-        imgEl.removeEventListener('panzoomend', panzoomEndHandler);
-      }
       // Never leave the app-wide grabbing cursor behind if the viewer is torn
-      // down mid-drag — panzoomend would not fire
+      // down mid-drag — pointerup would not fire
       gestureDoc.body.classList.remove('is-grabbing');
       if (mobileTouchHandler) {
         container.removeEventListener(
@@ -776,17 +786,15 @@ function setupImageViewerGestures(
       }
     },
     setAltDragMode: (enabled: boolean) => {
-      panzoomInstance?.setOptions({ exclude: enabled ? [imgEl] : [] });
+      desktopSetAltDrag?.(enabled);
     },
     resetZoom: () => {
-      // Panzoom's default animates the reset, so the incoming image would be
-      // shown inheriting the outgoing zoom and then scaling down
-      panzoomInstance?.reset({ animate: false });
+      desktopResetTransform?.();
       // Tablets with a keyboard can arrow-navigate while on the mobile backend
       mobileResetTransform?.();
     },
     ensureGestures: () => {
-      if (panzoomInstance || mobileTouchHandler) return;
+      if (desktopAttached || mobileTouchHandler) return;
       if (!(imgEl.complete && imgEl.naturalWidth > 0)) return;
       if (isMobileMode) attachMobileGestures();
       else attachDesktopGestures();
@@ -963,7 +971,7 @@ function openImageViewer(
       'dynamic-views-zoom-disabled'
     );
 
-    // Track gesture controls for Alt+drag coordination (set when Panzoom active)
+    // Track gesture controls for Alt+drag coordination (set when gestures active)
     let gestureControls: ViewerGestureControls | null = null;
 
     if (!isPinchZoomDisabled) {
@@ -984,10 +992,10 @@ function openImageViewer(
         viewerCleanupFns.set(cloneEl, gestureControls.cleanup);
       }
     } else if (!isMobile) {
-      // Image is always draggable when panzoom is off (no pan to conflict with)
+      // Image is always draggable when zoom is off (no pan to conflict with)
       imgEl.draggable = true;
 
-      const onPanzoomOffDragStart = (e: DragEvent) => {
+      const onZoomDisabledDragStart = (e: DragEvent) => {
         const src = imgEl.src;
         const vaultPath = getVaultPathFromResourceUrl(src);
 
@@ -1003,12 +1011,12 @@ function openImageViewer(
         }
       };
 
-      imgEl.addEventListener('dragstart', onPanzoomOffDragStart);
+      imgEl.addEventListener('dragstart', onZoomDisabledDragStart);
 
       const existingGestureCleanup = viewerCleanupFns.get(cloneEl);
       viewerCleanupFns.set(cloneEl, () => {
         existingGestureCleanup?.();
-        imgEl.removeEventListener('dragstart', onPanzoomOffDragStart);
+        imgEl.removeEventListener('dragstart', onZoomDisabledDragStart);
       });
     }
 
@@ -1395,7 +1403,10 @@ function openImageViewer(
 
     // Focus viewer clone to prevent :focus-visible on cards during keyboard input.
     // Card loses focus → no focus ring while viewer is open or after it closes.
-    // Capture-phase pointerdown re-focuses after tab switches (before panzoom stops propagation).
+    // Capture-phase pointerdown re-focuses after tab switches. Nothing swallows
+    // the event now that the pan handler no longer calls preventDefault, and no
+    // document-level listener acts on a body-level clone — text-selection.ts
+    // bails when the target has no ancestor card.
     if (!isMobile) {
       cloneEl.addEventListener(
         'pointerdown',

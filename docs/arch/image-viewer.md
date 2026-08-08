@@ -1,14 +1,14 @@
 ---
 title: Image viewer
-description: Dual-mode image viewer architecture — gesture systems (Panzoom desktop, native mobile touch), keyboard handler map, arrow navigation, constrained vs fullscreen modes, cleanup lifecycle, and invariants.
+description: Dual-mode image viewer architecture — gesture systems (hand-rolled desktop wheel/pointer, native mobile touch), keyboard handler map, arrow navigation, constrained vs fullscreen modes, cleanup lifecycle, and invariants.
 author: 🤖 Generated with Claude Code
-updated: 2026-08-07
+updated: 2026-08-08
 ---
 # Image viewer
 
 See also: [`odkb/electron-popout-quirks.md`](https://github.com/churnish/odkb/blob/main/electron-popout-quirks.md)
 
-`src/core/image-viewer.ts` implements a panzoom image viewer overlay with two gesture backends, platform-aware keyboard handling, and clipboard/drag support. The module exports two functions: `handleImageViewerTrigger()` (entry point for card image clicks) and `cleanupAllViewers()` (force cleanup on view destruction). Everything else is private.
+`src/core/image-viewer.ts` implements a zoom/pan image viewer overlay with two gesture backends, platform-aware keyboard handling, and clipboard/drag support. The module exports two functions: `handleImageViewerTrigger()` (entry point for card image clicks) and `cleanupAllViewers()` (force cleanup on view destruction). Everything else is private.
 
 ## Design principle: native parity takes priority
 
@@ -74,15 +74,24 @@ GestureMode = 'mobile' | 'desktop'
 
 Mobile (phone or tablet, `Platform.isMobile`) always uses `'mobile'`. Desktop only uses `'desktop'`. The mode determines which gesture backend attaches — they never coexist.
 
-### Desktop: Panzoom
+### Desktop: hand-rolled wheel + pointer
 
-Library: `@panzoom/panzoom`. Provides mouse drag pan with default transform behaviour — no custom `setTransform`. Wheel handling is written by hand (see [Wheel behaviour](#wheel-behaviour)).
+No library. `attachDesktopGestures()` owns three numbers — `scale`, `panX`, `panY` — and writes them as **native's transform order**: `translate(panXpx, panYpx) scale(scale)`. Translate applies after the scale, so the pan is in **screen pixels**. `@panzoom/panzoom` was removed once the wheel handler was ported; the workarounds it needed (container reparenting for its module-scope `isAttached`, four rebound pointer listeners for popouts, an `!important` cursor override, `is-grabbing` listeners, `{ animate: false }` on every reset) all disappeared with it.
 
-- **Pan only when zoomed**: `panOnlyWhenZoomed: true` disables panning while scale equals `startScale` (1), matching native, which pans only once zoomed in. The mobile handler needs no equivalent — its `maxPan = imgDim * (scale-1) / scale / 2` is already 0 at 1x.
-- **Cursor**: `cursor: 'grab'` (open hand), matching the native lightbox's `cursor: grab` on `.lightbox.is-zoomed .media-wrapper img`. Panzoom applies its cursor once at init and never varies it, so two listeners drive the rest: `panzoomchange` toggles `.is-pannable` on the container from `detail.scale` (SCSS reverts to `cursor: default !important` while absent, so 1x never advertises a pan that cannot happen), and `panzoomstart`/`panzoomend` add and remove Obsidian's own `is-grabbing` class on the owner document's body for the closed-fist drag cursor. Native drives that same class from its pan handler; `app.css` already carries `cursor: grabbing !important` for it, so the plugin adds no CSS. The start handler is gated on `.is-pannable`, mirroring native's `zoomLevel <= 1` bail. Because `is-grabbing` is app-wide, gesture cleanup removes it unconditionally — `panzoomend` does not fire when the viewer is torn down mid-drag.
+- **Transform writes are coalesced.** `applyDesktopTransform()` schedules a single-slot `requestAnimationFrame` (`if (rafId) return`), matching native's `applyZoom`. A burst of wheel or pointer events produces one style write per frame; the callback reads the live state, so a reset issued mid-frame is picked up by the pending callback rather than queuing a second one. Scheduled and cancelled through `gestureWin` — never a bare global, which in a popout would schedule on the main window and silently no-op the cancel.
+- **Clamping is against live dimensions**, exactly as native's `getMaxPanBounds`: `maxPanX = max(0, (imgEl.offsetWidth * scale - container.offsetWidth) / 2)`, same for Y. Deliberately not cached — the container resizes without a `load` event on window resize (fullscreen) and via the `.workspace-leaf` ResizeObserver that rewrites the clone's inline size (constrained). A cache would also buy nothing, since `imgEl.offsetWidth` is read in the same expression; the clone's `contain: strict` keeps the read cheap. At 1x the image never exceeds the container, so `maxPan` is 0 and pan is pinned — the same "no pan until zoomed" behaviour native has, with no separate flag.
+- **Pointer drag pan**: `pointerdown`/`pointermove`/`pointerup`/`pointercancel`, all four on `imgEl`. `setPointerCapture` retargets the stream to the capture element, so document-level listeners are unnecessary and container-level ones would never fire — which is also why popouts need no special handling. `pointerdown` bails unless `e.button === 0 && scale > 1` (native's `handleMouseDown`) and alt-drag is off; `pointermove` bails unless the pointer id matches the captured one, since the listeners are permanently attached and hovering a zoomed image would otherwise pan it. Movement is added in screen pixels with no scale division.
+- **Cursor**: `.is-pannable` is toggled on the container from inside the rAF, guarded by a `wasPannable` boolean so an unchanged state writes no class (the container has `contain: strict`, and this runs every gesture frame). SCSS gives `.is-zoomed.is-pannable img` `cursor: grab`, matching native's `.lightbox.is-zoomed .media-wrapper img`; at 1x the image inherits `cursor: default` from the overlay. `pointerdown`/`pointerup` add and remove Obsidian's own `is-grabbing` class on the owner document's body for the closed-fist drag cursor — `app.css` already carries `cursor: grabbing !important` for it, so the plugin adds no CSS. Because that class is app-wide, gesture cleanup removes it unconditionally: `pointerup` never fires if the viewer is torn down mid-drag.
 - **No maximize mode**: there is no fill-the-container state, no `.is-maximized` class, and no keyboard or right-click zoom reset. Space closes the viewer (see [Keyboard handlers](#keyboard-handlers)); right-click on the image is suppressed by `onContextMenu` in `openImageViewer`.
-- **Popout quirk**: Panzoom binds pointer events to module-scope `document`. In popout windows, pointer events must be rebound to the popout's document (`gestureDoc`), otherwise drag/release fails. See [popout-window-safety.md](../patterns/popout-window-safety.md) for the canonical `getOwnerWindow()` pattern.
-- **Alt+drag**: `setAltDragMode(true)` excludes the image from Panzoom and sets `imgEl.draggable = true` to allow native drag via `app.dragManager`.
+- **Alt+drag**: `setAltDragMode(true)` sets a closure flag that makes `pointerdown` bail, plus `imgEl.draggable = true`, allowing native drag via `app.dragManager`.
+
+#### Scope wiring
+
+`resetZoom` and `setAltDragMode` live on the object returned by `setupImageViewerGestures()` and cannot see `attachDesktopGestures`'s locals. Four bindings in the outer closure bridge the gap, mirroring the existing `mobileResetTransform` pattern: `desktopResetTransform`, `desktopSetAltDrag`, `desktopCleanup`, and a `desktopAttached` boolean.
+
+`desktopAttached` replaces the old `panzoomInstance` null-check in both `ensureGestures()` (whose guard is `if (desktopAttached || mobileTouchHandler) return`) and `cleanup()`. It is set immediately after the wheel listener registers, not at the end of the function: a throw in between would otherwise make cleanup skip desktop teardown and leak the listener along with its `containerWheelHandlers` entry. Without the sentinel, `ensureGestures` would attach a second wheel and pointer set on every navigation load and overwrite the tracked handler, leaking the first.
+
+The four pointer listeners share one `AbortController`; `desktopCleanup` aborts it and cancels any pending rAF.
 
 ### Wheel behaviour
 
@@ -94,20 +103,20 @@ Replicates native's `handleWheelZoom` exactly. Three branches, on a `{ passive: 
 | No modifier, scale > 1 | `preventDefault`, then pan |
 | No modifier, scale = 1 | Ignored — **no `preventDefault`**, so normal scrolling is untouched |
 
-**Zoom is additive, not multiplicative.** `deltaY` is normalised by `deltaMode` (`DOM_DELTA_LINE` ×40, `DOM_DELTA_PAGE` ×800), then the step is `-delta / 150`, doubled when `Platform.isMacOS && !Number.isInteger(e.deltaY)` — fractional deltas mean a trackpad. The result is added to the current scale and clamped to 1–10, so `maxScale` is 10 rather than Panzoom's earlier 4. Trackpad pinch synthesises `ctrlKey` on every platform, so pinch lands in the zoom branch for free. Panzoom's own `step` option is unused; the plugin's `zoomSensitivity` setting is applied as a *relative* multiplier (`step *= sensitivity / 0.08`) so its default reproduces native exactly.
+**Zoom is additive, not multiplicative.** `deltaY` is normalised by `deltaMode` (`DOM_DELTA_LINE` ×40, `DOM_DELTA_PAGE` ×800), then the step is `-delta / 150`, doubled when `Platform.isMacOS && !Number.isInteger(e.deltaY)` — fractional deltas mean a trackpad. The result is added to the current scale and clamped to 1–10. Trackpad pinch synthesises `ctrlKey` on every platform, so pinch lands in the zoom branch for free. The plugin's `zoomSensitivity` setting is applied as a *relative* multiplier (`step *= sensitivity / 0.08`) so its default reproduces native exactly.
 
-**Transform order is the crux.** Native composes `translate(px, px) scale(z)` — translate applies after the scale, so its pan is in screen pixels. Panzoom composes `scale(s) translate(x, y)`, so its translate is pre-scale. Two consequences:
+Because the desktop backend now uses native's transform order, both branches are native's arithmetic verbatim:
 
-- **Pan**: dividing by the scale (`1.5 * delta / scale`) keeps on-screen travel at a flat 1.5 × delta at every zoom level. Copying native's constant directly would accelerate as you zoom in.
-- **Focal zoom**: native's `pan' = (pan - f) * (zNew/zOld) + f` reduces, in Panzoom's units, to `pan' = pan + f * (1/zNew - 1/zOld)`, where `f` is the cursor offset from the **container** centre.
+- **Pan**: `panX -= 1.5 * deltaX`. Screen pixels, so travel is a flat 1.5 × delta at every zoom level with no scale division.
+- **Focal zoom**: `pan' = (pan - f) * (zNew/zOld) + f`, where `f` is the cursor offset from the **container** centre (not the element's — the image is centred in a full-window container, so an element-relative focal drifts on whichever axis the image does not fill).
 
-Panzoom's `zoomToPoint` is deliberately **not** used: it offsets by half the *element* width, assuming the element sits at its parent's origin. The viewer's image is centred in a full-window container, so that only holds on the axis where the image fills the container — a portrait image tracked the cursor in Y but drifted badly in X.
-
-Returning to 1x clears the pan explicitly (`pan(0, 0, { force: true })`). `panOnlyWhenZoomed` blocks *new* pans at 1x but leaves any accumulated offset applied, which would strand the image off-screen; `force` is required because `constrainXY` otherwise returns the current values untouched.
+Returning to 1x zeroes the pan explicitly, as native does, so zooming out after panning never strands the image off-screen.
 
 ### Mobile: native touch handler
 
-No Panzoom. Direct `touchstart`/`touchmove`/`touchend` listeners on the container. Behavior modeled after Obsidian's native `mobile-image-viewer`.
+Direct `touchstart`/`touchmove`/`touchend` listeners on the container. Behavior modeled after Obsidian's native `mobile-image-viewer`.
+
+**The mobile backend keeps the opposite transform order** — `scale(s) translate(x, y)`, so its pan is pre-scale and its one-finger delta is divided by the scale. This divergence from the desktop backend (and from native) is deliberate: the mobile pinch/pan/momentum maths is written against pre-scale units throughout, and it is already at parity with Obsidian's mobile viewer, which is a different implementation from the desktop lightbox.
 
 - **Pinch zoom**: Two-finger gesture with focal-point tracking (midpoint between fingers, relative to `container.getBoundingClientRect()` — works in both fullscreen and constrained modes).
 - **Pan**: One-finger drag. Clamped: `maxPan = imgDim * (scale-1) / scale / 2` — prevents showing empty space.
@@ -117,9 +126,9 @@ No Panzoom. Direct `touchstart`/`touchmove`/`touchend` listeners on the containe
 
 ### Desktop: zoom-disabled mode
 
-When `dynamic-views-zoom-disabled` class is present, no Panzoom or mobile touch handler attaches. Desktop-only behavior in this mode:
+When `dynamic-views-zoom-disabled` class is present, neither gesture backend attaches. Desktop-only behavior in this mode:
 
-- **Always draggable**: `imgEl.draggable = true` set unconditionally. `onPanzoomOffDragStart` handles drag via `app.dragManager` for vault files, or `text/plain` embed markdown for external URLs.
+- **Always draggable**: `imgEl.draggable = true` set unconditionally. `onZoomDisabledDragStart` handles drag via `app.dragManager` for vault files, or `text/plain` embed markdown for external URLs.
 
 ## Keyboard handlers
 
@@ -132,8 +141,8 @@ All desktop keyboard handlers use capture-phase listeners and are guarded by `is
 | `onEscape` | Escape, Space | `openImageViewer` | Close viewer. Space also `preventDefault()`s to stop pane scroll and card re-activation. |
 | `onCopy` | Cmd/Ctrl+C | `openImageViewer` | Copy image to clipboard. Handles CORS via canvas for external images. |
 | `onEnter` | Enter | `openImageViewer` | Open image's vault file. Uses `getVaultPathFromResourceUrl()`. No-op for external images. |
-| `onAltKeyDown/Up` | Alt press/release | `openImageViewer` | Enable/disable alt-drag mode. Only when Panzoom active. |
-| `onAltBlur` | Window blur | `openImageViewer` | Resets alt-drag state when user Alt+Tabs away. Only when Panzoom active. |
+| `onAltKeyDown/Up` | Alt press/release | `openImageViewer` | Enable/disable alt-drag mode. Only when gestures are active. |
+| `onAltBlur` | Window blur | `openImageViewer` | Resets alt-drag state when user Alt+Tabs away. Only when gestures are active. |
 | `onArrowNav` | ArrowLeft, ArrowRight | `openImageViewer` | Step through the card's navigable image set. Only attached when the card registered a set of more than one image. See [Arrow navigation](#arrow-navigation). |
 
 ### Mobile only
@@ -158,7 +167,7 @@ ArrowLeft/ArrowRight step through the images a card can already navigate. Enable
 
 `hasPhysicalKeyboard()` is a local accessor, not a `Platform` property — see its doc comment in `image-viewer.ts` for why module augmentation cannot reach it, and why it can only ever widen the mobile case.
 
-Tablets run the **mobile** gesture backend, where `panzoomInstance` is null. `resetZoom()` therefore also calls `mobileResetTransform()`, exposed from the mobile gesture closure, to zero `scale`/`panX`/`panY` and cancel momentum — otherwise a navigated image would inherit the previous zoom. Bounds need no extra handling: `mobileLoadHandler` already recomputes `imgWidth`/`imgHeight`/`maxScale` on every load, src swaps included.
+Tablets run the **mobile** gesture backend, so `desktopResetTransform` is null. `resetZoom()` therefore also calls `mobileResetTransform()`, exposed from the mobile gesture closure, to zero `scale`/`panX`/`panY` and cancel momentum — otherwise a navigated image would inherit the previous zoom. Bounds need no extra handling: `mobileLoadHandler` already recomputes `imgWidth`/`imgHeight`/`maxScale` on every load, src swaps included.
 
 ### The navigable set
 
@@ -199,9 +208,9 @@ On error the handler marks the URL broken and retries in the same direction, bou
 
 ### Zoom and gestures across steps
 
-`showIndex` calls `gestureControls.resetZoom()` before swapping `src` so the incoming image starts at 1x. `.is-pannable` self-clears because Panzoom dispatches `panzoomchange` from `setTransformWithEvent`.
+`showIndex` calls `gestureControls.resetZoom()` before swapping `src` so the incoming image starts at 1x. `.is-pannable` self-clears on the next frame, when `applyDesktopTransform` (or the mobile `applyTransform`) sees the scale back at 1.
 
-`ensureGestures()` closes a hole navigation opens: if the *first* image is broken, the gesture module's `errorHandler` removes `initialLoadHandler` and neither is re-armed. Without it, navigating to a valid image would leave that image with no Panzoom, no wheel zoom, and no working `resetZoom` for the rest of the viewer session. `showIndex` calls it on every successful load.
+`ensureGestures()` closes a hole navigation opens: if the *first* image is broken, the gesture module's `errorHandler` removes `initialLoadHandler` and neither is re-armed. Without it, navigating to a valid image would leave that image with no pan, no wheel zoom, and no working `resetZoom` for the rest of the viewer session. `showIndex` calls it on every successful load.
 
 ### Titles
 
@@ -211,7 +220,7 @@ Titles after navigation use `getImageDisplayName(url)` only — not the `title |
 
 ### Two-level tracking
 
-1. **`viewerCleanupFns`** (passed in from caller): Gesture cleanup — Panzoom `.destroy()`, mobile touch handlers, momentum `cancelAnimationFrame()`.
+1. **`viewerCleanupFns`** (passed in from caller): Gesture cleanup — desktop wheel/pointer listeners and pending rAF, mobile touch handlers, momentum `cancelAnimationFrame()`.
 2. **`viewerListenerCleanups`** (module-scope Map): Listener cleanup — all keyboard, click, pointer, touch, drag handlers. Timeout cleanup. Observer cleanup.
 
 `viewerCleanupFns` is keyed by clone element. `viewerClones` (the caller-provided map) is keyed by original embed element (original → clone mapping). Deletion happens in pairs in `closeImageViewer()` and `cleanupAllViewers()`.
@@ -223,7 +232,7 @@ Titles after navigation use `getImageDisplayName(url)` only — not the `title |
 ### Module-scope maps
 
 - **`viewerListenerCleanups`**: Keyboard/click/touch listener cleanup. Used by `cleanupAllViewers()`.
-- **`containerWheelHandlers`**: Wheel event handlers tracked separately (Panzoom wheel listeners need explicit removal).
+- **`containerWheelHandlers`**: Wheel event handlers tracked separately — the listener is registered with non-default options (`{ passive: false }`), so removal needs the stored reference and the same options object.
 
 ## Close behavior
 

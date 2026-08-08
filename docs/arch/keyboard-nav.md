@@ -121,6 +121,6 @@ The capture-phase keydown listener binds to `ownerDocument` (not global `documen
 3. **`_keyboardNavActive` must be `false` after mouse interaction.** Mouse clicks do not activate visible focus — they set DOM focus only. Ensures focus rings only appear during keyboard navigation.
 4. **Roving tabindex tracks the last-focused card.** When arrow navigation moves focus, the `onFocusChange`/`onNavigate` callback updates the focusable index so the tabindex follows.
 5. **Virtual rects include unmounted items.** In Bases, `getVirtualRects()` returns positions for ALL items (mounted and unmounted). `handleVirtualArrowNavigation` calls `onMountItem()` to mount the target before focusing.
-6. **Image viewer blocks arrow navigation.** When a panzoom viewer is active, `isImageViewerBlockingNav()` prevents arrow keys from moving card focus.
+6. **Image viewer blocks arrow navigation.** When an image viewer is active, `isImageViewerBlockingNav()` prevents arrow keys from moving card focus.
 7. **One visible-focus container at a time.** Case 3 in `setupHoverKeyboardNavigation` only activates `_keyboardNavActive` when the focused card is in THIS container (`focusedCardContainer === getContainerRef()`), preventing cross-view focus activation when multiple views exist.
 8. **`content-hidden` is removed before focus.** `CONTENT_HIDDEN_CLASS` is removed from target cards before `.focus()` to ensure the focus target is visible (prevents focusing an invisible element in virtual-scrolled views).
