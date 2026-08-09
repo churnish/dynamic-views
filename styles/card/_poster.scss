@@ -1,6 +1,21 @@
 @use 'backdrop' as *;
 
 /* Poster setup: position, overflow, card-content scroll, poster element */
+/* Scrollable card content exists only outside `poster-static` — that is, only
+   when 'Interact to show details' is on. A card that scrolls its own content
+   swallows the drag that would otherwise scroll the view, and touch has no hover
+   intent to gate it with, so every drag started on a card would be captured.
+   Requiring a deliberate reveal first makes that trade explicit: the user has
+   asked to interact with this card.
+
+   Touch is what forces the gate — desktop could rely on hover intent alone, as
+   the hover-gated rules further down already do. The gate is applied on both
+   platforms anyway: a poster card that scrolls with a pointer but not with a
+   finger is harder to explain than one that behaves the same everywhere.
+
+   Neither platform loses content to this. The static mode line-clips to fit
+   instead (see `clipPosterStaticOverflow` in poster.ts). */
+
 .dynamic-views {
   .card.image-format-poster {
     position: relative;
@@ -41,24 +56,24 @@
   &.image-fit-contain .card.image-format-poster .card-poster img {
     object-fit: contain;
   }
+
+  /* Clip-box strips for the URL icon's hover halo. The icon's negative margins
+     keep its footprint at 20px so the title keeps its width, which leaves its
+     28px border box poking 5px above and 4px past the inline end of the header.
+     Only poster clips that away — card-content is a scroll container here, and
+     a scroll container clips at its PADDING box. Growing the padding by exactly
+     the overhang and pulling it back with equal negative margins moves the clip
+     boundary without moving anything else: every child position, the title
+     width, and scrollHeight - clientHeight are all unchanged. */
+  .card.image-format-poster .card-content {
+    padding-block-start: 5px;
+    padding-inline-end: 4px;
+    margin-block-start: -5px;
+    margin-inline-end: -4px;
+  }
 }
 
-/* Scrollable card content exists only outside `poster-static` — that is, only
-   when 'Interact to show details' is on. A card that scrolls its own content
-   swallows the drag that would otherwise scroll the view, and touch has no hover
-   intent to gate it with, so every drag started on a card would be captured.
-   Requiring a deliberate reveal first makes that trade explicit: the user has
-   asked to interact with this card.
-
-   Touch is what forces the gate — desktop could rely on hover intent alone, as
-   it already does for the rule below. The gate is applied on both platforms
-   anyway: a poster card that scrolls with a pointer but not with a finger is
-   harder to explain than one that behaves the same everywhere.
-
-   Neither platform loses content to this. The static mode line-clips to fit
-   instead (see `clipPosterStaticOverflow` in poster.ts).
-
-   Desktop: scroll gated by hover intent to prevent capturing view scroll */
+/* Desktop: scroll gated by hover intent to prevent capturing view scroll */
 @media (any-hover: hover) {
   .dynamic-views:not(.poster-static) {
     .card.image-format-poster .card-content {
@@ -261,7 +276,9 @@ body:is(
   .card.image-format-poster.has-poster
   .card-content {
   flex: 0 1 auto;
-  max-height: 70%;
+  /* +5px compensates the clip-box strip's padding-block-start — box-sizing is
+     border-box, so without it the strip would eat 5px of content capacity */
+  max-height: calc(70% + 5px);
 }
 
 /* ============================================
@@ -274,9 +291,9 @@ body:is(
 /* Dark overlay defaults (unrevealed — identity filter with matching function list).
    Dark is the Style Settings default — :not([class*=]) fallback fires without Style Settings installed. */
 body:is(
-    .dynamic-views-poster-theme-dark,
-    .dynamic-views-poster-theme-match.theme-dark,
-    :not([class*='dynamic-views-poster-theme-'])
+    .dynamic-views-poster-color-scheme-dark,
+    .dynamic-views-poster-color-scheme-match.theme-dark,
+    :not([class*='dynamic-views-poster-color-scheme-'])
   )
   .dynamic-views.poster-mode-overlay
   .card.image-format-poster
@@ -288,8 +305,8 @@ body:is(
 /* Light overlay defaults (unrevealed — double invert = identity).
    No fallback arm — only fires when explicitly set to light. */
 body:is(
-    .dynamic-views-poster-theme-light,
-    .dynamic-views-poster-theme-match.theme-light
+    .dynamic-views-poster-color-scheme-light,
+    .dynamic-views-poster-color-scheme-match.theme-light
   )
   .dynamic-views.poster-mode-overlay
   .card.image-format-poster
@@ -300,9 +317,9 @@ body:is(
 
 /* Dark overlay revealed (tap/press) */
 body:is(
-    .dynamic-views-poster-theme-dark,
-    .dynamic-views-poster-theme-match.theme-dark,
-    :not([class*='dynamic-views-poster-theme-'])
+    .dynamic-views-poster-color-scheme-dark,
+    .dynamic-views-poster-color-scheme-match.theme-dark,
+    :not([class*='dynamic-views-poster-color-scheme-'])
   )
   .dynamic-views.poster-mode-overlay
   .card.image-format-poster.poster-revealed
@@ -316,9 +333,9 @@ body:is(
 
 /* Dark overlay static (always dimmed for readability) */
 body:is(
-    .dynamic-views-poster-theme-dark,
-    .dynamic-views-poster-theme-match.theme-dark,
-    :not([class*='dynamic-views-poster-theme-'])
+    .dynamic-views-poster-color-scheme-dark,
+    .dynamic-views-poster-color-scheme-match.theme-dark,
+    :not([class*='dynamic-views-poster-color-scheme-'])
   )
   .dynamic-views.poster-mode-overlay.poster-static
   .card.image-format-poster
@@ -332,8 +349,8 @@ body:is(
 
 /* Light overlay revealed (tap/press) */
 body:is(
-    .dynamic-views-poster-theme-light,
-    .dynamic-views-poster-theme-match.theme-light
+    .dynamic-views-poster-color-scheme-light,
+    .dynamic-views-poster-color-scheme-match.theme-light
   )
   .dynamic-views.poster-mode-overlay
   .card.image-format-poster.poster-revealed
@@ -346,8 +363,8 @@ body:is(
 
 /* Light overlay static (always dimmed for readability) */
 body:is(
-    .dynamic-views-poster-theme-light,
-    .dynamic-views-poster-theme-match.theme-light
+    .dynamic-views-poster-color-scheme-light,
+    .dynamic-views-poster-color-scheme-match.theme-light
   )
   .dynamic-views.poster-mode-overlay.poster-static
   .card.image-format-poster
@@ -362,9 +379,9 @@ body:is(
 @media (any-hover: hover) {
   /* Dark hover reveal */
   body:is(
-      .dynamic-views-poster-theme-dark,
-      .dynamic-views-poster-theme-match.theme-dark,
-      :not([class*='dynamic-views-poster-theme-'])
+      .dynamic-views-poster-color-scheme-dark,
+      .dynamic-views-poster-color-scheme-match.theme-dark,
+      :not([class*='dynamic-views-poster-color-scheme-'])
     )
     .dynamic-views.poster-mode-overlay:not(.poster-static)
     .card.image-format-poster.poster-hover-active
@@ -378,8 +395,8 @@ body:is(
 
   /* Light hover reveal */
   body:is(
-      .dynamic-views-poster-theme-light,
-      .dynamic-views-poster-theme-match.theme-light
+      .dynamic-views-poster-color-scheme-light,
+      .dynamic-views-poster-color-scheme-match.theme-light
     )
     .dynamic-views.poster-mode-overlay:not(.poster-static)
     .card.image-format-poster.poster-hover-active
@@ -615,10 +632,10 @@ body.dynamic-views-open-on-card
 }
 
 /* Overlay: text color overrides (light tint → dark text) */
-body.dynamic-views-poster-theme-light
+body.dynamic-views-poster-color-scheme-light
   .dynamic-views.poster-mode-overlay
   .card.image-format-poster.has-poster,
-body.dynamic-views-poster-theme-match.theme-light
+body.dynamic-views-poster-color-scheme-match.theme-light
   .dynamic-views.poster-mode-overlay
   .card.image-format-poster.has-poster {
   @include overlay-text-colors('light');
@@ -653,12 +670,12 @@ body.dynamic-views-poster-bg-custom
 
 /* Overlay: text color overrides (dark tint → light text) */
 body:is(
-    .dynamic-views-poster-theme-dark,
-    :not([class*='dynamic-views-poster-theme-'])
+    .dynamic-views-poster-color-scheme-dark,
+    :not([class*='dynamic-views-poster-color-scheme-'])
   )
   .dynamic-views.poster-mode-overlay
   .card.image-format-poster.has-poster,
-body.dynamic-views-poster-theme-match.theme-dark
+body.dynamic-views-poster-color-scheme-match.theme-dark
   .dynamic-views.poster-mode-overlay
   .card.image-format-poster.has-poster {
   @include overlay-text-colors('dark');

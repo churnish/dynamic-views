@@ -7,10 +7,21 @@
   }
 
   /* Keep clamped title/subtitle text from inflating card-content scroll height
-     in poster mode. The URL icon no longer overflows this box — see the
-     margin/padding reset further down. */
+     in poster mode. This clips at the padding box, so the strips below give the
+     URL icon's hover halo room to paint — see the matching card-content strip
+     in _poster.scss. */
   .card.image-format-poster .card-header {
     overflow: hidden;
+    padding-block-start: 5px;
+    padding-inline-end: 4px;
+    margin-block-start: -5px;
+    margin-inline-end: -4px;
+    /* The icon's 28px border box starts at this box's block-start edge, so a
+       header shorter than that would clip its bottom. Reserve the height rather
+       than adding a block-end strip: a negative block-end margin leaves the
+       border box overhanging the flow, which the scroll container counts as
+       scrollable overflow and poster's JS clipping then acts on. */
+    min-block-size: 28px;
   }
 
   .card-title-block {
@@ -21,9 +32,15 @@
   }
 
   .card-title {
-    font-weight: calc(
-      var(--dynamic-views-font-weight) + var(--dynamic-views-bold-modifier)
+    font-weight: var(
+      --dynamic-views-title-weight,
+      calc(
+        var(--dynamic-views-font-weight) + var(--dynamic-views-bold-modifier)
+      )
     );
+    font-style: var(--dynamic-views-title-style, normal);
+    font-variant: var(--dynamic-views-title-variant, normal);
+    text-transform: var(--dynamic-views-title-case, none);
     color: var(--dynamic-views-title-color, var(--dynamic-views-text-normal));
     font-family: var(--dynamic-views-title-font, inherit);
     font-size: var(
@@ -76,13 +93,14 @@
 }
 
 .dynamic-views {
-  /* No negative margins to pull the glyph flush with the header edge: the 4px
-     wrapper padding would then sit outside the header, and poster cards clip
-     that away (card-content is a scroll container there, unlike every other
-     image format). Leaving the icon inside its own box keeps the glyph at a 4px
-     inset — identical across all image formats. */
   .card-title-url-icon {
     flex-shrink: 0;
+    /* Compensate for wrapper padding: (28px wrapper - 20px icon) / 2 = 4px.
+       Also shrinks the icon's margin box to 20px so the padding costs the title
+       block no width — do NOT drop these to avoid overflow. */
+    margin: -4px;
+    /* Extra -1px aligns URL icon top with slideshow icon edge distance */
+    margin-top: -5px;
   }
 
   .card-title-url-icon svg {
@@ -100,6 +118,11 @@
   width: 28px;
   height: 28px;
   stroke-width: 1.5;
+}
+
+/* Larger glyph here makes the icon's border box 36px — reserve to match */
+.is-mobile .dynamic-views .card.image-format-poster .card-header {
+  min-block-size: 36px;
 }
 
 @media (any-hover: hover) {
@@ -283,6 +306,13 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
 
 .dynamic-views {
   .card-subtitle {
+    font-weight: var(
+      --dynamic-views-subtitle-weight,
+      var(--dynamic-views-font-weight)
+    );
+    font-style: var(--dynamic-views-subtitle-style, normal);
+    font-variant: var(--dynamic-views-subtitle-variant, normal);
+    text-transform: var(--dynamic-views-subtitle-case, none);
     color: var(--dynamic-views-text-faint);
     font-family: var(--dynamic-views-subtitle-font);
     font-size: var(
@@ -314,66 +344,16 @@ body.dynamic-views-file-type-none .dynamic-views .card-title-icon {
   }
 }
 
-/* Title bold defaults ON, so only the unbold branch needs a rule. Gating on
-   .css-settings-manager separates "user unchecked it" from "Style Settings absent" —
-   without the plugin the rule is inert and the bold base rule stands. */
-body.css-settings-manager:not(.dynamic-views-title-bold)
+/* Title bold defaults ON, so the base rule's fallback is the bold weight and only the
+   unbold branch needs a rule — a body class cannot express "unset the variable".
+   Gating on .dynamic-views-ss-ready separates "user unchecked it" from "Style Settings
+   absent" — without the plugin the rule is inert and the bold fallback stands. That
+   flag is set by the plugin, NOT .css-settings-manager, which Style Settings adds a
+   second before its per-setting classes: gating on it un-bolds titles until they land. */
+body.dynamic-views-ss-ready:not(.dynamic-views-title-bold)
   .dynamic-views
   .card-title {
   font-weight: var(--dynamic-views-font-weight);
-}
-
-/* Title italic */
-body.dynamic-views-title-italic .dynamic-views .card-title {
-  font-style: italic;
-}
-
-/* Title small caps */
-body.dynamic-views-title-small-caps .dynamic-views .card-title {
-  font-variant: small-caps;
-}
-
-/* Title case transformations */
-body.dynamic-views-title-case-lowercase .dynamic-views .card-title {
-  text-transform: lowercase;
-}
-
-body.dynamic-views-title-case-uppercase .dynamic-views .card-title {
-  text-transform: uppercase;
-}
-
-body.dynamic-views-title-case-title .dynamic-views .card-title {
-  text-transform: capitalize;
-}
-
-/* Subtitle bold */
-body.dynamic-views-subtitle-bold .dynamic-views .card-subtitle {
-  font-weight: calc(
-    var(--dynamic-views-font-weight) + var(--dynamic-views-bold-modifier)
-  );
-}
-
-/* Subtitle italic */
-body.dynamic-views-subtitle-italic .dynamic-views .card-subtitle {
-  font-style: italic;
-}
-
-/* Subtitle small caps */
-body.dynamic-views-subtitle-small-caps .dynamic-views .card-subtitle {
-  font-variant: small-caps;
-}
-
-/* Subtitle case transformations */
-body.dynamic-views-subtitle-case-lowercase .dynamic-views .card-subtitle {
-  text-transform: lowercase;
-}
-
-body.dynamic-views-subtitle-case-uppercase .dynamic-views .card-subtitle {
-  text-transform: uppercase;
-}
-
-body.dynamic-views-subtitle-case-title .dynamic-views .card-subtitle {
-  text-transform: capitalize;
 }
 
 /* Subtitle alignment */
@@ -401,7 +381,6 @@ body.dynamic-views-subtitle-hyphenate .dynamic-views .card-subtitle {
 .dynamic-views {
   .card-subtitle .property-content-wrapper {
     overflow: hidden;
-    flex-wrap: wrap;
   }
 }
 
@@ -466,6 +445,11 @@ body.dynamic-views-subtitle-hyphenate .dynamic-views .card-subtitle {
 /* Subtitle scroll mode — scoped to single-line subtitles, so the view's subtitle
    lines setting decides how many lines there are and this only decides what
    happens to a line that overflows */
+/* Gated on one JS-derived class rather than a body class plus a container class,
+   unlike the title below. The subtitle's wrap rules are a :not() branch of this
+   same class, so both branches must flip on the identical condition — keying
+   them off different selectors leaves a state matching neither, where the
+   subtitle never wraps and gradients paint over static text. */
 /* The clamp lives on the wrapper and is already excluded in scroll mode, so
    nothing needs unsetting here. */
 .dynamic-views.subtitle-scroll .card-subtitle {
@@ -523,6 +507,9 @@ body.dynamic-views-title-align-right .dynamic-views .card-title {
 /* Title scroll mode — scoped to single-line titles, so the view's title lines
    setting decides how many lines there are and this only decides what happens
    to a line that overflows */
+/* Two classes rather than one derived class, unlike the subtitle above: the
+   title's wrap behaviour is the CSS default, so there is no counterpart branch
+   that has to flip in lockstep. */
 body.dynamic-views-title-overflow-scroll
   .dynamic-views.title-single-line
   .card-title {

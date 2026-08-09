@@ -162,7 +162,7 @@ Wherever bare `--text-*` overrides are set (poster text, backdrop text), also se
 
 ```scss
 // Backdrop dark overlay — light text
-body.dynamic-views-backdrop-theme-dark .dynamic-views .card.image-format-backdrop:has(.card-backdrop) {
+body.dynamic-views-backdrop-color-scheme-dark .dynamic-views .card.image-format-backdrop:has(.card-backdrop) {
   --text-normal: #fafafa;
   --text-muted: #f5f5f5;
   --text-faint: color-mix(in srgb, #f5f5f5 60%, transparent);

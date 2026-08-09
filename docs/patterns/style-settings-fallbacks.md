@@ -8,7 +8,7 @@ updated: 2026-08-09
 
 ## Problem
 
-The [Style Settings](https://github.com/mgmeyers/obsidian-style-settings) plugin reads `class-select` options from [_style-settings.scss](../../styles/_style-settings.scss) and adds the selected value as a body class (e.g., `body.dynamic-views-poster-theme-dark`). Without Style Settings installed, **no body class is added**, so CSS rules gated behind those classes silently fail.
+The [Style Settings](https://github.com/mgmeyers/obsidian-style-settings) plugin reads `class-select` options from [_style-settings.scss](../../styles/_style-settings.scss) and adds the selected value as a body class (e.g., `body.dynamic-views-poster-color-scheme-dark`). Without Style Settings installed, **no body class is added**, so CSS rules gated behind those classes silently fail.
 
 ## Fallback pattern
 
@@ -16,8 +16,8 @@ Use `:is()` with a `:not([class*="prefix-"])` arm to match both "class explicitl
 
 ```scss
 body:is(
-    .dynamic-views-poster-theme-dark,
-    :not([class*='dynamic-views-poster-theme-'])
+    .dynamic-views-poster-color-scheme-dark,
+    :not([class*='dynamic-views-poster-color-scheme-'])
   )
   .dynamic-views.poster-mode-overlay
   .card.image-format-poster
@@ -38,7 +38,7 @@ body:not([class*='dynamic-views-card-background-hover-'])
 
 ## Specificity
 
-`:is()` takes the specificity of its most specific argument. Both `.dynamic-views-poster-theme-dark` (class = `0,1,0`) and `:not([class*="..."])` (attribute = `0,1,0`) have equal specificity. The fallback branch has the same weight as the explicit branch — no cascade surprises.
+`:is()` takes the specificity of its most specific argument. Both `.dynamic-views-poster-color-scheme-dark` (class = `0,1,0`) and `:not([class*="..."])` (attribute = `0,1,0`) have equal specificity. The fallback branch has the same weight as the explicit branch — no cascade surprises.
 
 ## When a fallback is NOT needed
 

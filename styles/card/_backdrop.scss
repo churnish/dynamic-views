@@ -70,13 +70,13 @@ body.dynamic-views-backdrop-hover-zoom
    jagged corner clipping in Chromium. Dark uses brightness(); light uses
    invert-brightness-invert (mathematically identical to a white overlay). */
 
-/* Dark overlay: Match theme (default) + Dark (forced) */
+/* Dark overlay: Match color scheme (default) + Dark (forced) */
 body:is(
-    .dynamic-views-backdrop-theme-dark,
-    .dynamic-views-backdrop-theme-match.theme-dark,
+    .dynamic-views-backdrop-color-scheme-dark,
+    .dynamic-views-backdrop-color-scheme-match.theme-dark,
     :not(
-      .dynamic-views-backdrop-theme-light,
-      .dynamic-views-backdrop-theme-dark
+      .dynamic-views-backdrop-color-scheme-light,
+      .dynamic-views-backdrop-color-scheme-dark
     ).theme-dark
   )
   .dynamic-views
@@ -89,13 +89,13 @@ body:is(
     blur(var(--dynamic-views-backdrop-overlay-blur, 0px));
 }
 
-/* Light overlay: Match theme (default) + Light (forced) */
+/* Light overlay: Match color scheme (default) + Light (forced) */
 body:is(
-    .dynamic-views-backdrop-theme-light,
-    .dynamic-views-backdrop-theme-match.theme-light,
+    .dynamic-views-backdrop-color-scheme-light,
+    .dynamic-views-backdrop-color-scheme-match.theme-light,
     :not(
-      .dynamic-views-backdrop-theme-light,
-      .dynamic-views-backdrop-theme-dark
+      .dynamic-views-backdrop-color-scheme-light,
+      .dynamic-views-backdrop-color-scheme-dark
     ).theme-light
   )
   .dynamic-views
@@ -108,14 +108,14 @@ body:is(
 }
 
 /* Backdrop text color overrides (light overlay → dark text) */
-body.dynamic-views-backdrop-theme-light
+body.dynamic-views-backdrop-color-scheme-light
   .dynamic-views
   .card.image-format-backdrop.has-backdrop,
 body:is(
-    .dynamic-views-backdrop-theme-match,
+    .dynamic-views-backdrop-color-scheme-match,
     :not(
-      .dynamic-views-backdrop-theme-light,
-      .dynamic-views-backdrop-theme-dark
+      .dynamic-views-backdrop-color-scheme-light,
+      .dynamic-views-backdrop-color-scheme-dark
     )
   ).theme-light
   .dynamic-views
@@ -124,14 +124,14 @@ body:is(
 }
 
 /* Backdrop text color overrides (dark overlay → light text) */
-body.dynamic-views-backdrop-theme-dark
+body.dynamic-views-backdrop-color-scheme-dark
   .dynamic-views
   .card.image-format-backdrop.has-backdrop,
 body:is(
-    .dynamic-views-backdrop-theme-match,
+    .dynamic-views-backdrop-color-scheme-match,
     :not(
-      .dynamic-views-backdrop-theme-light,
-      .dynamic-views-backdrop-theme-dark
+      .dynamic-views-backdrop-color-scheme-light,
+      .dynamic-views-backdrop-color-scheme-dark
     )
   ).theme-dark
   .dynamic-views

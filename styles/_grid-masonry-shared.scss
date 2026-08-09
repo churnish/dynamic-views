@@ -2,7 +2,14 @@
    (Obsidian only sets --bases-view-padding for its own types: cards, list, table) */
 .bases-view[data-view-type='dynamic-views-grid'],
 .bases-view[data-view-type='dynamic-views-masonry'] {
-  --bases-view-padding: var(--size-4-3);
+  /* Fixed inset for view chrome — the sticky group header, the group divider and
+     the end-of-view line. Unlike --bases-view-padding below it never tracks the
+     card gap: each of those elements cancels the gap-driven container inset with
+     calc(chrome-inset - bases-view-padding), so both must be named, and a bare
+     --size-4-3 at any of those sites would desync if this seed ever changed.
+     Also the floor applyViewContainerStyles() clamps the gap-driven padding to. */
+  --dynamic-views-chrome-inset: var(--size-4-3);
+  --bases-view-padding: var(--dynamic-views-chrome-inset);
   --dynamic-views-bases-view-padding: var(--bases-view-padding);
   scroll-padding-block: var(--dynamic-views-bases-view-padding);
   container-type: inline-size;
@@ -136,8 +143,8 @@ body:not(.dynamic-views-disable-sticky-group-header)
     position: absolute;
     top: 0;
     bottom: 0;
-    left: calc(-1 * var(--size-4-3));
-    right: calc(-1 * var(--size-4-3));
+    left: calc(-1 * var(--dynamic-views-chrome-inset));
+    right: calc(-1 * var(--dynamic-views-chrome-inset));
     background: var(
       --dynamic-views-view-bg-color,
       var(--dynamic-views-background-primary)
@@ -200,7 +207,7 @@ body:not(.dynamic-views-disable-sticky-group-header)
      that far below the text. */
   align-self: start;
   margin-inline: calc(
-    var(--size-4-3) - var(--dynamic-views-bases-view-padding)
+    var(--dynamic-views-chrome-inset) - var(--dynamic-views-bases-view-padding)
   );
   /* The negative margins reposition the heading but do not stretch it, leaving it
      short on the right by both margins. Restore the width so the background pseudo
@@ -211,9 +218,9 @@ body:not(.dynamic-views-disable-sticky-group-header)
   max-width: none;
   width: calc(
     100cqw + var(--dynamic-views-bases-view-padding) +
-      var(--dynamic-views-bases-view-padding) - var(--size-4-3) - var(
-        --size-4-3
-      )
+      var(--dynamic-views-bases-view-padding) - var(
+        --dynamic-views-chrome-inset
+      ) - var(--dynamic-views-chrome-inset)
   );
 }
 
@@ -221,7 +228,9 @@ body:not(.dynamic-views-disable-sticky-group-header)
    sitting against the scroll container's gap-driven top inset. Applying it to
    every heading would pull each group up and shrink group-to-group spacing. */
 .dynamic-views-group-section:first-child > .bases-group-heading {
-  margin-top: calc(var(--size-4-3) - var(--dynamic-views-bases-view-padding));
+  margin-top: calc(
+    var(--dynamic-views-chrome-inset) - var(--dynamic-views-bases-view-padding)
+  );
 }
 
 /* Hide group result count when toggle enabled */
@@ -236,101 +245,18 @@ body.dynamic-views-hide-group-property-names
   display: none;
 }
 
-/* Group header bold */
-body.dynamic-views-group-property-bold .dynamic-views .bases-group-property,
-body.dynamic-views-group-count-bold .dynamic-views .bases-group-count {
-  font-weight: calc(
-    var(--dynamic-views-font-weight) + var(--dynamic-views-bold-modifier)
-  );
-}
-
 /* Property values are semibold in Obsidian's own Bases styling, so this toggle
-   defaults ON and the unbold branch must override app.css. Gating on
-   .css-settings-manager distinguishes "user unchecked it" from "Style Settings
-   absent" — without the plugin the rule is inert and the Bases weight stands. */
-body.css-settings-manager:not(.dynamic-views-group-value-bold)
+   defaults ON and the unbold branch must override app.css. The base rule therefore
+   declares no font-weight at all — no var() fallback can express "declare nothing".
+   Gating on .dynamic-views-ss-ready distinguishes "user unchecked it" from "Style
+   Settings absent" — without the plugin the rule is inert and the Bases weight stands.
+   NOT .css-settings-manager: Style Settings adds that a second before its per-setting
+   classes, so the rule would fire while the toggle's class is still missing. */
+body.dynamic-views-ss-ready:not(.dynamic-views-group-value-bold)
   .dynamic-views
   .bases-group-heading
   .bases-group-value {
   font-weight: var(--dynamic-views-font-weight);
-}
-
-/* Group header case transformations */
-body.dynamic-views-group-property-case-lowercase
-  .dynamic-views
-  .bases-group-property {
-  text-transform: lowercase;
-}
-
-body.dynamic-views-group-property-case-uppercase
-  .dynamic-views
-  .bases-group-property {
-  text-transform: uppercase;
-}
-
-body.dynamic-views-group-property-case-title
-  .dynamic-views
-  .bases-group-property {
-  text-transform: capitalize;
-}
-
-body.dynamic-views-group-value-case-lowercase
-  .dynamic-views
-  .bases-group-heading
-  .bases-group-value {
-  text-transform: lowercase;
-}
-
-body.dynamic-views-group-value-case-uppercase
-  .dynamic-views
-  .bases-group-heading
-  .bases-group-value {
-  text-transform: uppercase;
-}
-
-body.dynamic-views-group-value-case-title
-  .dynamic-views
-  .bases-group-heading
-  .bases-group-value {
-  text-transform: capitalize;
-}
-
-body.dynamic-views-group-count-case-lowercase
-  .dynamic-views
-  .bases-group-count {
-  text-transform: lowercase;
-}
-
-body.dynamic-views-group-count-case-uppercase
-  .dynamic-views
-  .bases-group-count {
-  text-transform: uppercase;
-}
-
-body.dynamic-views-group-count-case-title .dynamic-views .bases-group-count {
-  text-transform: capitalize;
-}
-
-/* Group header italic */
-body.dynamic-views-group-property-italic .dynamic-views .bases-group-property,
-body.dynamic-views-group-count-italic .dynamic-views .bases-group-count,
-body.dynamic-views-group-value-italic
-  .dynamic-views
-  .bases-group-heading
-  .bases-group-value {
-  font-style: italic;
-}
-
-/* Group header small caps — inherits into value pills */
-body.dynamic-views-group-property-small-caps
-  .dynamic-views
-  .bases-group-property,
-body.dynamic-views-group-count-small-caps .dynamic-views .bases-group-count,
-body.dynamic-views-group-value-small-caps
-  .dynamic-views
-  .bases-group-heading
-  .bases-group-value {
-  font-variant: small-caps;
 }
 
 /* Last group section has no divider */
@@ -433,6 +359,13 @@ body.dynamic-views-group-value-small-caps
 
   /* Group header property name */
   .bases-group-property {
+    font-weight: var(
+      --dynamic-views-group-property-weight,
+      var(--dynamic-views-font-weight)
+    );
+    font-style: var(--dynamic-views-group-property-style, normal);
+    font-variant: var(--dynamic-views-group-property-variant, normal);
+    text-transform: var(--dynamic-views-group-property-case, none);
     color: var(
       --dynamic-views-group-property-color-value,
       var(--dynamic-views-text-muted)
@@ -446,6 +379,13 @@ body.dynamic-views-group-value-small-caps
 
   /* Group header result count - match property name style */
   .bases-group-count {
+    font-weight: var(
+      --dynamic-views-group-count-weight,
+      var(--dynamic-views-font-weight)
+    );
+    font-style: var(--dynamic-views-group-count-style, normal);
+    font-variant: var(--dynamic-views-group-count-variant, normal);
+    text-transform: var(--dynamic-views-group-count-case, none);
     color: var(
       --dynamic-views-group-count-color-value,
       var(--dynamic-views-text-muted)
@@ -460,6 +400,9 @@ body.dynamic-views-group-value-small-caps
 
   /* Group header property value — .bases-group-heading included to outrank the app.css rule */
   .bases-group-heading .bases-group-value {
+    font-style: var(--dynamic-views-group-value-style, normal);
+    font-variant: var(--dynamic-views-group-value-variant, normal);
+    text-transform: var(--dynamic-views-group-value-case, none);
     color: var(
       --dynamic-views-group-value-color-value,
       var(--dynamic-views-text-normal)

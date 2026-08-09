@@ -23,13 +23,13 @@ Both modes are purely CSS. Switching between them changes the available content 
 
 The fade gradient is a real DOM element (`.poster-gradient`) created in `shared-renderer.ts` — not an `::after` pseudo-element, which forces async compositor layer creation and a 1-3 frame blank flash on WebKit virtual scroll remount.
 
-Its color comes from the `dynamic-views-poster-fade-tint` Style Settings `class-select` (Light / Dark / Match theme, default dark), which is independent of the overlay tint:
+Its color comes from the `dynamic-views-poster-fade-tint` Style Settings `class-select` (Light / Dark / Match color scheme, default dark), which is independent of the overlay tint:
 
 | Value | Body class | `--dynamic-views-poster-fade-rgb` | Text |
 |---|---|---|---|
 | Dark (default) | `dynamic-views-poster-fade-dark` | `0 0 0` | `#fafafa` / `#f5f5f5` |
 | Light | `dynamic-views-poster-fade-light` | `255 255 255` | `#0a0a0a` / `#141414` |
-| Match theme | `dynamic-views-poster-fade-match` | follows `body.theme-dark` / `body.theme-light` | follows |
+| Match color scheme | `dynamic-views-poster-fade-match` | follows `body.theme-dark` / `body.theme-light` | follows |
 
 Both the gradient stops and the fade-mode text color overrides (`--text-normal`, `--text-muted`, `--text-faint` and their `--dynamic-views-*` twins) read these variables, so light fade flips the text dark in the same rule. The variables are set on `.card.image-format-poster.has-poster` and inherit down to `.poster-gradient`.
 
@@ -48,35 +48,60 @@ The `posterInteractToReveal` setting controls the interaction model:
 
 ## Static clipping pipeline
 
-`clipPosterStaticOverflow(cardEl)` measures card content and hides elements that don't fit. Internally decomposed into three phases (clear → measure → apply) that can run per-card or batched across multiple cards.
+`clipPosterStaticOverflow(cardEl)` measures card content and hides elements that don't fit. Internally decomposed into **five phases** — three writes and two reads — that can run per-card or batched across multiple cards. Two of the phases exist solely to fold the per-paragraph text preview clamp into the same read/write separation.
 
 ```
-clipPosterStaticOverflow(cardEl)  — single card
-clipPosterStaticOverflowBatch(cards)  — batched (1 reflow instead of K)
+clipPosterStaticOverflow(cardEl)      — single card
+clipPosterStaticOverflowBatch(cards)  — batched (2 reflows total, not 2 per card)
 │
-├── clearPosterClipState(cardEl) → PosterClipPrepared | null  [WRITE]
-│   ├── Remove .poster-clip-hidden from all elements
-│   ├── Reset --dynamic-views-title-lines on .card-title
-│   ├── Reset --dynamic-views-subtitle-lines on .card-subtitle
-│   ├── Reset --dynamic-views-text-preview-lines on .card-text-preview
-│   │   └── Re-apply per-paragraph clamp if has-paragraphs
-│   ├── No .card-content → return null
-│   └── Returns { contentEl, titleEl, subtitleEl, clippable[], textPreviewEl, textPreviewWrapper }
+├── 1. clearPosterClipState(cardEl) → PosterClipPrepared | null           [WRITE]
+│      ├── Card is content-hidden → return null (see Content-hidden filter)
+│      ├── Remove .poster-clip-hidden from all elements
+│      ├── Reset --dynamic-views-title-lines on .card-title
+│      ├── Reset --dynamic-views-subtitle-lines on .card-subtitle
+│      ├── Reset --dynamic-views-text-preview-lines on .card-text-preview
+│      ├── clearParagraphClampState() → <p> children, if .has-paragraphs
+│      ├── No .card-content, or nothing clippable and no title → return null
+│      └── Returns { contentEl, titleEl, subtitleEl, clippable[],
+│                    textPreviewEl, textPreviewWrapper, paragraphs[] }
 │
-├── measurePosterClipGeometry(cardEl, prepared) → PosterClipMeasured | null  [READ]
-│   ├── scrollHeight <= clientHeight (no overflow) → return null
-│   ├── getBoundingClientRect() for all clippable elements + title
-│   └── getComputedStyle().lineHeight for text preview, subtitle, title
+├── 2. measurePreparedParagraphClamp(prepared)                            [READ]
+│      → ParagraphClampMeasurement | null
+│      └── measureParagraphClamp(): line height, inherited budget,
+│          unclamped <p> heights
 │
-└── applyPosterClipDecisions(prepared, measured)  [WRITE]
-    ├── Element fully below clip boundary → add .poster-clip-hidden
-    ├── Element partially visible:
-    │   ├── Text preview → clampToFit() with --dynamic-views-text-preview-lines
-    │   └── Subtitle → clampToFit() with --dynamic-views-subtitle-lines
-    └── Title (never hidden) → clampToFit() with --dynamic-views-title-lines
+├── 3. applyParagraphClamp(clamp)                                         [WRITE]
+│      └── Clamps <p>s to the container's line budget
+│
+├── 4. measurePosterClipGeometry(cardEl, prepared, caps)                  [READ]
+│      → PosterClipMeasured | null
+│      ├── scrollHeight <= clientHeight (no overflow) → return null
+│      ├── getBoundingClientRect() for all clippable elements + title
+│      ├── getComputedStyle().lineHeight for text preview, subtitle, title
+│      └── caps from readPosterLineCaps() — one container read, not one per card
+│
+└── 5. applyPosterClipDecisions(prepared, measured, paragraphClamp)       [WRITE]
+       ├── Element fully below clip boundary → add .poster-clip-hidden
+       ├── Element partially visible:
+       │   ├── Text preview → clampToFit() → fitted line count
+       │   │   └── fitted > 0 → applyParagraphClamp(clamp, fitted)
+       │   └── Subtitle → clampToFit() with --dynamic-views-subtitle-lines
+       └── Title (never hidden) → clampToFit() with --dynamic-views-title-lines
 ```
 
-**Batch variant**: `clipPosterStaticOverflowBatch` runs all clears first, then all measures (one forced reflow), then all applies. The single-card `clipPosterStaticOverflow` calls the same three functions sequentially.
+**Why paragraph clamping sits inside the poster pipeline**: unclamped `<p>` text inflates `.card-content`'s `scrollHeight` and shifts every rect below the preview, so phase 4 would decide to hide elements that in fact fit. The clamp must be applied before the geometry read, and its own inputs must be read before that — hence the extra read/write pair rather than a call to `applyPerParagraphClamp` from inside phase 1.
+
+**Why phase 5 needs no re-measure**: `ParagraphClampMeasurement.heights` are recorded unclamped, so they stay valid at any budget. Phase 5 re-runs `applyParagraphClamp` with the reduced fitted count using the same heights, keeping the write phase read-free.
+
+**Batch variant**: `clipPosterStaticOverflowBatch` runs each phase across every card before moving to the next — all clears, then all paragraph reads, then all paragraph clamps, then all geometry reads, then all clip writes. Two forced reflows total regardless of card count. The single-card `clipPosterStaticOverflow` calls the same five functions sequentially.
+
+**Container caps in the batch**: caps are memoized per `.dynamic-views` container rather than read once off the first card. A compact-stacked batch is collected per document and can span two views with different line settings.
+
+### Content-hidden filter
+
+`clearPosterClipState` returns `null` for any card inside a `content-visibility: hidden` subtree, so every entry point inherits the filter — callers do not repeat it. Such cards measure at zero height, making clip work meaningless. The per-card `ResizeObserver` applies the same guard independently.
+
+**Known gap**: a hidden card keeps whatever clip state it had rather than having it cleared. Neither state is correct — nothing re-clips on reveal, because the IntersectionObserver only toggles the visibility class. Stale clipping is the cheaper of the two wrong states, which is why the guard sits before the clear rather than after it.
 
 ### Clippable elements (DOM order)
 
@@ -97,23 +122,25 @@ All three clampable text elements (title, subtitle, text preview) use CSS variab
 
 All three elements carry their own clamp in base CSS, so poster only overwrites the variable. The subtitle's clamp lives on its `.property-content-wrapper` rather than on `.card-subtitle` itself — the subtitle is a flex item and cannot host a `-webkit-box` — but the variable is written on `.card-subtitle` and inherits down.
 
-`clampToFit()` never raises a line count: it caps its result at the container's value for that variable, read once per card during the measure phase. Poster reduces to fit, it does not override the per-view setting.
+`clampToFit()` never raises a line count: it caps its result at the container's value for that variable, read once per container during the measure phase. Poster reduces to fit, it does not override the per-view setting.
+
+It returns **the applied line count**, or `0` when not even one line fits. The text preview branch needs the number, not a yes/no — the fitted count becomes the budget for the paragraph re-clamp in phase 5. Callers that only care whether the element survived compare the return against `0`.
 
 ### Call sites
 
 | Context | Caller | Variant | Notes |
 |---|---|---|---|
-| Grid initial render | `shared-renderer.ts` | Single | Clip only (no prior state) |
-| ResizeObserver | `shared-renderer.ts` | Single | Size-guarded (`lastClipWidth`/`lastClipHeight`) |
-| `textPreviewLines` change | `applyCssOnlySettings` | Single | Immediate re-clip |
+| Grid initial render | `shared-renderer.ts` | Single | Clip only (no prior state). Masonry defers to the card RO — cards have no final size at render time |
+| Uniform height initial render | `shared-renderer.ts` | Single | Imageless cards in Grid when the `dynamic-views-poster-uniform-height` body class is present |
+| Card ResizeObserver | `shared-renderer.ts` | Single | One branch covering both poster-static cards and uniform-height imageless cards. Size-guarded (`lastClipWidth`/`lastClipHeight`) |
+| `textPreviewLines` change | `applyCssOnlySettings` | Batch | Gated by `lastClippedTextPreviewLines` so an unchanged value fires nothing |
 | Static mode toggled ON | `applyCssOnlySettings` | Batch | All poster cards in container |
 | Display mode changed | `applyCssOnlySettings` | Batch | Deferred via `requestAnimationFrame` (CSS needs one frame to recalculate layout after class swap) |
-| Compact-stacked settling | `processCompactStackedBatch` | Batch | Re-clip poster-static cards after stacking changes property heights |
-| Uniform height initial render | `shared-renderer.ts` | Single | Imageless cards in Grid when `dynamic-views-poster-uniform-height` body class present |
-| Uniform height resize | `shared-renderer.ts` | Single | Same guard + size-guarded |
-| Uniform height compact-stacked | `processCompactStackedBatch` | Batch | Imageless cards with uniform height after stacking settles |
+| Compact-stacked settling | `processCompactStackedBatch` | Batch | Poster-static cards plus uniform-height imageless cards, after stacking changes property heights |
 
-`resetPosterClipping(cardEl)` exists as a standalone function for the transition-to-interactive path only (static mode toggled OFF). All other sites call `clipPosterStaticOverflow` or `clipPosterStaticOverflowBatch`.
+Every entry point above goes through `clearPosterClipState`, so none of them needs to filter out content-hidden cards. Choosing *which* cards to pass is still the caller's job — the batch sites select `.card.image-format-poster.has-poster`.
+
+`resetPosterClipping(cards: HTMLElement[])` exists as a standalone function for the transition-to-interactive path only (static mode toggled OFF). It takes an **array**, not a single card: restoring the container's line budget means re-measuring paragraph heights, so a per-card variant would cost one reflow per card. It runs its own three phases — clear every card's clip state and paragraph clamp, read paragraph metrics at the restored budget, re-clamp — for one reflow total.
 
 ## Display mode re-clip
 

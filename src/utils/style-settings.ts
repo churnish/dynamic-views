@@ -17,6 +17,47 @@ const containerSpacingCache = new Map<HTMLElement, number>();
 const DYNAMIC_VIEWS_CLASS_PATTERN = /\bdynamic-views-\S+/g;
 
 /**
+ * Set on body once Style Settings has applied its per-setting classes.
+ *
+ * Style Settings adds `css-settings-manager` to body roughly a second before
+ * `initClasses()` runs. CSS that means "Style Settings is installed AND the user
+ * unchecked this toggle" cannot gate on `css-settings-manager` alone: during that
+ * window the toggle's class is legitimately absent, so the rule fires and the
+ * setting reads as switched off. Bold titles visibly dropped to regular weight
+ * for the duration. Gate on this class instead.
+ */
+export const STYLE_SETTINGS_READY_CLASS = 'dynamic-views-ss-ready';
+
+/**
+ * Class prefixes Style Settings is guaranteed to have applied once `initClasses()`
+ * has run — each belongs to a `class-select` with `allowEmpty: false` and a
+ * `default:`, so a value is always emitted. Several are listed from different
+ * setting groups so retiring any one setting cannot silently break the signal.
+ */
+const STYLE_SETTINGS_INITIALIZED_SENTINELS = [
+  'dynamic-views-title-case-',
+  'dynamic-views-title-size-',
+  'dynamic-views-group-value-case-',
+  'dynamic-views-tag-style-',
+];
+
+/**
+ * Add or remove {@link STYLE_SETTINGS_READY_CLASS} on the given document's body to
+ * match whether Style Settings has finished applying its classes.
+ *
+ * Idempotent: `classList.toggle` with an explicit force value mutates nothing when
+ * the state already matches, so calling this from a body-class observer settles
+ * after one extra no-op pass rather than looping.
+ */
+export function syncStyleSettingsReadyFlag(doc: Document): void {
+  const { className } = doc.body;
+  const ready = STYLE_SETTINGS_INITIALIZED_SENTINELS.some((prefix) =>
+    className.includes(prefix)
+  );
+  doc.body.classList.toggle(STYLE_SETTINGS_READY_CLASS, ready);
+}
+
+/**
  * Matches Style Settings classes that change text metrics, and therefore card
  * height: font size presets, bold, italic, small caps and case transforms.
  * Longer element stems precede their prefixes so `property-name` is not
@@ -408,6 +449,10 @@ export function setupStyleSettingsObserver(
         mutation.type === 'attributes' &&
         mutation.attributeName === 'class'
       ) {
+        // Before the diff below: the ready flag must land in the same frame Style
+        // Settings applies its classes, or the gated rules flash their off state.
+        syncStyleSettingsReadyFlag(doc);
+
         // Skip when no dynamic-views- class changed (e.g., is-grabbing, theme classes)
         const oldDV =
           (mutation.oldValue ?? '')
@@ -448,6 +493,10 @@ export function setupStyleSettingsObserver(
       }
     }
   });
+
+  // Seed the flag for views opened after Style Settings already settled — the
+  // observer only fires on subsequent mutations
+  syncStyleSettingsReadyFlag(doc);
 
   bodyObserver.observe(doc.body, {
     attributes: true,

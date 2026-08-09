@@ -37,17 +37,17 @@ settings:
         description: Shade of backdrop overlay.
         type: class-select
         allowEmpty: false
-        default: dynamic-views-backdrop-theme-match
+        default: dynamic-views-backdrop-color-scheme-match
         options:
             -
                 label: Light
-                value: dynamic-views-backdrop-theme-light
+                value: dynamic-views-backdrop-color-scheme-light
             -
                 label: Dark
-                value: dynamic-views-backdrop-theme-dark
+                value: dynamic-views-backdrop-color-scheme-dark
             -
-                label: Match theme
-                value: dynamic-views-backdrop-theme-match
+                label: Match color scheme
+                value: dynamic-views-backdrop-color-scheme-match
     -
         id: dynamic-views-backdrop-overlay-light
         title: Light overlay strength
@@ -554,6 +554,23 @@ settings:
         title: Divider line
         description: Show border between cover and card content.
         type: class-toggle
+    -
+        id: dynamic-views-cover-shadow
+        title: Shadow
+        description: Cast a shadow along the edge between cover and card content.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-cover-shadow-none
+        options:
+            -
+                label: Disable
+                value: dynamic-views-cover-shadow-none
+            -
+                label: Under cover
+                value: dynamic-views-cover-shadow-cover
+            -
+                label: Under content
+                value: dynamic-views-cover-shadow-content
     -
         id: dynamic-views-cover-disable-navigation
         title: Disable navigation
@@ -1152,7 +1169,7 @@ settings:
                 label: Dark
                 value: dynamic-views-poster-fade-dark
             -
-                label: Match theme
+                label: Match color scheme
                 value: dynamic-views-poster-fade-match
     -
         id: dynamic-views-poster-overlay-tint
@@ -1160,17 +1177,17 @@ settings:
         description: Shade of poster overlay.
         type: class-select
         allowEmpty: false
-        default: dynamic-views-poster-theme-dark
+        default: dynamic-views-poster-color-scheme-dark
         options:
             -
                 label: Light
-                value: dynamic-views-poster-theme-light
+                value: dynamic-views-poster-color-scheme-light
             -
                 label: Dark
-                value: dynamic-views-poster-theme-dark
+                value: dynamic-views-poster-color-scheme-dark
             -
-                label: Match theme
-                value: dynamic-views-poster-theme-match
+                label: Match color scheme
+                value: dynamic-views-poster-color-scheme-match
     -
         id: dynamic-views-poster-overlay-light
         title: Light overlay strength
@@ -1803,6 +1820,35 @@ settings:
             -
                 label: Theme default
                 value: dynamic-views-tag-style-theme
+    -
+        id: dynamic-views-tag-size
+        title: Size
+        description: Font size for tags.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-tag-size-tiny
+        options:
+            -
+                label: Large
+                value: dynamic-views-tag-size-large
+            -
+                label: Medium
+                value: dynamic-views-tag-size-medium
+            -
+                label: Small
+                value: dynamic-views-tag-size-small
+            -
+                label: Tiny
+                value: dynamic-views-tag-size-tiny
+            -
+                label: Custom
+                value: dynamic-views-tag-size-custom
+    -
+        id: dynamic-views-tag-size-custom
+        title: Custom size
+        description: Set custom font size for tags (e.g., 0.8em, 13px, 0.8125rem).
+        type: variable-text
+        default: ''
     -
         id: dynamic-views-tag-bold
         title: Bold
@@ -2472,6 +2518,9 @@ body:not(.dynamic-views-group-value-size-custom)
 body:not(.dynamic-views-group-count-size-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-group-count-size-custom'],
+body:not(.dynamic-views-tag-size-custom)
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-tag-size-custom'],
 body:not(.dynamic-views-group-property-color-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-group-property-color-custom'],
@@ -2575,13 +2624,13 @@ body:not(.dynamic-views-title-hover-color-custom)
 body:not(.dynamic-views-title-size-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-title-size-custom'],
-body.dynamic-views-poster-theme-dark
+body.dynamic-views-poster-color-scheme-dark
   .style-settings-container
   .setting-item[data-id='dynamic-views-poster-overlay-light'],
 body:not(.dynamic-views-view-background-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-view-background-custom'],
-body.dynamic-views-poster-theme-light
+body.dynamic-views-poster-color-scheme-light
   .style-settings-container
   .setting-item[data-id='dynamic-views-poster-overlay-dark'] {
   display: none !important;
