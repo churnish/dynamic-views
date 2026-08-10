@@ -197,6 +197,8 @@ body.dynamic-views-text-preview-hyphenate .dynamic-views .card-text-preview {
     svg {
       width: 12px;
       height: 12px;
+      /* Mirrored so the stacked-sheet offset reads as depth going into the image */
+      transform: scaleX(-1);
       color: white;
       filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6))
         drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));

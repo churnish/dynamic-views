@@ -220,6 +220,8 @@ body.dynamic-views-slideshow-arrows-hide .dynamic-views .slideshow-nav-right {
     svg {
       width: 14px;
       height: 14px;
+      /* Mirrored so the stacked-sheet offset reads as depth going into the image */
+      transform: scaleX(-1);
       filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6))
         drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
     }
