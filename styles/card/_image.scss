@@ -112,11 +112,12 @@ body.dynamic-views-thumbnail-crop-bottom .dynamic-views .card-thumbnail img {
 
 /* HDR images are rendered at full brightness by Chromium, which makes them
    glare next to SDR neighbours in a grid. `standard` clamps them to SDR.
-   Scoped to the plugin's own images rather than `body`, so the rest of Obsidian
-   keeps rendering HDR as before. Both selectors are needed: the card images live
-   under `.dynamic-views`, while the image viewer's clone is mounted on `body`
-   (full screen) or on `.workspace-leaf` (constrained), outside that subtree. */
-body.dynamic-views-disable-image-hdr .dynamic-views img,
-body.dynamic-views-disable-image-hdr .dynamic-views-image-embed img {
+   Cards only: the image viewer shows one image at a time with nothing to glare
+   against, and it deliberately reproduces Obsidian's own lightbox, which does
+   not clamp. Scoped to `.dynamic-views` rather than `body` so the rest of
+   Obsidian is unaffected — and the viewer clone is mounted outside that
+   subtree (on `body`, or on `.workspace-leaf` when constrained), so it falls
+   outside this rule by construction. */
+body.dynamic-views-disable-image-hdr .dynamic-views img {
   dynamic-range-limit: standard;
 }

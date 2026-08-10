@@ -76,6 +76,12 @@ export const SCRUB_DIRECTION_THRESHOLD = 10;
 /** Delay in ms after gesture ends before allowing click events */
 export const GESTURE_TIMEOUT_MS = 50;
 
+/** How long a dismissed image viewer keeps suppressing touch-press interact on its source card, so the dismiss tap is not read as a press on the card underneath. */
+export const VIEWER_DISMISS_SUPPRESS_MS = 300;
+
+/** Settle delay (ms) after focusing the window for a clipboard write — the Clipboard API rejects while the document is unfocused, and focus is not observable synchronously. */
+export const CLIPBOARD_FOCUS_SETTLE_MS = 50;
+
 /** Touch tap threshold (ms) — presses longer than this suppress file-open on lift. */
 export const TOUCH_TAP_THRESHOLD_MS = 200;
 

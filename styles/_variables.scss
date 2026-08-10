@@ -127,10 +127,6 @@ body {
     --background-modifier-box-shadow,
     rgba(0, 0, 0, 0.1)
   );
-  --dynamic-views-background-modifier-cover: var(
-    --background-modifier-cover,
-    rgba(220, 220, 220, 0.4)
-  );
   --dynamic-views-raised-background: var(--raised-background, transparent);
   /* Obsidian's native lightbox chrome — absent before 1.13, hence the fallbacks */
   --dynamic-views-lightbox-background: var(--lightbox-background, black);

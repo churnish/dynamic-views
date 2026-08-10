@@ -9,7 +9,11 @@ body:not(.dynamic-views-image-viewer-disabled)
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 50; /* Below Obsidian's notice layer */
+  /* Same layer as `.modal-container`, deliberately: a modal opened over the
+     viewer stacks above it by DOM order rather than by z-index (see
+     docs/arch/image-viewer.md). A hardcoded 50 would break that the moment a
+     theme moved `--layer-modal`. */
+  z-index: var(--dynamic-views-layer-modal);
   position: fixed;
   height: 100%;
   width: 100%;
@@ -29,7 +33,7 @@ body:not(.dynamic-views-image-viewer-disabled)
    Specificity has to beat the rule above (0,3,1), which is why the class alone
    would not do. */
 body:not(.dynamic-views-image-viewer-disabled)
-  .dynamic-views-image-embed.is-zoomed.dynamic-views-viewer-fixed {
+  .dynamic-views-image-embed.is-zoomed.dynamic-views-viewer-constrained {
   position: absolute;
   inset: 0;
   width: auto;
@@ -38,7 +42,8 @@ body:not(.dynamic-views-image-viewer-disabled)
 
 /* Overlay chrome — declarations replicated from Obsidian's native lightbox
    (.lightbox-titlebar / .modal-close-button) rather than reusing its class names:
-   none of that CSS exists before 1.13, and the plugin supports 1.11+. */
+   the lightbox is not part of the plugin API, so its classes carry no
+   compatibility guarantee and could be renamed in any release. */
 body:not(.dynamic-views-image-viewer-disabled)
   .dynamic-views-image-embed.is-zoomed
   .dynamic-views-viewer-titlebar {
@@ -183,12 +188,14 @@ body.is-phone:not(.dynamic-views-image-viewer-disabled)
 
 /* No drag-layer overrides here any more. Both the drop indicator and the drop
    preview live outside `.workspace-leaf`, and the constrained overlay now lives
-   inside it — paint containment plus the leaf's own stacking isolation
-   (app.css:6394-6401) put every `body`-level workspace element above it without
-   help. The previous rules raised `.workspace-drop-overlay` by redefining
-   `--layer-dragged-item` as 51, which silently demoted Obsidian's drag ghost
-   from its native 80 (app.css:2415) to below notices, menus and tooltips for as
-   long as any viewer was open — fullscreen included, where it bought nothing. */
+   inside it — paint containment plus the leaf's own stacking isolation, both
+   from the `.workspace-leaf` rule (app.css:6394-6401), put every `body`-level
+   workspace element above it without help. The previous rules raised
+   `.workspace-drop-overlay` by redefining `--layer-dragged-item` as 51, which
+   silently demoted Obsidian's drag ghost from the native 80 the `body` layer
+   block gives it (app.css:2415) to below notices, menus and tooltips for as
+   long as any viewer was open — fullscreen included, where it bought nothing.
+   Line numbers read against Obsidian 1.13.5; re-resolve by symbol. */
 
 /* Suppress card focus ring while viewer is open — keyboard events trigger
    :focus-visible on the still-focused card, which is a visual artifact.
@@ -374,4 +381,12 @@ body.dynamic-views-image-viewer-disabled
   .dynamic-views-image-embed
   img {
   cursor: inherit !important;
+}
+
+/* Obsidian deep-clones the drop target during a tab drag, so a second copy of
+   the viewer image exists for the duration — complete with `will-change:
+   transform`, which promotes it to its own compositing layer. The copy never
+   receives gestures, so the hint is pure GPU memory. */
+.workspace-fake-target-container .dynamic-views-image-embed.is-zoomed img {
+  will-change: auto;
 }

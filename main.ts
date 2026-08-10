@@ -34,6 +34,7 @@ import {
   clearInFlightLoads,
   invalidateContentCacheForPath,
 } from './src/core/content-loader';
+import { closeAllViewers } from './src/core/image-viewer';
 import { installDropTextPatch } from './src/core/drag';
 import { invalidateCacheForFile } from './src/core/image-loader';
 import { getNotebookNavigatorAPI } from './src/core/notebook-navigator';
@@ -139,7 +140,7 @@ export default class DynamicViews extends Plugin {
     );
 
     this.addRibbonIcon('shuffle', 'Shuffle base', () => {
-      this.closeAllZoomedImages();
+      closeAllViewers();
       toggleShuffleActiveView(this.app);
     });
 
@@ -147,7 +148,7 @@ export default class DynamicViews extends Plugin {
       'dices',
       'Open random file from base',
       async (evt: MouseEvent) => {
-        this.closeAllZoomedImages();
+        closeAllViewers();
         const openInNewTab =
           this.persistenceManager.getPluginSettings().openRandomInNewTab;
         await openRandomFile(this.app, getPaneType(evt, openInNewTab));
@@ -160,7 +161,7 @@ export default class DynamicViews extends Plugin {
       name: 'Open random file from base',
       icon: 'dices',
       callback: async () => {
-        this.closeAllZoomedImages();
+        closeAllViewers();
         const openInNewTab =
           this.persistenceManager.getPluginSettings().openRandomInNewTab;
         await openRandomFile(this.app, openInNewTab);
@@ -172,7 +173,7 @@ export default class DynamicViews extends Plugin {
       name: 'Shuffle base',
       icon: 'shuffle',
       callback: () => {
-        this.closeAllZoomedImages();
+        closeAllViewers();
         toggleShuffleActiveView(this.app);
       },
     });
@@ -509,14 +510,6 @@ export default class DynamicViews extends Plugin {
     console.debug(`refreshed width badges (${count} cards)`);
   }
 
-  private closeAllZoomedImages(): void {
-    const docs = [document, ...this.getAllPopoutDocuments()];
-    for (const doc of docs) {
-      doc
-        .querySelectorAll('.dynamic-views-image-embed.is-zoomed')
-        .forEach((el) => el.classList.remove('is-zoomed'));
-    }
-  }
 
   getAllPopoutDocuments(): Document[] {
     const floating = (

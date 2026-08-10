@@ -11,6 +11,7 @@
 
 import { getOwnerWindow } from '../utils/owner-window';
 import { CONTENT_HIDDEN_CLASS } from './content-visibility';
+import { getViewerSourceEmbed } from './image-viewer';
 
 const CARD_SELECTOR = '.card';
 
@@ -241,25 +242,28 @@ export function isArrowKey(key: string): boolean {
   return ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key);
 }
 
-/** Check if image viewer should block keyboard navigation for a container. */
 /**
  * True when a modal is open in this document, so arrow keys belong to it.
  *
  * A plain `Modal` registers nothing for arrows, so Obsidian does not stop
- * propagation (app.js:59570-59571 only fires on a literal `false`) and this
- * capture-phase listener would otherwise focus a card sitting behind the modal.
- * Suggest-type modals are already immune — their `moveUp`/`moveDown` return
- * `false` (app.js:64096-64103), so the event never reaches here.
+ * propagation (`Keymap.onKeyEvent`, app.js:59570-59571, only fires on a literal
+ * `false`) and this capture-phase listener would otherwise focus a card sitting
+ * behind the modal. Suggest-type modals are already immune — `Suggest.moveUp`
+ * and `Suggest.moveDown` return `false` (app.js:64096-64103), so the event
+ * never reaches here.
  *
  * A DOM-presence test is sound for arrows, unlike for Escape: nothing detaches
  * `.modal-container` during an arrow dispatch, whereas `Modal.close` detaches it
  * synchronously on Escape before any document listener runs — which is why the
  * image viewer had to move onto Obsidian's keymap stack instead.
+ *
+ * Line numbers read against Obsidian 1.13.5; re-resolve by symbol.
  */
 function isModalOpen(doc: Document): boolean {
   return !!doc.querySelector('.modal-container');
 }
 
+/** Check if image viewer should block keyboard navigation for a container. */
 export function isImageViewerBlockingNav(
   container: HTMLElement | null
 ): boolean {
@@ -267,10 +271,10 @@ export function isImageViewerBlockingNav(
   const viewer = doc.querySelector('.dynamic-views-image-embed.is-zoomed');
   if (!viewer) return false;
   // Fullscreen viewer → block all nav
-  if (!viewer.classList.contains('dynamic-views-viewer-fixed')) return true;
+  if (!viewer.classList.contains('dynamic-views-viewer-constrained'))
+    return true;
   // Constrained viewer → block only if original embed is in the same view
-  const originalEmbed = (viewer as unknown as { __originalEmbed?: HTMLElement })
-    .__originalEmbed;
+  const originalEmbed = getViewerSourceEmbed(viewer);
   if (!originalEmbed || !container) return false;
   return container.contains(originalEmbed);
 }
@@ -349,12 +353,15 @@ export function setupHoverKeyboardNavigation(
   setFocusableIndex: (index: number) => void
 ): { cleanup: () => void; reattach: () => void } {
   const handleKeydown = (e: KeyboardEvent) => {
-    if (isImageViewerBlockingNav(getContainerRef())) return;
-    if (isModalOpen(getContainerRef()?.ownerDocument ?? document)) return;
+    // Cheapest test first: this runs on every keystroke in the pane
     if (!isArrowKey(e.key)) return;
 
+    const containerRef = getContainerRef();
+    const doc = containerRef?.ownerDocument ?? document;
+    if (isImageViewerBlockingNav(containerRef)) return;
+    if (isModalOpen(doc)) return;
+
     const hoveredCard = getHoveredCard();
-    const doc = getContainerRef()?.ownerDocument ?? document;
     const activeEl = doc.activeElement as HTMLElement | null;
     const isCardFocused = activeEl?.classList.contains('card');
 

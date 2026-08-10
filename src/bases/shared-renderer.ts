@@ -1982,10 +1982,7 @@ export class SharedCardRenderer {
     );
 
     // imageUrls is already capped by getSlideshowMaxImages() at the call site
-    setViewerImageSet(imageEmbedContainer, {
-      urls: imageUrls,
-      format: 'slideshow',
-    });
+    setViewerImageSet(imageEmbedContainer, imageUrls);
 
     // Add zoom handler
     const cardEl = slideshowEl.closest('.card') as HTMLElement;
@@ -2206,10 +2203,7 @@ export class SharedCardRenderer {
 
     // scrubbableUrls already encodes the thumbnail + multi-image + scrubbing gate
     if (scrubbableUrls) {
-      setViewerImageSet(imageEmbedContainer, {
-        urls: scrubbableUrls,
-        format: 'thumbnail',
-      });
+      setViewerImageSet(imageEmbedContainer, scrubbableUrls);
     }
 
     // Fallback to next valid image if current fails (for multi-image cards)

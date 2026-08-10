@@ -1,10 +1,22 @@
 /**
- * Shared image viewer handler - eliminates code duplication across card renderers
+ * Image viewer: the enlarged view opened from a card's cover or thumbnail.
+ *
+ * Owns the clone's lifecycle and its two mount modes — full screen appends to
+ * `body`, constrained appends to the owning `.workspace-leaf` so the overlay
+ * takes part in Obsidian's tab-drop preview — plus two gesture backends with
+ * deliberately opposite transform orders, arrow navigation, clipboard export,
+ * drag-out, and the keymap `Scope` that carries every viewer key.
+ *
+ * See docs/arch/image-viewer.md.
  */
 
 import { Notice, Platform, Scope, TFile, setIcon, type App } from 'obsidian';
 
-import { GESTURE_TIMEOUT_MS } from './constants';
+import {
+  CLIPBOARD_FOCUS_SETTLE_MS,
+  GESTURE_TIMEOUT_MS,
+  VIEWER_DISMISS_SUPPRESS_MS,
+} from './constants';
 import {
   getImageDisplayName,
   getVaultPathFromResourceUrl,
@@ -36,10 +48,13 @@ type GestureMode = 'mobile' | 'desktop';
  * `Platform.hasPhysicalKeyboard` is undocumented and absent from the typings,
  * which declare `Platform` as a const object literal — not an interface, so it
  * cannot be reached by module augmentation. It is **true on desktop** — the
- * boot block sets it alongside `isDesktopApp`/`isDesktop` (app.js:226430) — and
- * `emulateMobile()` forces it false (app.js:223079), so it cannot be exercised
- * through desktop mobile emulation. Only ever used to widen a mobile case, so
- * the desktop value never decides anything on its own.
+ * desktop boot IIFE sets it alongside `isDesktopApp`/`isDesktop`
+ * (app.js:226430) — and `emulateMobile()` forces it false, via the `App`
+ * constructor's `emulate-mobile` branch (app.js:223079), so it cannot be
+ * exercised through desktop mobile emulation. Only ever used to widen a mobile
+ * case, so the desktop value never decides anything on its own.
+ *
+ * Line numbers read against Obsidian 1.13.5; re-resolve by symbol.
  */
 function hasPhysicalKeyboard(): boolean {
   return (
@@ -51,28 +66,29 @@ function hasPhysicalKeyboard(): boolean {
 // Store cleanup functions for event listeners (Map for explicit lifecycle control)
 const viewerListenerCleanups = new Map<HTMLElement, () => void>();
 
-// Map for wheel handlers (keyed by container element, uses explicit lifecycle control)
-const containerWheelHandlers = new Map<HTMLElement, (e: WheelEvent) => void>();
+// Closes the viewer a clone belongs to, keyed by that clone. `closeImageViewer`
+// needs the two view-owned maps, which a caller outside a view — a ribbon
+// action, a command — has no way to reach; this is the bridge for them.
+const openViewerClosers = new Map<HTMLElement, () => void>();
 
-/** The set of images the viewer can arrow through for one card embed. */
-export interface ViewerImageSet {
-  urls: string[];
-  format: 'slideshow' | 'thumbnail';
-}
+// Last cursor position over an open viewer, keyed by the card's embed element.
+// A WeakMap rather than `dataset`, so the mousemove handler writes one object
+// instead of stringifying two numbers into attributes on every move.
+const viewerCursorPositions = new WeakMap<
+  HTMLElement,
+  { x: number; y: number }
+>();
 
 // DOM-keyed, so entries are collected when cards unmount — no explicit cleanup
-const viewerImageSets = new WeakMap<HTMLElement, ViewerImageSet>();
+const viewerImageSets = new WeakMap<HTMLElement, string[]>();
 
 /**
  * Registers the navigable image set for a card embed.
  * Stores a snapshot: the renderer's arrays are spliced in place by broken-URL
  * recovery, which would otherwise shift indices while the viewer is open.
  */
-export function setViewerImageSet(
-  embedEl: HTMLElement,
-  set: ViewerImageSet
-): void {
-  viewerImageSets.set(embedEl, { urls: [...set.urls], format: set.format });
+export function setViewerImageSet(embedEl: HTMLElement, urls: string[]): void {
+  viewerImageSets.set(embedEl, [...urls]);
 }
 
 /**
@@ -83,8 +99,10 @@ export function cleanupAllViewers(
   viewerCleanupFns: Map<HTMLElement, () => void>,
   viewerClones: Map<HTMLElement, HTMLElement>
 ): void {
+  const docs = new Set<Document>();
   // Remove clones from DOM and run gesture cleanup
   viewerClones.forEach((clone) => {
+    docs.add(clone.ownerDocument);
     clone.remove();
   });
   viewerClones.clear();
@@ -99,10 +117,56 @@ export function cleanupAllViewers(
     cleanup();
   });
   viewerListenerCleanups.clear();
+
+  openViewerClosers.clear();
+
+  // Clones are removed directly above rather than through `closeImageViewer`,
+  // so the body class it would have dropped has to be dropped here too — it
+  // outlives the view otherwise, suppressing card focus rings app-wide
+  for (const doc of docs) dropZoomedBodyClass(doc);
+}
+
+/**
+ * Closes every open viewer, wherever its owning view lives.
+ *
+ * Each closer captures its own clone, whose `ownerDocument` drives the body
+ * class drop, so popouts need no document enumeration here.
+ */
+export function closeAllViewers(): void {
+  // Copied: each closer deletes its own entry as it runs
+  for (const close of Array.from(openViewerClosers.values())) close();
+}
+
+/**
+ * Drops the body zoom class once no viewer remains in this document.
+ *
+ * The fake-target exclusion is load-bearing now that the constrained clone
+ * lives inside the leaf: during a tab drag Obsidian deep-clones the drop
+ * target, so a copy of this very clone — `.is-zoomed` and all — exists in the
+ * preview tree. Without it, closing mid-drag finds the copy and strands the
+ * class.
+ */
+function dropZoomedBodyClass(doc: Document): void {
+  if (
+    !doc.querySelector(
+      '.dynamic-views-image-embed.is-zoomed:not(.workspace-fake-target-container .dynamic-views-image-embed)'
+    )
+  ) {
+    doc.body.classList.remove('dynamic-views-image-zoomed');
+  }
 }
 
 /** Extended clone element type with original embed reference */
-type CloneElement = HTMLElement & { __originalEmbed?: HTMLElement };
+export type CloneElement = HTMLElement & { __originalEmbed?: HTMLElement };
+
+/**
+ * The card embed a viewer clone was opened from, or undefined for any other
+ * element. Exported so consumers read the expando through this module's own
+ * type rather than re-declaring it behind a second cast.
+ */
+export function getViewerSourceEmbed(el: Element): HTMLElement | undefined {
+  return (el as CloneElement).__originalEmbed;
+}
 
 /**
  * Closes image viewer clone and removes it from DOM
@@ -117,7 +181,10 @@ function closeImageViewer(
   const sourceCard = cloneEl.__originalEmbed?.closest<HTMLElement>('.card');
   if (sourceCard) {
     sourceCard.dataset.viewerDismissing = '1';
-    setTimeout(() => delete sourceCard.dataset.viewerDismissing, 300);
+    setTimeout(
+      () => delete sourceCard.dataset.viewerDismissing,
+      VIEWER_DISMISS_SUPPRESS_MS
+    );
     sourceCard.classList.remove('viewer-active');
   }
 
@@ -128,15 +195,7 @@ function closeImageViewer(
   // tab drag Obsidian deep-clones the drop target, so a copy of this very clone
   // — `.is-zoomed` and all — exists in the preview tree. Without the exclusion,
   // closing the viewer mid-drag would find the copy and strand the body class.
-  const doc = cloneEl.ownerDocument;
-  if (
-    doc &&
-    !doc.querySelector(
-      '.dynamic-views-image-embed.is-zoomed:not(.workspace-fake-target-container .dynamic-views-image-embed)'
-    )
-  ) {
-    doc.body.classList.remove('dynamic-views-image-zoomed');
-  }
+  if (cloneEl.ownerDocument) dropZoomedBodyClass(cloneEl.ownerDocument);
 
   // O(1) lookup using stored reference instead of iterating map
   const original = cloneEl.__originalEmbed;
@@ -150,17 +209,18 @@ function closeImageViewer(
     // unreliable — restore class directly using last tracked cursor position.
     // Skipped when a new viewer pre-empts this one (mouse is on a different card).
     if (restoreHoverIntent && !Platform.isMobile) {
+      const cursor = viewerCursorPositions.get(original);
+      // The card and the thumbnail below ask the same question of two rects
+      const contains = (rect: DOMRect): boolean =>
+        !!cursor &&
+        cursor.x >= rect.left &&
+        cursor.x <= rect.right &&
+        cursor.y >= rect.top &&
+        cursor.y <= rect.bottom;
+
       const cardEl = original.closest<HTMLElement>('.card');
-      if (cardEl && original.dataset.viewerX) {
-        const cx = Number(original.dataset.viewerX);
-        const cy = Number(original.dataset.viewerY);
-        const cardRect = cardEl.getBoundingClientRect();
-        if (
-          cx >= cardRect.left &&
-          cx <= cardRect.right &&
-          cy >= cardRect.top &&
-          cy <= cardRect.bottom
-        ) {
+      if (cardEl && cursor) {
+        if (contains(cardEl.getBoundingClientRect())) {
           // Cursor is over the card — restore without re-triggering transitions
           cardEl.classList.add('interact-restore');
           cardEl.classList.add('interact');
@@ -183,21 +243,13 @@ function closeImageViewer(
       const thumbnailEl = original.closest<HTMLElement>(
         '.card-thumbnail.multi-image'
       );
-      if (thumbnailEl && original.dataset.viewerX) {
-        const x = Number(original.dataset.viewerX);
-        const y = Number(original.dataset.viewerY);
-        const rect = thumbnailEl.getBoundingClientRect();
-        if (
-          x >= rect.left &&
-          x <= rect.right &&
-          y >= rect.top &&
-          y <= rect.bottom
-        ) {
+      if (thumbnailEl && cursor) {
+        if (contains(thumbnailEl.getBoundingClientRect())) {
           // Recalculate scrub position for current cursor coordinates
           thumbnailEl.dispatchEvent(
             new MouseEvent('mousemove', {
-              clientX: x,
-              clientY: y,
+              clientX: cursor.x,
+              clientY: cursor.y,
               bubbles: false,
             })
           );
@@ -222,10 +274,13 @@ function closeImageViewer(
           );
         }
       }
-      delete original.dataset.viewerX;
-      delete original.dataset.viewerY;
+      // Scoped to one viewer session: the open path always writes a fresh
+      // position, so a leftover entry would only ever be stale
+      viewerCursorPositions.delete(original);
     }
   }
+
+  openViewerClosers.delete(cloneEl);
 
   const cleanup = viewerCleanupFns.get(cloneEl);
   if (cleanup) {
@@ -286,8 +341,7 @@ export function handleImageViewerTrigger(
     closeImageViewer(existingClone, viewerCleanupFns, viewerClones);
   } else {
     // Store click coordinates for scrub resume on viewer close
-    embedEl.dataset.viewerX = String(e.clientX);
-    embedEl.dataset.viewerY = String(e.clientY);
+    viewerCursorPositions.set(embedEl, { x: e.clientX, y: e.clientY });
     // Suppress hover deactivation while viewer is open — the overlay's
     // pointer-events: auto triggers pointerleave on the card
     cardEl?.classList.add('viewer-active');
@@ -305,7 +359,11 @@ interface ViewerGestureControls {
 
 /** Constrained viewer: returns true when the key event should be ignored (viewer's leaf is not active). */
 function isConstrainedViewerInactive(el: CloneElement, doc: Document): boolean {
-  if (!el.classList.contains('dynamic-views-viewer-fixed')) return false;
+  if (!el.classList.contains('dynamic-views-viewer-constrained')) return false;
+  // A hidden viewer never owns keys. Safe on this branch only: the clone is
+  // `position: absolute` here, so `offsetParent` is its leaf, whereas the
+  // full screen clone is `position: fixed` and would always report null.
+  if (el.offsetParent === null) return true;
   const orig = el.__originalEmbed;
   const activeLeaf = doc.activeElement?.closest('.workspace-leaf');
   return (
@@ -320,7 +378,8 @@ function isConstrainedViewerInactive(el: CloneElement, doc: Document): boolean {
  * Setup zoom and pan gestures for an image in the viewer
  * @param imgEl - The image element
  * @param container - The container element (overlay or embed)
- * @param mode - 'mobile' for phone/tablet fullscreen, 'desktop' for desktop and tablet constrained
+ * @param mode - 'mobile' for touch devices, 'desktop' otherwise. Touch devices run the
+ *   mobile backend in both mount modes, so drag-out never applies there.
  * @param allowDragOut - whether the image may be dragged out into the vault. Constrained only:
  *   fullscreen has nowhere to drop, so it stays inert. Even when allowed it is suppressed while
  *   zoomed, since panning owns the pointer.
@@ -334,8 +393,9 @@ function setupImageViewerGestures(
   const isMobileMode = mode === 'mobile';
   // Images are draggable by default, so this must be set even when the desktop
   // backend never attaches (mobile, or a broken first image)
-  imgEl.draggable = allowDragOut;
+  imgEl.draggable = allowDragOut && !isMobileMode;
   let errorHandler: (() => void) | null = null;
+  let initialLoadHandler: (() => void) | null = null;
   // The desktop backend keeps its transform state in `attachDesktopGestures`'s
   // closure; these bridges expose it to the returned controls, mirroring the
   // `mobileResetTransform` pattern below
@@ -420,6 +480,7 @@ function setupImageViewerGestures(
     // plain wheel at 1x is ignored outright — not even preventDefault, so the
     // page keeps its normal scroll. Native binds this to the whole viewer with
     // no target check, so hovering the backdrop behaves the same as the image.
+    // Line numbers read against Obsidian 1.13.5; re-resolve by symbol.
     const wheelHandler = (e: WheelEvent) => {
       // Trackpad pinch synthesises ctrlKey on every platform, so macOS pinch
       // lands here too
@@ -464,13 +525,13 @@ function setupImageViewerGestures(
       applyDesktopTransform();
     };
     container.addEventListener('wheel', wheelHandler, WHEEL_OPTIONS);
-    containerWheelHandlers.set(container, wheelHandler);
 
     // Armed the moment anything is registered — a throw further down would
     // otherwise make `cleanup()` skip desktop teardown and leak the wheel
-    // listener along with its `containerWheelHandlers` entry
+    // listener
     desktopAttached = true;
     desktopCleanup = () => {
+      container.removeEventListener('wheel', wheelHandler, WHEEL_OPTIONS);
       pointerController.abort();
       if (rafId) {
         gestureWin.cancelAnimationFrame(rafId);
@@ -572,7 +633,7 @@ function setupImageViewerGestures(
     let lastTime = 0;
 
     const momentumTick = () => {
-      cancelAnimationFrame(mobileAnimFrame);
+      gestureWin.cancelAnimationFrame(mobileAnimFrame);
       if (scale <= 1) return; // No momentum at base zoom — pan is clamped to 0
       const now = Date.now();
       const dt = now - lastTime;
@@ -590,7 +651,7 @@ function setupImageViewerGestures(
     // handler below refreshes bounds but deliberately preserves scale, so
     // without this a navigated image would inherit the previous zoom
     mobileResetTransform = () => {
-      cancelAnimationFrame(mobileAnimFrame);
+      gestureWin.cancelAnimationFrame(mobileAnimFrame);
       velocity = 0;
       scale = 1;
       panX = 0;
@@ -619,7 +680,7 @@ function setupImageViewerGestures(
     let prevTouch2: Touch | null = null;
 
     const handleTouch = (e: TouchEvent) => {
-      cancelAnimationFrame(mobileAnimFrame);
+      gestureWin.cancelAnimationFrame(mobileAnimFrame);
       const now = Date.now();
       const dt = now - lastTime;
       const touches = Array.from(e.touches);
@@ -736,15 +797,29 @@ function setupImageViewerGestures(
     if (isMobileMode) attachMobileGestures();
     else attachDesktopGestures();
   } else {
-    const initialLoadHandler = () => {
+    // Both handlers are hoisted so `cleanup()` can remove them: a detached
+    // `<img>` still fires `load`, so a viewer closed before its image arrived
+    // would otherwise attach gestures to a dead clone after teardown ran — a
+    // pending rAF and the app-wide `is-grabbing` class included, neither of
+    // which any later cleanup can reach
+    initialLoadHandler = () => {
+      initialLoadHandler = null;
+      if (errorHandler) {
+        imgEl.removeEventListener('error', errorHandler);
+        errorHandler = null;
+      }
       if (isMobileMode) attachMobileGestures();
       else attachDesktopGestures();
     };
     imgEl.addEventListener('load', initialLoadHandler, { once: true });
 
     errorHandler = () => {
+      errorHandler = null;
       console.warn('Image failed to load, viewer gestures not attached');
-      imgEl.removeEventListener('load', initialLoadHandler);
+      if (initialLoadHandler) {
+        imgEl.removeEventListener('load', initialLoadHandler);
+        initialLoadHandler = null;
+      }
     };
     imgEl.addEventListener('error', errorHandler, { once: true });
   }
@@ -752,11 +827,6 @@ function setupImageViewerGestures(
   return {
     cleanup: () => {
       if (desktopAttached) {
-        const wheelHandler = containerWheelHandlers.get(container);
-        if (wheelHandler) {
-          container.removeEventListener('wheel', wheelHandler, WHEEL_OPTIONS);
-          containerWheelHandlers.delete(container);
-        }
         desktopCleanup?.();
       }
       if (errorHandler) {
@@ -782,10 +852,14 @@ function setupImageViewerGestures(
           'touchcancel',
           mobileTouchHandler as EventListener
         );
-        cancelAnimationFrame(mobileAnimFrame);
+        gestureWin.cancelAnimationFrame(mobileAnimFrame);
       }
       if (mobileLoadHandler) {
         imgEl.removeEventListener('load', mobileLoadHandler);
+      }
+      if (initialLoadHandler) {
+        imgEl.removeEventListener('load', initialLoadHandler);
+        initialLoadHandler = null;
       }
     },
     resetZoom: () => {
@@ -862,7 +936,7 @@ function openImageViewer(
   const imageSet = viewerImageSets.get(embedEl);
   const rawSrc = imgEl.getAttribute('src') ?? '';
   let currentIndex = imageSet
-    ? imageSet.urls.findIndex(
+    ? imageSet.findIndex(
         (u) =>
           u === imgEl.src ||
           u === rawSrc ||
@@ -871,6 +945,11 @@ function openImageViewer(
       )
     : -1;
   if (currentIndex < 0) currentIndex = 0;
+
+  // The original URL, kept across the blob swap below and across navigation.
+  // Drag-out and any other consumer needs the durable address, not the
+  // session-scoped `blob:` one the viewer actually displays.
+  let currentRawUrl = imgEl.src;
 
   // Use cached blob URL for external images to avoid re-fetching
   if (isExternalUrl(imgEl.src)) {
@@ -905,20 +984,24 @@ function openImageViewer(
       const workspaceLeaf = embedEl.closest<HTMLElement>('.workspace-leaf');
       if (workspaceLeaf) {
         // Mounted inside the leaf rather than on `body`, so the overlay takes
-        // part in Obsidian's tab-drop preview. A leaf drag has two halves: the
-        // drop target's container is set to `opacity: 0` in the real DOM
-        // (app.js:166503) and a `cloneNode(true)` of it is rendered at the
-        // squeezed rect inside `.workspace-fake-target-overlay`
-        // (app.js:166502, 166525-166529). A `body`-level overlay belongs to
-        // neither half, so it neither dims with the real pane nor squeezes with
-        // the preview; a descendant of the leaf gets both for free.
+        // part in Obsidian's tab-drop preview. A leaf drag has two halves, both
+        // inside `Workspace.onDragLeaf`: the drop target's container is set to
+        // `opacity: 0` in the real DOM (app.js:166503) and a `cloneNode(true)`
+        // of it is rendered at the squeezed rect inside
+        // `.workspace-fake-target-overlay` (app.js:166502, 166525-166529). A
+        // `body`-level overlay belongs to neither half, so it neither dims with
+        // the real pane nor squeezes with the preview; a descendant of the leaf
+        // gets both for free.
         //
-        // It also removes the #230 divider collision outright. `.workspace-leaf`
-        // is `position: relative` with `contain: strict` and `overflow: hidden`
-        // (app.css:6394-6401), so an absolutely positioned child matches the
-        // leaf box exactly and is paint-clipped to it. The split resize handles
-        // live outside the leaf, so no arrangement can put the overlay on top of
-        // one — previously they had to be measured and dodged every frame.
+        // It also removes the #230 divider collision outright. The `.workspace-leaf`
+        // rule makes it `position: relative` with `contain: strict` and
+        // `overflow: hidden` (app.css:6394-6401), so an absolutely positioned
+        // child matches the leaf box exactly and is paint-clipped to it. The
+        // split resize handles live outside the leaf, so no arrangement can put
+        // the overlay on top of one — previously they had to be measured and
+        // dodged every frame.
+        //
+        // Line numbers read against Obsidian 1.13.5; re-resolve by symbol.
         const updateHeaderInset = () => {
           // The leaf's box starts at the tab title bar, so covering it outright
           // would scrim the file name and the tab actions along with the
@@ -929,11 +1012,16 @@ function openImageViewer(
             ':scope > .workspace-leaf-content > .view-header'
           );
           // Not a constant: the header collapses to `display: none` in the
-          // sidebars (app.css:4320-4323), where the inset must be zero.
-          cloneEl.style.top = `${viewHeader?.getBoundingClientRect().height ?? 0}px`;
+          // sidebars, via the `.workspace-split.mod-left-split .view-header`
+          // rule group (app.css:4320-4323 — line numbers read against Obsidian
+          // 1.13.5; re-resolve by symbol), where the inset must be zero.
+          // Guarded because this runs per ResizeObserver frame while the user
+          // drags a split divider, and the height does not change during a drag
+          const nextTop = `${viewHeader?.getBoundingClientRect().height ?? 0}px`;
+          if (cloneEl.style.top !== nextTop) cloneEl.style.top = nextTop;
         };
 
-        cloneEl.addClass('dynamic-views-viewer-fixed');
+        cloneEl.addClass('dynamic-views-viewer-constrained');
         updateHeaderInset();
         workspaceLeaf.appendChild(cloneEl);
 
@@ -1055,8 +1143,8 @@ function openImageViewer(
     let stepImage: ((direction: 1 | -1) => void) | null = null;
     let pendingNavError: (() => void) | null = null;
 
-    if (canArrowNavigate && imageSet && imageSet.urls.length > 1) {
-      const set = imageSet;
+    if (canArrowNavigate && imageSet && imageSet.length > 1) {
+      const urls = imageSet;
 
       const clearPendingNavError = (): void => {
         if (pendingNavError) {
@@ -1075,14 +1163,14 @@ function openImageViewer(
         // perfectly good URL broken when a later step genuinely fails
         clearPendingNavError();
         currentIndex = index;
-        const url = set.urls[index];
+        const url = urls[index];
 
         const onNavError = (): void => {
           pendingNavError = null;
           if (!imgEl.isConnected) return; // Viewer closed mid-flight
           markImageBroken(url);
-          if (attempts >= set.urls.length) return;
-          const retry = getNextImageIndex(index, direction, set.urls, (u) =>
+          if (attempts >= urls.length) return;
+          const retry = getNextImageIndex(index, direction, urls, (u) =>
             brokenImageUrls.has(u)
           );
           if (retry !== -1) showIndex(retry, direction, attempts + 1);
@@ -1096,17 +1184,15 @@ function openImageViewer(
         imgEl.addEventListener('error', onNavError, { once: true });
         imgEl.addEventListener('load', onNavLoad, { once: true });
         gestureControls.resetZoom();
+        currentRawUrl = url;
         imgEl.src = getCachedBlobUrl(url);
         // title/alt belong to the initially embedded image — never reapply them
         titlebarTextEl.setText(getImageDisplayName(url));
       };
 
       stepImage = (direction: 1 | -1) => {
-        const next = getNextImageIndex(
-          currentIndex,
-          direction,
-          set.urls,
-          (url) => brokenImageUrls.has(url)
+        const next = getNextImageIndex(currentIndex, direction, urls, (url) =>
+          brokenImageUrls.has(url)
         );
         if (next === -1) return;
         showIndex(next, direction);
@@ -1119,7 +1205,7 @@ function openImageViewer(
         try {
           if (!viewerDoc.hasFocus()) {
             viewerWin.focus();
-            await new Promise((r) => setTimeout(r, 50));
+            await new Promise((r) => setTimeout(r, CLIPBOARD_FOCUS_SETTLE_MS));
           }
 
           // For external images, reload with crossOrigin to avoid tainted canvas
@@ -1170,26 +1256,30 @@ function openImageViewer(
 
     // Keyboard runs through Obsidian's keymap stack rather than a document
     // listener, because a document listener cannot win against a modal.
-    // Obsidian's own keydown listener is capture-phase on `window`
-    // (app.js:59501-59504), and the capture path reaches Window before Document
-    // whatever the registration order, so every document listener is downstream
-    // by construction. A modal's Escape handler preventDefaults and closes
-    // synchronously (app.js:63741), and `close()` detaches `.modal-container` in
-    // the same tick on desktop (app.js:63699), so by the time a document handler
-    // runs there is no modal left to detect. Checking keymap state instead is
-    // worse: `popScope` runs at app.js:63689, before that detach.
+    // Obsidian's own keydown listener is capture-phase on `window`, registered
+    // in the `Keymap` constructor (app.js:59501-59504), and the capture path
+    // reaches Window before Document whatever the registration order, so every
+    // document listener is downstream by construction. `Modal.onEscapeKey`
+    // preventDefaults and closes synchronously (app.js:63741), and
+    // `Modal.close` detaches `.modal-container` in the same tick on desktop
+    // (app.js:63699), so by the time a document handler runs there is no modal
+    // left to detect. Checking keymap state instead is worse: `Modal.close`
+    // pops its scope first, at app.js:63689, before that detach.
     //
     // A Scope removes the question. `Modal.open` pushes a parentless scope
     // (app.js:63628, :63493) and `Scope.handleKey` only walks `parent`
     // (app.js:59473), so while a modal is up the viewer's scope is never
     // consulted at all — the first Escape closes the modal, the second reaches
     // the viewer. Registered as a catch-all, the shape Obsidian's own
-    // HotkeyManager uses (app.js:65672): an entry bound to a specific key
-    // swallows that key even when the callback declines (app.js:59471-59472),
-    // which would eat Escape for other panes when the leaf guard bails.
-    // Returning `false` makes Obsidian preventDefault + stopPropagation at the
-    // window listener (app.js:59570-59571), which also keeps the event off the
-    // card's own handler — the job the mobile block list was hand-rolling.
+    // `HotkeyManager` constructor uses (app.js:65672): in `Scope.handleKey` an
+    // entry bound to a specific key swallows that key even when the callback
+    // declines (app.js:59471-59472), which would eat Escape for other panes
+    // when the leaf guard bails. Returning `false` makes `Keymap.onKeyEvent`
+    // preventDefault + stopPropagation at the window listener
+    // (app.js:59570-59571), which also keeps the event off the card's own
+    // handler — the job the mobile block list was hand-rolling.
+    //
+    // Line numbers read against Obsidian 1.13.5; re-resolve by symbol.
     const viewerScope = new Scope(app.scope);
 
     viewerScope.register(null, null, (e: KeyboardEvent): false | undefined => {
@@ -1250,7 +1340,7 @@ function openImageViewer(
           return;
         }
 
-        const src = imgEl.src;
+        const src = currentRawUrl;
         const vaultPath = getVaultPathFromResourceUrl(src);
 
         if (vaultPath) {
@@ -1270,9 +1360,10 @@ function openImageViewer(
 
     // Cleanup removes all listeners (removeEventListener is no-op if never added)
     viewerListenerCleanups.set(cloneEl, () => {
-      // `popScope` is inert once the scope's window reference is cleared
-      // (app.js:59545-59548), so the closeImageViewer + cleanupAllViewers double
-      // path is safe
+      // `Keymap.popScope` is inert once the scope's window reference is cleared
+      // (app.js:59545-59548 — line numbers read against Obsidian 1.13.5;
+      // re-resolve by symbol), so the closeImageViewer + cleanupAllViewers
+      // double path is safe
       app.keymap.popScope(viewerScope);
       if (pendingNavError) imgEl.removeEventListener('error', pendingNavError);
       cloneEl.removeEventListener('click', onOverlayClick);
@@ -1316,12 +1407,14 @@ function openImageViewer(
     // Track cursor position over overlay so closeImageViewer has fresh coordinates
     // for the synthetic mousemove that resumes thumbnail scrubbing
     cloneEl.addEventListener('mousemove', (e: MouseEvent) => {
-      embedEl.dataset.viewerX = String(e.clientX);
-      embedEl.dataset.viewerY = String(e.clientY);
+      viewerCursorPositions.set(embedEl, { x: e.clientX, y: e.clientY });
     });
 
-    // Register in tracking map AFTER all setup succeeds (prevents partial state)
+    // Register in tracking maps AFTER all setup succeeds (prevents partial state)
     viewerClones.set(embedEl, cloneEl);
+    openViewerClosers.set(cloneEl, () =>
+      closeImageViewer(cloneEl, viewerCleanupFns, viewerClones)
+    );
   } catch (error) {
     // Comprehensive cleanup in reverse order of allocation
     console.error('Failed to setup image viewer', error);
@@ -1332,6 +1425,7 @@ function openImageViewer(
       gestureCleanup();
     }
     viewerCleanupFns.delete(cloneEl);
+    openViewerClosers.delete(cloneEl);
 
     // 2. Call and remove listener cleanup (may have been partially set up)
     const listenerCleanup = viewerListenerCleanups.get(cloneEl);
@@ -1345,6 +1439,12 @@ function openImageViewer(
 
     // 4. Remove DOM element last
     cloneEl.remove();
+
+    // 5. Roll back the two mutations made before the try block — the body class
+    // would otherwise suppress card focus rings for the session, and the source
+    // card would keep hover deactivation suppressed
+    dropZoomedBodyClass(viewerDoc);
+    embedEl.closest('.card')?.classList.remove('viewer-active');
   }
 }
 
@@ -1365,6 +1465,12 @@ function setupTouchInterceptAll(
         e.stopPropagation();
       }
     },
-    { passive: false, signal }
+    // Passive on purpose: the handler only ever calls `stopPropagation`, which
+    // needs no opt-out, and a non-passive `touchmove` makes WebKit wait for the
+    // main thread on every move — it also silently negated the mobile backend's
+    // own `{ passive: true }` registrations on this same element. `passive: true`
+    // must be stated: the default-passive intervention covers only
+    // window/document/body, not a regular element.
+    { passive: true, signal }
   );
 }

@@ -28,7 +28,7 @@ Two display modes, determined at open time:
 | Mode | CSS class | Positioning | When |
 |---|---|---|---|
 | Fullscreen | `.is-zoomed` | `position: fixed` on `body` | Phone always; tablet/desktop when fullscreen not disabled |
-| Constrained | `.dynamic-views-viewer-fixed` + `.is-zoomed` | `position: fixed`, bounds locked to workspace-leaf via ResizeObserver | Desktop/tablet with fullscreen disabled in Style Settings |
+| Constrained | `.dynamic-views-viewer-constrained` + `.is-zoomed` | `position: fixed`, bounds locked to workspace-leaf via ResizeObserver | Desktop/tablet with fullscreen disabled in Style Settings |
 
 The fullscreen backdrop uses `--lightbox-background` (Obsidian's native lightbox variable, wrapped as `--dynamic-views-lightbox-background`) at 0.9 alpha, matching the native lightbox in both themes. Constrained mode has no native counterpart, so it keeps the pane-blended `--background-primary` tint — but at the same 0.9 alpha, so both modes dim by the same amount. It previously derived its alpha from the theme's `--background-modifier-cover`, which made the two modes dim differently. The native lightbox class itself is not exported from the `obsidian` module, so it cannot be used directly (see [#419](https://github.com/churnish/dynamic-views/issues/419)).
 
@@ -147,7 +147,7 @@ Anything else returns `undefined` and falls through to the parent scope.
 
 `isConstrainedViewerInactive(el, doc)` — module-scope helper. Returns true when a constrained viewer's originating leaf is not active, causing keyboard handlers to return early. Prevents handlers in one pane from affecting a viewer in another pane.
 
-Checks: viewer has `.dynamic-views-viewer-fixed` class, `doc.activeElement` is not the viewer, originating leaf (via `__originalEmbed`) is not `.mod-active`, and a different leaf has focus.
+Checks: viewer has `.dynamic-views-viewer-constrained` class, `doc.activeElement` is not the viewer, originating leaf (via `__originalEmbed`) is not `.mod-active`, and a different leaf has focus.
 
 Checked once at the top of the scope callback, so it gates every key the viewer handles.
 

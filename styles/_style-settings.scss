@@ -1090,7 +1090,7 @@ settings:
     -
         id: dynamic-views-disable-image-hdr
         title: Disable HDR
-        description: Show HDR images in standard dynamic range instead of at full brightness.
+        description: Show HDR card images in standard dynamic range instead of at full brightness.
         type: class-toggle
     -
         id: poster-heading
@@ -2567,8 +2567,11 @@ body.dynamic-views-slideshow-arrows-show
   .setting-item[data-id='dynamic-views-hide-cover-icon'],
 body.dynamic-views-cover-disable-navigation
   .style-settings-container
-  .setting-item[data-id='dynamic-views-cover-disable-navigation']
-  ~ .setting-item,
+  .setting-item:is(
+    [data-id='dynamic-views-slideshow-arrows'],
+    [data-id='dynamic-views-hide-cover-icon'],
+    [data-id='dynamic-views-slideshow-max-images']
+  ),
 body:not(.dynamic-views-subtitle-color-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-subtitle-color-custom'],
@@ -2656,6 +2659,15 @@ body:not(
 body:not(.dynamic-views-property-name-color-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-property-name-color'] {
+  border-bottom-right-radius: var(--setting-items-radius);
+  border-bottom-left-radius: var(--setting-items-radius);
+}
+
+// Cover: navigation arrows, hide icon and image count all hide when navigation is
+// disabled → cover-disable-navigation becomes visually last
+body.dynamic-views-cover-disable-navigation
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-cover-disable-navigation'] {
   border-bottom-right-radius: var(--setting-items-radius);
   border-bottom-left-radius: var(--setting-items-radius);
 }
