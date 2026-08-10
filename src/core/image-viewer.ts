@@ -391,9 +391,10 @@ function setupImageViewerGestures(
   allowDragOut: boolean
 ): ViewerGestureControls {
   const isMobileMode = mode === 'mobile';
-  // Images are draggable by default, so this must be set even when the desktop
-  // backend never attaches (mobile, or a broken first image)
-  imgEl.draggable = allowDragOut && !isMobileMode;
+  // Images are draggable by default, so this must be set even when neither
+  // backend attaches (a broken first image). Phones never reach here with
+  // `allowDragOut` true — they are always fullscreen.
+  imgEl.draggable = allowDragOut;
   let errorHandler: (() => void) | null = null;
   let initialLoadHandler: (() => void) | null = null;
   // The desktop backend keeps its transform state in `attachDesktopGestures`'s
@@ -613,6 +614,9 @@ function setupImageViewerGestures(
       if (pannable === wasPannable) return;
       wasPannable = pannable;
       container.classList.toggle('is-pannable', pannable);
+      // Zoomed, a one-finger drag is a pan, so the image must not also be
+      // draggable — same gate the desktop backend applies in its rAF
+      imgEl.draggable = allowDragOut && !pannable;
     };
 
     /** Apply clamped transform — native formula: maxPan = imgDim * (scale-1)/scale/2 */
@@ -1333,7 +1337,7 @@ function openImageViewer(
     // the pannable state flips.
     let onDragStart: ((e: DragEvent) => void) | null = null;
 
-    if (!isMobile && !isFullscreen) {
+    if (!isFullscreen) {
       onDragStart = (e: DragEvent) => {
         if (cloneEl.classList.contains('is-pannable')) {
           e.preventDefault();

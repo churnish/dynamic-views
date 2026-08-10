@@ -269,7 +269,8 @@ body:not(.dynamic-views-image-viewer-disabled):not(
   max-width: 90%;
 }
 
-/* Disable drag in fullscreen mode (desktop only — mobile uses system drag & drop) */
+/* Disable drag in fullscreen mode (desktop only — mobile is always fullscreen
+   when `allowDragOut` is false, so touch needs no rule here) */
 body:not(.is-mobile):not(.dynamic-views-image-viewer-constrain-to-pane)
   .dynamic-views-image-embed.is-zoomed
   img {
