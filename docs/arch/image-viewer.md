@@ -87,9 +87,9 @@ No library. `attachDesktopGestures()` owns three numbers — `scale`, `panX`, `p
 
 #### Scope wiring
 
-`resetZoom` and `setAltDragMode` live on the object returned by `setupImageViewerGestures()` and cannot see `attachDesktopGestures`'s locals. Four bindings in the outer closure bridge the gap, mirroring the existing `mobileResetTransform` pattern: `desktopResetTransform`, `desktopSetAltDrag`, `desktopCleanup`, and a `desktopAttached` boolean.
+`resetZoom` lives on the object returned by `setupImageViewerGestures()` and cannot see `attachDesktopGestures`'s locals. Three bindings in the outer closure bridge the gap, mirroring the existing `mobileResetTransform` pattern: `desktopResetTransform`, `desktopCleanup`, and a `desktopAttached` boolean.
 
-`desktopAttached` replaces the old `panzoomInstance` null-check in both `ensureGestures()` (whose guard is `if (desktopAttached || mobileTouchHandler) return`) and `cleanup()`. It is set immediately after the wheel listener registers, not at the end of the function: a throw in between would otherwise make cleanup skip desktop teardown and leak the listener along with its `containerWheelHandlers` entry. Without the sentinel, `ensureGestures` would attach a second wheel and pointer set on every navigation load and overwrite the tracked handler, leaking the first.
+`desktopAttached` replaces the old `panzoomInstance` null-check in both `ensureGestures()` (whose guard is `if (desktopAttached || mobileTouchHandler) return`) and `cleanup()`. It is set immediately after the wheel listener registers, not at the end of the function: a throw in between would otherwise make cleanup skip desktop teardown and leak the listener. Without the sentinel, `ensureGestures` would attach a second wheel and pointer set on every navigation load, leaking the first.
 
 The four pointer listeners share one `AbortController`; `desktopCleanup` aborts it and cancels any pending rAF.
 
@@ -161,14 +161,14 @@ Tablets run the **mobile** gesture backend, so `desktopResetTransform` is null. 
 
 ### The navigable set
 
-`setViewerImageSet(embedEl, set)` registers what the viewer may step through, keyed in a module-scope `WeakMap` by the `.dynamic-views-image-embed` element — the same element `handleImageViewerTrigger` receives as `e.currentTarget`. DOM-keyed, so entries are collected when cards unmount; there is no explicit cleanup.
+`setViewerImageSet(embedEl, urls)` registers what the viewer may step through, keyed in a module-scope `WeakMap` by the `.dynamic-views-image-embed` element — the same element `handleImageViewerTrigger` receives as `e.currentTarget`. DOM-keyed, so entries are collected when cards unmount; there is no explicit cleanup.
 
 Two render sites in `shared-renderer.ts` populate it, both with the already-capped arrays:
 
-| Site | `format` | Array | Cap |
-|---|---|---|---|
-| `renderSlideshow` | `'slideshow'` | `imageUrls` (already `slideshowUrls`) | `getSlideshowMaxImages()` |
-| `renderImage` | `'thumbnail'` | `scrubbableUrls`, when non-null | 10 |
+| Site | Array | Cap |
+|---|---|---|
+| `renderSlideshow` | `imageUrls` (already `slideshowUrls`) | `getSlideshowMaxImages()` |
+| `renderImage` | `scrubbableUrls`, when non-null | 10 |
 
 `scrubbableUrls` being non-null already encodes the thumbnail + multi-image + scrubbing-enabled gate, so no extra condition is needed. Every other format — plain covers, posters, backdrops, single-image thumbnails — registers nothing, and the viewer is inert there.
 
@@ -222,14 +222,17 @@ Titles after navigation use `getImageDisplayName(url)` only — not the `title |
 ### Module-scope maps
 
 - **`viewerListenerCleanups`**: Keyboard/click/touch listener cleanup. Used by `cleanupAllViewers()`.
-- **`containerWheelHandlers`**: Wheel event handlers tracked separately — the listener is registered with non-default options (`{ passive: false }`), so removal needs the stored reference and the same options object.
+- **`openViewerClosers`**: One closer per open viewer, keyed by clone. Backs the exported `closeAllViewers()`, which `main.ts` calls instead of stripping `is-zoomed`.
+- **`viewerCursorPositions`**: Last pointer position over each overlay, `WeakMap`-keyed by the source embed. Read on close to decide hover-intent restore and scrub resume.
+
+The wheel listener needs no map: it is removed inside `desktopCleanup`, which closes over both the handler and the container, with the same `WHEEL_OPTIONS` object used to add it.
 
 ## Close behavior
 
 `closeImageViewer()` handles two post-close restorations:
 
 - **Hover intent**: Restores `.interact` on the original card to work around an Electron hit-testing issue where `:hover` and `mouseenter` are unreliable after clone overlay removal. The `restoreHoverIntent` parameter (default `true`) is `false` when a new viewer pre-empts the current one.
-- **Thumbnail scrub resume**: Tracks cursor position via `dataset.viewerX/viewerY` (set by a `mousemove` listener on the overlay during open). On close, dispatches synthetic `mousemove` to resume slideshow scrubbing if cursor is still over a multi-image thumbnail. Uses `requestAnimationFrame` to handle Preact re-render race conditions. Dispatches `mouseleave` if cursor is out of bounds.
+- **Thumbnail scrub resume**: Tracks cursor position in the `viewerCursorPositions` `WeakMap` (set by a `mousemove` listener on the overlay during open). On close, dispatches synthetic `mousemove` to resume slideshow scrubbing if cursor is still over a multi-image thumbnail. Uses `requestAnimationFrame` to handle Preact re-render race conditions. Dispatches `mouseleave` if cursor is out of bounds.
 
 ## Key types
 
@@ -242,22 +245,14 @@ Stores reference to the original embed element for O(1) cleanup lookup and leaf 
 ```typescript
 interface ViewerGestureControls {
   cleanup: () => void;
-  setAltDragMode: (enabled: boolean) => void;
   resetZoom: () => void;
   ensureGestures: () => void;
 }
 ```
 
-Returned by `setupImageViewerGestures()`. `setAltDragMode` is desktop-only — never called on mobile (gated by `!isMobile && gestureControls`). `resetZoom` and `ensureGestures` are called only from arrow navigation, which is likewise desktop-only.
+Returned by `setupImageViewerGestures()`. `resetZoom` and `ensureGestures` are called only from arrow navigation, which is desktop-only plus keyboard-equipped tablets.
 
-```typescript
-interface ViewerImageSet {
-  urls: string[];
-  format: 'slideshow' | 'thumbnail';
-}
-```
-
-Registered by `setViewerImageSet()` from the renderer. `format` selects which per-format looping style setting applies. See [Arrow navigation](#arrow-navigation).
+The navigable set is a bare `string[]`, registered by `setViewerImageSet()` from the renderer. It carried a `format` discriminator until the two per-format looping settings it selected between were removed; navigation now always wraps. See [Arrow navigation](#arrow-navigation).
 
 ## Invariants
 
