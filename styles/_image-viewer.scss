@@ -195,7 +195,7 @@ body.is-phone:not(.dynamic-views-image-viewer-disabled)
    silently demoted Obsidian's drag ghost from the native 80 the `body` layer
    block gives it (app.css:2415) to below notices, menus and tooltips for as
    long as any viewer was open — fullscreen included, where it bought nothing.
-   Line numbers read against Obsidian 1.13.5; re-resolve by symbol. */
+   Line numbers read against Obsidian 1.13.6; re-resolve by symbol. */
 
 /* Suppress card focus ring while viewer is open — keyboard events trigger
    :focus-visible on the still-focused card, which is a visual artifact.
@@ -236,6 +236,18 @@ body:not(.dynamic-views-image-viewer-disabled):not(
   );
   position: fixed;
   transition: background var(--dynamic-views-anim-duration-fast) ease;
+  /* Opt out of every default touch behaviour, as native does on
+     `.lightbox-media` (app.css:8624-8633). Both gesture backends own their pan
+     and zoom, so nothing here wants the browser's. Without it WebKit keeps its
+     long-press image affordance alive: the press starts a system drag, fires
+     the lift haptic, then aborts with no payload — a phantom native never has.
+     `draggable="false"` alone does not stop it (§7.131); native sets that too,
+     at element creation (app.js:95278-95282), and still needs this.
+     Fullscreen only, deliberately: constrained mode is a plugin-only mode whose
+     whole point on tablets is that a long press *does* start a vault drag, so
+     opting it out there would delete that feature.
+     Line numbers read against Obsidian 1.13.6; re-resolve by symbol. */
+  touch-action: none;
 }
 
 body:not(.dynamic-views-image-viewer-disabled)
@@ -269,13 +281,16 @@ body:not(.dynamic-views-image-viewer-disabled):not(
   max-width: 90%;
 }
 
-/* Disable drag in fullscreen mode (desktop only — mobile is always fullscreen
-   when `allowDragOut` is false, so touch needs no rule here) */
+/* Disable drag in fullscreen mode. Touch is excluded here because this property
+   is not what reaches it: WebKit's long-press image drag ignores both this and
+   the `draggable` attribute (§7.131), and is instead opted out by the
+   `touch-action: none` on the fullscreen overlay above — which is where native
+   suppresses it too. Native's own `.lightbox .media-wrapper img` sets no
+   `user-drag` on any platform. */
 body:not(.is-mobile):not(.dynamic-views-image-viewer-constrain-to-pane)
   .dynamic-views-image-embed.is-zoomed
   img {
   -webkit-user-drag: none;
-  user-drag: none;
   -webkit-user-select: none;
   user-select: none;
 }
@@ -290,7 +305,6 @@ body:not(.is-mobile):not(.dynamic-views-image-viewer-constrain-to-pane)
 .dynamic-views-image-embed.is-zoomed.is-pannable img {
   cursor: grab;
   -webkit-user-drag: none;
-  user-drag: none;
 }
 
 /* Image viewer cursor — requires hover intent (.interact) */
@@ -387,7 +401,13 @@ body.dynamic-views-image-viewer-disabled
 /* Obsidian deep-clones the drop target during a tab drag, so a second copy of
    the viewer image exists for the duration — complete with `will-change:
    transform`, which promotes it to its own compositing layer. The copy never
-   receives gestures, so the hint is pure GPU memory. */
-.workspace-fake-target-container .dynamic-views-image-embed.is-zoomed img {
+   receives gestures, so the hint is pure GPU memory.
+   The `body:not(...)` prefix is not decoration: the sizing rule above is
+   (0,3,2), so a selector carrying only the fake-target class would be (0,3,1)
+   and lose outright, leaving the hint in place however late it appeared. */
+body:not(.dynamic-views-image-viewer-disabled)
+  .workspace-fake-target-container
+  .dynamic-views-image-embed.is-zoomed
+  img {
   will-change: auto;
 }

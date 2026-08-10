@@ -11,7 +11,7 @@
 
 import { getOwnerWindow } from '../utils/owner-window';
 import { CONTENT_HIDDEN_CLASS } from './content-visibility';
-import { getViewerSourceEmbed } from './image-viewer';
+import { getViewerSourceEmbed, hasOpenViewer } from './image-viewer';
 
 const CARD_SELECTOR = '.card';
 
@@ -257,7 +257,7 @@ export function isArrowKey(key: string): boolean {
  * synchronously on Escape before any document listener runs — which is why the
  * image viewer had to move onto Obsidian's keymap stack instead.
  *
- * Line numbers read against Obsidian 1.13.5; re-resolve by symbol.
+ * Line numbers read against Obsidian 1.13.6; re-resolve by symbol.
  */
 function isModalOpen(doc: Document): boolean {
   return !!doc.querySelector('.modal-container');
@@ -267,6 +267,9 @@ function isModalOpen(doc: Document): boolean {
 export function isImageViewerBlockingNav(
   container: HTMLElement | null
 ): boolean {
+  // O(1) module state before a document-wide query: this runs on every arrow
+  // keypress, once per open card view, and no viewer open is the common case
+  if (!hasOpenViewer()) return false;
   const doc = container?.ownerDocument ?? document;
   const viewer = doc.querySelector('.dynamic-views-image-embed.is-zoomed');
   if (!viewer) return false;
@@ -353,7 +356,9 @@ export function setupHoverKeyboardNavigation(
   setFocusableIndex: (index: number) => void
 ): { cleanup: () => void; reattach: () => void } {
   const handleKeydown = (e: KeyboardEvent) => {
-    // Cheapest test first: this runs on every keystroke in the pane
+    // Cheapest test first: this listener is document-level and capture-phase,
+    // one instance per open card view, so it sees every keystroke in the
+    // window — including typing in an editor in another pane
     if (!isArrowKey(e.key)) return;
 
     const containerRef = getContainerRef();
