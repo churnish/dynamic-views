@@ -312,10 +312,9 @@ Note: "Show cover placeholder" uses the fallback only in Grid sections. Masonry 
 
 | Setting                  | Toggle class                                    | Fallback file        |
 | ------------------------ | ----------------------------------------------- | -------------------- |
-| Do not lift (card hover) | `dynamic-views-card-hover-disable-elevate`      | [_hover-and-touch.scss](../../styles/_hover-and-touch.scss) |
+| Disable lift (card hover) | `dynamic-views-card-hover-disable-lift`      | [_hover-and-touch.scss](../../styles/_hover-and-touch.scss) |
 | Poster reveal zoom       | `dynamic-views-poster-disable-reveal-zoom`      | [_poster.scss](../../styles/card/_poster.scss)       |
 | Image viewer fullscreen  | `dynamic-views-image-viewer-constrain-to-pane` | [_image-viewer.scss](../../styles/_image-viewer.scss) |
-| Image viewer file name   | `dynamic-views-image-viewer-hide-filename`      | [_image-viewer.scss](../../styles/_image-viewer.scss) |
 | Cover hover zoom         | `dynamic-views-cover-disable-hover-zoom`        | [_cover-elements.scss](../../styles/card/_cover-elements.scss) |
 
 ### `class-toggle` — `.css-settings-manager` gate (CSS)

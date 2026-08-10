@@ -19,7 +19,7 @@ Two consequences worth stating outright:
 - **Verify native before claiming it.** Native's behaviour is frequently not where you expect: the drag cursor is a body class set from JS, not a rule in the lightbox CSS block; the titlebar name comes from `img.alt` for wikilink embeds rather than URL derivation; the close button's hover lightens via svg opacity while its colour stays fixed. Several claims in this session were wrong on first inspection because only one likely location was searched. Read the extracted renderer, and measure at runtime where possible.
 - **Reproduce native's asymmetries too.** The close button is touch-sized and gets a raised backing plate on `.is-phone` only, while the titlebar reserves `--touch-size-m` of height across all of `.is-mobile` — so on tablets the titlebar reserves space the button never fills. That is native's inconsistency and it is mirrored deliberately. An earlier change extended the touch target to `.is-mobile` on accessibility grounds and was reverted under this principle.
 
-Genuine divergences are limited to things native has no equivalent for — constrained-to-pane mode, the plugin's Style Settings toggles, Cmd+C copy, Enter-to-open, and Alt+drag — plus arrow navigation on tablets with a hardware keyboard. Each is noted where it appears below.
+Genuine divergences are limited to things native has no equivalent for — constrained-to-pane mode, the plugin's Style Settings toggles, Cmd+C copy, and dragging the image out into the vault — plus arrow navigation on tablets with a hardware keyboard. Each is noted where it appears below.
 
 ## Viewer modes
 
@@ -30,9 +30,9 @@ Two display modes, determined at open time:
 | Fullscreen | `.is-zoomed` | `position: fixed` on `body` | Phone always; tablet/desktop when fullscreen not disabled |
 | Constrained | `.dynamic-views-viewer-fixed` + `.is-zoomed` | `position: fixed`, bounds locked to workspace-leaf via ResizeObserver | Desktop/tablet with fullscreen disabled in Style Settings |
 
-The fullscreen backdrop uses `--lightbox-background` (Obsidian's native lightbox variable, wrapped as `--dynamic-views-lightbox-background`) at 0.9 alpha, matching the native lightbox in both themes. Constrained mode keeps the pane-blended `--background-primary` overlay — it has no native counterpart. The native lightbox class itself is not exported from the `obsidian` module, so it cannot be used directly (see [#419](https://github.com/churnish/dynamic-views/issues/419)).
+The fullscreen backdrop uses `--lightbox-background` (Obsidian's native lightbox variable, wrapped as `--dynamic-views-lightbox-background`) at 0.9 alpha, matching the native lightbox in both themes. Constrained mode has no native counterpart, so it keeps the pane-blended `--background-primary` tint — but at the same 0.9 alpha, so both modes dim by the same amount. It previously derived its alpha from the theme's `--background-modifier-cover`, which made the two modes dim differently. The native lightbox class itself is not exported from the `obsidian` module, so it cannot be used directly (see [#419](https://github.com/churnish/dynamic-views/issues/419)).
 
-Fullscreen viewers close when a modal opens (command palette, settings). Constrained viewers add `.dynamic-views-viewer-behind-modal` — this class is permanent for that viewer instance (the MutationObserver only watches `addedNodes`). The viewer must be closed and reopened after modal dismissal.
+Modals need no special handling, matching native — nothing in the renderer couples the lightbox to the modal system. Obsidian's `.modal-container` uses `z-index: var(--layer-modal)`, the same 50 the viewer uses, and is appended to `body` afterwards, so it stacks on top by DOM order and the viewer stays open behind it.
 
 ## Overlay chrome
 
@@ -52,7 +52,7 @@ The titlebar name resolves as `img.title || img.alt || getImageDisplayName(src)`
 
 Card images always carry `alt=""`, so in practice the name is the basename of the URL's decoded path, query string stripped — matching native for external images (`…/300` → `300`, `…demo.png?cachebust=99` → `demo.png`). Native shows a vault-relative path for `![[wikilink]]` embeds only because Obsidian sets `alt` to the link text there; that is the `alt` branch, not URL derivation.
 
-The Style Settings toggle `dynamic-views-image-viewer-hide-filename` is inverted — absence of the class shows the name, so the default survives without Style Settings installed. Unlike native, the titlebar does not fade out while the image is zoomed; the plugin tracks no zoom-level state class.
+The file name always shows, as in native; visibility is governed solely by the wrapped `--lightbox-titlebar-display` variable, which themes can still override. The titlebar fades out while the image is zoomed, matching native — keyed to `.is-pannable`, which both gesture backends maintain.
 
 The close button needs no interaction guards: `onOverlayClick` only fires when `e.target === cloneEl`, and `setupTouchInterceptAll` intercepts `touchmove` only without calling `preventDefault()`.
 
@@ -83,7 +83,7 @@ No library. `attachDesktopGestures()` owns three numbers — `scale`, `panX`, `p
 - **Pointer drag pan**: `pointerdown`/`pointermove`/`pointerup`/`pointercancel`, all four on `imgEl`. `setPointerCapture` retargets the stream to the capture element, so document-level listeners are unnecessary and container-level ones would never fire — which is also why popouts need no special handling. `pointerdown` bails unless `e.button === 0 && scale > 1` (native's `handleMouseDown`) and alt-drag is off; `pointermove` bails unless the pointer id matches the captured one, since the listeners are permanently attached and hovering a zoomed image would otherwise pan it. Movement is added in screen pixels with no scale division.
 - **Cursor**: `.is-pannable` is toggled on the container from inside the rAF, guarded by a `wasPannable` boolean so an unchanged state writes no class (the container has `contain: strict`, and this runs every gesture frame). SCSS gives `.is-zoomed.is-pannable img` `cursor: grab`, matching native's `.lightbox.is-zoomed .media-wrapper img`; at 1x the image inherits `cursor: default` from the overlay. `pointerdown`/`pointerup` add and remove Obsidian's own `is-grabbing` class on the owner document's body for the closed-fist drag cursor — `app.css` already carries `cursor: grabbing !important` for it, so the plugin adds no CSS. Because that class is app-wide, gesture cleanup removes it unconditionally: `pointerup` never fires if the viewer is torn down mid-drag.
 - **No maximize mode**: there is no fill-the-container state, no `.is-maximized` class, and no keyboard or right-click zoom reset. Space closes the viewer (see [Keyboard handlers](#keyboard-handlers)); right-click on the image is suppressed by `onContextMenu` in `openImageViewer`.
-- **Alt+drag**: `setAltDragMode(true)` sets a closure flag that makes `pointerdown` bail, plus `imgEl.draggable = true`, allowing native drag via `app.dragManager`.
+- **Drag into the vault**: constrained mode only, and only at 1x. `imgEl.draggable` is toggled by the gesture backend in the same guarded block that toggles `.is-pannable`, so panning keeps the pointer once zoomed; the `dragstart` handler re-checks `.is-pannable` and builds the payload via `app.dragManager`. Full screen never attaches the listener at all — the overlay covers everything droppable — and is additionally held inert by `draggable = false` plus a `user-drag: none` rule.
 
 #### Scope wiring
 
@@ -124,34 +124,24 @@ Direct `touchstart`/`touchmove`/`touchend` listeners on the container. Behavior 
 - **Snap-back**: Pinching below 1x snaps back to 1x.
 - **WebKit drag & drop**: Touch handler uses `{ passive: true }`. WebKit fires `touchcancel` when it takes over for drag, cleaning up handler state. At scale=1, maxPan=0 so microtremor during long-press hold is clamped.
 
-### Desktop: zoom-disabled mode
-
-When `dynamic-views-zoom-disabled` class is present, neither gesture backend attaches. Desktop-only behavior in this mode:
-
-- **Always draggable**: `imgEl.draggable = true` set unconditionally. `onZoomDisabledDragStart` handles drag via `app.dragManager` for vault files, or `text/plain` embed markdown for external URLs.
-
 ## Keyboard handlers
 
-All desktop keyboard handlers use capture-phase listeners and are guarded by `isConstrainedViewerInactive()` in constrained mode.
+Keyboard input runs through **one catch-all `Scope`** pushed onto Obsidian's keymap stack (`app.keymap.pushScope`), not through document listeners. A document listener cannot win against a modal: Obsidian's own keydown listener is capture-phase on `window` (`app.js:59501-59504`), so the capture path reaches Window before Document regardless of registration order, and a modal's Escape handler closes synchronously and detaches `.modal-container` in the same tick on desktop (`app.js:63741`, `:63699`). Any DOM-presence test for "is a modal open" therefore reads false by the time a document handler runs.
 
-### Desktop only
+`Modal.open` pushes a **parentless** scope (`app.js:63628`, `:63493`) and `Scope.handleKey` only walks `parent` (`app.js:59473`), so while a modal is up the viewer's scope is never consulted — the first Escape closes the modal, the second reaches the viewer.
 
-| Handler | Keys | Scope | Notes |
+Registration is a catch-all `(null, null)`, the shape Obsidian's own HotkeyManager uses (`app.js:65672`): an entry bound to a specific key swallows that key even when the callback declines (`app.js:59471-59472`), which would eat Escape for other panes when the leaf guard bails. Returning `false` makes Obsidian `preventDefault()` + `stopPropagation()` at the window listener (`app.js:59570-59571`), which also keeps the event off the card's own keydown handler.
+
+The callback bails via `isConstrainedViewerInactive()` before anything else, then dispatches in this order:
+
+| Order | Keys | Platform | Behaviour |
 |---|---|---|---|
-| `onEscape` | Escape, Space | `openImageViewer` | Close viewer. Space also `preventDefault()`s to stop pane scroll and card re-activation. |
-| `onCopy` | Cmd/Ctrl+C | `openImageViewer` | Copy image to clipboard. Handles CORS via canvas for external images. |
-| `onEnter` | Enter | `openImageViewer` | Open image's vault file. Uses `getVaultPathFromResourceUrl()`. No-op for external images. |
-| `onAltKeyDown/Up` | Alt press/release | `openImageViewer` | Enable/disable alt-drag mode. Only when gestures are active. |
-| `onAltBlur` | Window blur | `openImageViewer` | Resets alt-drag state when user Alt+Tabs away. Only when gestures are active. |
-| `onArrowNav` | ArrowLeft, ArrowRight | `openImageViewer` | Step through the card's navigable image set. Only attached when the card registered a set of more than one image. See [Arrow navigation](#arrow-navigation). |
+| 1 | ArrowLeft, ArrowRight | Desktop + keyboard tablets | Step through the card's navigable image set. Only when the card registered a set of more than one image. See [Arrow navigation](#arrow-navigation). Tested first so the mobile block list below cannot shadow it on tablets. |
+| 2 | Space, Enter, Escape, R, ArrowDown | Mobile | Consumed, preventing underlying card/link activation. Returning `false` does the blocking that a hand-rolled `stopPropagation()` used to. |
+| 3 | Escape, Space | Desktop | Close the viewer. Space would otherwise scroll the pane or re-activate the card underneath. |
+| 4 | Cmd/Ctrl+C | Desktop | Copy image to clipboard. Handles CORS via canvas for external images. |
 
-### Mobile only
-
-| Handler | Keys | Scope | Notes |
-|---|---|---|---|
-| `onBlockKeys` | Space, Enter, Escape, R, ArrowDown | `openImageViewer` | `preventDefault()` + `stopPropagation()`. Prevents underlying card/link activation. |
-
-`stopPropagation()` is required because the card element underneath the overlay retains focus and has its own keydown handler — `preventDefault()` alone only blocks browser default actions, not other JS listeners. See [keyboard-nav.md](keyboard-nav.md) for the card-side blocking mechanism (`isImageViewerBlockingNav()`).
+Anything else returns `undefined` and falls through to the parent scope.
 
 ### Constrained viewer leaf guard
 
@@ -159,7 +149,7 @@ All desktop keyboard handlers use capture-phase listeners and are guarded by `is
 
 Checks: viewer has `.dynamic-views-viewer-fixed` class, `doc.activeElement` is not the viewer, originating leaf (via `__originalEmbed`) is not `.mod-active`, and a different leaf has focus.
 
-Used by: `onEscape`, `onCopy`, `onEnter`, `onAltKeyDown`, `onArrowNav`.
+Checked once at the top of the scope callback, so it gates every key the viewer handles.
 
 ## Arrow navigation
 

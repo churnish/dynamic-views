@@ -242,6 +242,24 @@ export function isArrowKey(key: string): boolean {
 }
 
 /** Check if image viewer should block keyboard navigation for a container. */
+/**
+ * True when a modal is open in this document, so arrow keys belong to it.
+ *
+ * A plain `Modal` registers nothing for arrows, so Obsidian does not stop
+ * propagation (app.js:59570-59571 only fires on a literal `false`) and this
+ * capture-phase listener would otherwise focus a card sitting behind the modal.
+ * Suggest-type modals are already immune — their `moveUp`/`moveDown` return
+ * `false` (app.js:64096-64103), so the event never reaches here.
+ *
+ * A DOM-presence test is sound for arrows, unlike for Escape: nothing detaches
+ * `.modal-container` during an arrow dispatch, whereas `Modal.close` detaches it
+ * synchronously on Escape before any document listener runs — which is why the
+ * image viewer had to move onto Obsidian's keymap stack instead.
+ */
+function isModalOpen(doc: Document): boolean {
+  return !!doc.querySelector('.modal-container');
+}
+
 export function isImageViewerBlockingNav(
   container: HTMLElement | null
 ): boolean {
@@ -332,6 +350,7 @@ export function setupHoverKeyboardNavigation(
 ): { cleanup: () => void; reattach: () => void } {
   const handleKeydown = (e: KeyboardEvent) => {
     if (isImageViewerBlockingNav(getContainerRef())) return;
+    if (isModalOpen(getContainerRef()?.ownerDocument ?? document)) return;
     if (!isArrowKey(e.key)) return;
 
     const hoveredCard = getHoveredCard();

@@ -141,43 +141,36 @@ Each Grid and Masonry view has its own settings, configured in the view's config
 
 Press on a card's cover or thumbnail to open the image viewer — a fullscreen overlay with pan and zoom.
 
-The image viewer can be disabled in Style Settings, along with individual features like zoom or press-to-dismiss.
+The image viewer can be disabled in Style Settings, or constrained to the current pane instead of taking over the window.
 
 ### Desktop
 
 | Action | Control |
 | --- | --- |
-| Zoom in | Scroll down / Spread |
-| Zoom out | Scroll up / Pinch |
-| Maximize | Space |
-| Exit maximize | Space |
-| Reset pan & zoom | R / ↓ / Right-click |
+| Zoom | Ctrl/Cmd+scroll / Pinch |
+| Pan (while zoomed) | Scroll / Drag |
+| Previous / next image | ← / → |
 | Copy image | Ctrl/Cmd+C |
-| Drag & drop | Hold Alt+drag |
-| Drag & drop (zoom disabled) | Drag |
-| Open file | Enter |
-| Close | Click / Esc |
+| Drag into a note | Drag (constrained to pane, not zoomed) |
+| Close | Click background / Esc / Space |
 
 ### Mobile
 
 | Action | Control |
 | --- | --- |
-| Zoom in | Spread |
-| Zoom out | Pinch |
-| Drag & drop | Long press + drag |
-| Close | Tap |
+| Zoom | Spread / Pinch |
+| Pan (while zoomed) | Drag |
+| Close | Tap background |
 
 ### Style Settings
 
-These options are available in [Style Settings](https://obsidian.md/plugins?id=obsidian-style-settings) → Dynamic Views → Image viewer.
+These options are available in [Style Settings](https://obsidian.md/plugins?id=obsidian-style-settings) → Dynamic Views → Images.
 
 | Setting | Description | Default |
 | --- | --- | --- |
 | Disable image viewer | Turns off the image viewer entirely. Images will behave as normal embeds. | Off |
-| Disable pan & zoom | Disables pinch-to-zoom and pan gestures. Spacebar maximize still works. | Off |
-| Do not dismiss on press | Prevents the viewer from closing when you press the image. | Off |
-| Open in fullscreen | Opens images in fullscreen on desktop. When off, the viewer stays within the current pane. | On |
-| Zoom sensitivity | How quickly images zoom on desktop (0.01–1). | 0.08 |
+| Constrain image viewer to pane | Keeps the image within the pane instead of opening full screen. | Off |
+| Disable HDR | Shows HDR images in standard dynamic range instead of at full brightness. | Off |
 
 </details>
 

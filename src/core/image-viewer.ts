@@ -2,10 +2,9 @@
  * Shared image viewer handler - eliminates code duplication across card renderers
  */
 
-import { Notice, Platform, TFile, setIcon, type App } from 'obsidian';
+import { Notice, Platform, Scope, TFile, setIcon, type App } from 'obsidian';
 
 import { GESTURE_TIMEOUT_MS } from './constants';
-import { getZoomSensitivityDesktop } from '../utils/style-settings';
 import {
   getImageDisplayName,
   getVaultPathFromResourceUrl,
@@ -30,18 +29,17 @@ const WHEEL_DELTA_PAGE_SCALE = 800;
 const WHEEL_ZOOM_DIVISOR = 150;
 const WHEEL_PAN_MULTIPLIER = 1.5;
 const VIEWER_MAX_ZOOM = 10;
-/** Zoom sensitivity that reproduces native exactly; other values scale from it */
-const NATIVE_ZOOM_SENSITIVITY = 0.08;
 
 type GestureMode = 'mobile' | 'desktop';
 
 /**
  * `Platform.hasPhysicalKeyboard` is undocumented and absent from the typings,
  * which declare `Platform` as a const object literal — not an interface, so it
- * cannot be reached by module augmentation. Resolved asynchronously from
- * Capacitor at startup and **false on desktop**: it is a mobile-only signal, so
- * it may only widen a mobile case, never gate a desktop one. `emulateMobile()`
- * forces it false, so it cannot be exercised through desktop mobile emulation.
+ * cannot be reached by module augmentation. It is **true on desktop** — the
+ * boot block sets it alongside `isDesktopApp`/`isDesktop` (app.js:226430) — and
+ * `emulateMobile()` forces it false (app.js:223079), so it cannot be exercised
+ * through desktop mobile emulation. Only ever used to widen a mobile case, so
+ * the desktop value never decides anything on its own.
  */
 function hasPhysicalKeyboard(): boolean {
   return (
@@ -125,9 +123,18 @@ function closeImageViewer(
 
   cloneEl.remove();
 
-  // Remove body zoom class when no viewers remain
+  // Remove body zoom class when no viewers remain. The fake-target exclusion is
+  // load-bearing now that the constrained clone lives inside the leaf: during a
+  // tab drag Obsidian deep-clones the drop target, so a copy of this very clone
+  // — `.is-zoomed` and all — exists in the preview tree. Without the exclusion,
+  // closing the viewer mid-drag would find the copy and strand the body class.
   const doc = cloneEl.ownerDocument;
-  if (doc && !doc.querySelector('.dynamic-views-image-embed.is-zoomed')) {
+  if (
+    doc &&
+    !doc.querySelector(
+      '.dynamic-views-image-embed.is-zoomed:not(.workspace-fake-target-container .dynamic-views-image-embed)'
+    )
+  ) {
     doc.body.classList.remove('dynamic-views-image-zoomed');
   }
 
@@ -290,8 +297,6 @@ export function handleImageViewerTrigger(
 
 interface ViewerGestureControls {
   cleanup: () => void;
-  /** Suspend pointer-drag panning so native drag can proceed. */
-  setAltDragMode: (enabled: boolean) => void;
   /** Drop zoom/pan instantly so a newly navigated image starts at 1x. */
   resetZoom: () => void;
   /** Attach gestures that initial load never got (first image was broken). */
@@ -316,20 +321,26 @@ function isConstrainedViewerInactive(el: CloneElement, doc: Document): boolean {
  * @param imgEl - The image element
  * @param container - The container element (overlay or embed)
  * @param mode - 'mobile' for phone/tablet fullscreen, 'desktop' for desktop and tablet constrained
+ * @param allowDragOut - whether the image may be dragged out into the vault. Constrained only:
+ *   fullscreen has nowhere to drop, so it stays inert. Even when allowed it is suppressed while
+ *   zoomed, since panning owns the pointer.
  */
 function setupImageViewerGestures(
   imgEl: HTMLImageElement,
   container: HTMLElement,
-  mode: GestureMode
+  mode: GestureMode,
+  allowDragOut: boolean
 ): ViewerGestureControls {
   const isMobileMode = mode === 'mobile';
+  // Images are draggable by default, so this must be set even when the desktop
+  // backend never attaches (mobile, or a broken first image)
+  imgEl.draggable = allowDragOut;
   let errorHandler: (() => void) | null = null;
   // The desktop backend keeps its transform state in `attachDesktopGestures`'s
   // closure; these bridges expose it to the returned controls, mirroring the
   // `mobileResetTransform` pattern below
   let desktopAttached = false;
   let desktopResetTransform: (() => void) | null = null;
-  let desktopSetAltDrag: ((enabled: boolean) => void) | null = null;
   let desktopCleanup: (() => void) | null = null;
   let mobileTouchHandler: ((e: TouchEvent) => void) | null = null;
   let mobileAnimFrame = 0;
@@ -345,14 +356,11 @@ function setupImageViewerGestures(
    * opposite order (`scale(s) translate(x, y)`, pre-scale pan).
    */
   function attachDesktopGestures(): void {
-    const zoomSensitivity = getZoomSensitivityDesktop();
-
     let scale = 1;
     let panX = 0;
     let panY = 0;
     let rafId = 0;
     let wasPannable = false;
-    let altDragMode = false;
     let activePointerId: number | null = null;
     let lastX = 0;
     let lastY = 0;
@@ -391,6 +399,9 @@ function setupImageViewerGestures(
         if (pannable !== wasPannable) {
           wasPannable = pannable;
           container.classList.toggle('is-pannable', pannable);
+          // Zoomed, the pointer belongs to panning, so the image must not also
+          // start a native drag
+          imgEl.draggable = allowDragOut && !pannable;
         }
       });
     };
@@ -400,11 +411,6 @@ function setupImageViewerGestures(
       panX = 0;
       panY = 0;
       applyDesktopTransform();
-    };
-
-    desktopSetAltDrag = (enabled: boolean) => {
-      altDragMode = enabled;
-      imgEl.draggable = enabled;
     };
 
     const pointerController = new AbortController();
@@ -427,9 +433,6 @@ function setupImageViewerGestures(
         let step = -delta / WHEEL_ZOOM_DIVISOR;
         // Trackpads emit fractional deltas; native doubles those on macOS only
         if (Platform.isMacOS && !Number.isInteger(e.deltaY)) step *= 2;
-        // The plugin keeps a sensitivity setting native lacks; scale relative to
-        // the value that reproduces native so the default stays faithful
-        step *= zoomSensitivity / NATIVE_ZOOM_SENSITIVITY;
 
         const nextScale = Math.min(VIEWER_MAX_ZOOM, Math.max(1, scale + step));
         if (nextScale === scale) return;
@@ -480,7 +483,7 @@ function setupImageViewerGestures(
     // unnecessary and container-level ones would never fire.
     const onPointerDown = (e: PointerEvent) => {
       // Native's `handleMouseDown` bails on non-primary buttons and at 1x
-      if (e.button !== 0 || scale <= 1 || altDragMode) return;
+      if (e.button !== 0 || scale <= 1) return;
       activePointerId = e.pointerId;
       lastX = e.clientX;
       lastY = e.clientY;
@@ -785,9 +788,6 @@ function setupImageViewerGestures(
         imgEl.removeEventListener('load', mobileLoadHandler);
       }
     },
-    setAltDragMode: (enabled: boolean) => {
-      desktopSetAltDrag?.(enabled);
-    },
     resetZoom: () => {
       desktopResetTransform?.();
       // Tablets with a keyboard can arrow-navigate while on the mobile backend
@@ -897,45 +897,49 @@ function openImageViewer(
       'dynamic-views-image-viewer-constrain-to-pane'
     );
 
-  // For constrained mode, extract opacity from theme's cover color
-  if (!isFullscreen) {
-    const coverColor = getComputedStyle(viewerDoc.body)
-      .getPropertyValue('--background-modifier-cover')
-      .trim();
-    const match = coverColor.match(/[\d.]+(?=\s*\)$)/); // Extract last number (alpha)
-    if (match) {
-      const opacity = parseFloat(match[0]);
-      if (opacity >= 0 && opacity <= 1) {
-        cloneEl.style.setProperty('--overlay-opacity', String(opacity));
-      }
-    }
-  }
-
   // Wrap ALL setup in try-catch to prevent orphaned clone on error
   let resizeObserver: ResizeObserver | null = null;
-  let modalObserver: MutationObserver | null = null;
 
   try {
     if (!isFullscreen) {
-      // Use workspace-leaf (stable across React re-renders) as observer target
-      const workspaceLeaf = embedEl.closest('.workspace-leaf');
+      const workspaceLeaf = embedEl.closest<HTMLElement>('.workspace-leaf');
       if (workspaceLeaf) {
-        const updateBounds = () => {
-          const rect = workspaceLeaf.getBoundingClientRect();
-          cloneEl.style.top = `${rect.top}px`;
-          cloneEl.style.left = `${rect.left}px`;
-          cloneEl.style.width = `${rect.width}px`;
-          cloneEl.style.height = `${rect.height}px`;
+        // Mounted inside the leaf rather than on `body`, so the overlay takes
+        // part in Obsidian's tab-drop preview. A leaf drag has two halves: the
+        // drop target's container is set to `opacity: 0` in the real DOM
+        // (app.js:166503) and a `cloneNode(true)` of it is rendered at the
+        // squeezed rect inside `.workspace-fake-target-overlay`
+        // (app.js:166502, 166525-166529). A `body`-level overlay belongs to
+        // neither half, so it neither dims with the real pane nor squeezes with
+        // the preview; a descendant of the leaf gets both for free.
+        //
+        // It also removes the #230 divider collision outright. `.workspace-leaf`
+        // is `position: relative` with `contain: strict` and `overflow: hidden`
+        // (app.css:6394-6401), so an absolutely positioned child matches the
+        // leaf box exactly and is paint-clipped to it. The split resize handles
+        // live outside the leaf, so no arrangement can put the overlay on top of
+        // one — previously they had to be measured and dodged every frame.
+        const updateHeaderInset = () => {
+          // The leaf's box starts at the tab title bar, so covering it outright
+          // would scrim the file name and the tab actions along with the
+          // content. Scoped to the leaf's own header — a bare `.view-header`
+          // lookup would match one belonging to an embedded or hover-preview
+          // leaf nested inside this one.
+          const viewHeader = workspaceLeaf.querySelector<HTMLElement>(
+            ':scope > .workspace-leaf-content > .view-header'
+          );
+          // Not a constant: the header collapses to `display: none` in the
+          // sidebars (app.css:4320-4323), where the inset must be zero.
+          cloneEl.style.top = `${viewHeader?.getBoundingClientRect().height ?? 0}px`;
         };
 
-        // Set fixed positioning with bounds matching the container
         cloneEl.addClass('dynamic-views-viewer-fixed');
-        updateBounds();
-        // Append to body (not view-content) to survive React re-renders
-        viewerDoc.body.appendChild(cloneEl);
+        updateHeaderInset();
+        workspaceLeaf.appendChild(cloneEl);
 
-        // Update bounds when leaf resizes (stable element)
-        resizeObserver = new viewerWin.ResizeObserver(updateBounds);
+        // The leaf resizing is the only thing that can change the header's
+        // height without reopening the viewer
+        resizeObserver = new viewerWin.ResizeObserver(updateHeaderInset);
         resizeObserver.observe(workspaceLeaf);
       } else {
         viewerDoc.body.appendChild(cloneEl);
@@ -944,80 +948,35 @@ function openImageViewer(
       viewerDoc.body.appendChild(cloneEl);
     }
 
-    // Watch for Obsidian modals opening (command palette, settings, etc.)
-    // Note: MutationObserver callbacks are async, so viewerClones.set() at end of try block
-    // will always complete before any callback fires - no race condition possible
-    modalObserver = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        for (const node of mutation.addedNodes) {
-          if (
-            node instanceof HTMLElement &&
-            node.matches('.modal-container, .prompt')
-          ) {
-            if (isFullscreen) {
-              closeImageViewer(cloneEl, viewerCleanupFns, viewerClones);
-            } else {
-              cloneEl.addClass('dynamic-views-viewer-behind-modal');
-            }
-            return;
-          }
-        }
-      }
-    });
-    modalObserver.observe(viewerDoc.body, { childList: true });
+    // No modal handling: native's lightbox has no coupling to modals at all
+    // (nothing in the renderer links the two), and none is needed. Obsidian's
+    // `.modal-container` carries `z-index: var(--layer-modal)` — the same 50 the
+    // viewer uses — and is appended to `body` after it, so a modal opened over an
+    // open viewer already paints on top by DOM order. The previous
+    // MutationObserver closed fullscreen viewers outright and left constrained
+    // ones permanently behind a `.dynamic-views-viewer-behind-modal` class it
+    // never removed, since it only watched `addedNodes`.
 
-    // Only setup pinch/gesture zoom if not disabled
-    const isPinchZoomDisabled = viewerDoc.body.classList.contains(
-      'dynamic-views-zoom-disabled'
+    const gestureMode: GestureMode = isMobile ? 'mobile' : 'desktop';
+    const gestureControls: ViewerGestureControls = setupImageViewerGestures(
+      imgEl,
+      cloneEl,
+      gestureMode,
+      !isFullscreen
     );
 
-    // Track gesture controls for Alt+drag coordination (set when gestures active)
-    let gestureControls: ViewerGestureControls | null = null;
-
-    if (!isPinchZoomDisabled) {
-      const gestureMode: GestureMode = isMobile ? 'mobile' : 'desktop';
-      gestureControls = setupImageViewerGestures(imgEl, cloneEl, gestureMode);
-
-      // On mobile, block single-finger touch propagation on non-IMG elements so the
-      // mobile gesture handler gets exclusive control (prevents sidebar swipe + pull-down)
-      if (isMobile) {
-        cloneEl.dataset.ignoreSwipe = 'true';
-        const swipeController = new AbortController();
-        setupTouchInterceptAll(cloneEl, swipeController.signal);
-        viewerCleanupFns.set(cloneEl, () => {
-          gestureControls!.cleanup();
-          swipeController.abort();
-        });
-      } else {
-        viewerCleanupFns.set(cloneEl, gestureControls.cleanup);
-      }
-    } else if (!isMobile) {
-      // Image is always draggable when zoom is off (no pan to conflict with)
-      imgEl.draggable = true;
-
-      const onZoomDisabledDragStart = (e: DragEvent) => {
-        const src = imgEl.src;
-        const vaultPath = getVaultPathFromResourceUrl(src);
-
-        if (vaultPath) {
-          const file = app.vault.getAbstractFileByPath(vaultPath);
-          if (file instanceof TFile) {
-            const dragData = app.dragManager.dragFile(e, file);
-            app.dragManager.onDragStart(e, dragData);
-          }
-        } else if (isExternalUrl(src)) {
-          e.dataTransfer?.clearData();
-          e.dataTransfer?.setData('text/plain', `![](${src})`);
-        }
-      };
-
-      imgEl.addEventListener('dragstart', onZoomDisabledDragStart);
-
-      const existingGestureCleanup = viewerCleanupFns.get(cloneEl);
+    // On mobile, block single-finger touch propagation on non-IMG elements so the
+    // mobile gesture handler gets exclusive control (prevents sidebar swipe + pull-down)
+    if (isMobile) {
+      cloneEl.dataset.ignoreSwipe = 'true';
+      const swipeController = new AbortController();
+      setupTouchInterceptAll(cloneEl, swipeController.signal);
       viewerCleanupFns.set(cloneEl, () => {
-        existingGestureCleanup?.();
-        imgEl.removeEventListener('dragstart', onZoomDisabledDragStart);
+        gestureControls.cleanup();
+        swipeController.abort();
       });
+    } else {
+      viewerCleanupFns.set(cloneEl, gestureControls.cleanup);
     }
 
     // Prevent context menu on image
@@ -1087,26 +1046,13 @@ function openImageViewer(
       }
     };
 
-    // Desktop only: Escape or Space to close (native mobile viewer has no keys — tap to dismiss only)
-    let onEscape: ((e: KeyboardEvent) => void) | null = null;
-    if (!isMobile) {
-      onEscape = (e: KeyboardEvent) => {
-        if (e.key !== 'Escape' && e.code !== 'Space') return;
-        if (isConstrainedViewerInactive(cloneEl, viewerDoc)) return;
-        // Space would otherwise scroll the pane or re-activate the card underneath
-        e.preventDefault();
-        e.stopPropagation();
-        closeImageViewer(cloneEl, viewerCleanupFns, viewerClones);
-      };
-    }
-
     // Arrow keys step through the card's navigable image set. The viewer index
     // is independent — the card underneath never advances. Desktop always, plus
     // tablets with a hardware keyboard; phones are excluded even when one is
     // attached.
     const canArrowNavigate =
       !isMobile || (Platform.isTablet && hasPhysicalKeyboard());
-    let onArrowNav: ((e: KeyboardEvent) => void) | null = null;
+    let stepImage: ((direction: 1 | -1) => void) | null = null;
     let pendingNavError: (() => void) | null = null;
 
     if (canArrowNavigate && imageSet && imageSet.urls.length > 1) {
@@ -1143,24 +1089,19 @@ function openImageViewer(
         };
         const onNavLoad = (): void => {
           clearPendingNavError();
-          gestureControls?.ensureGestures();
+          gestureControls.ensureGestures();
         };
 
         pendingNavError = onNavError;
         imgEl.addEventListener('error', onNavError, { once: true });
         imgEl.addEventListener('load', onNavLoad, { once: true });
-        gestureControls?.resetZoom();
+        gestureControls.resetZoom();
         imgEl.src = getCachedBlobUrl(url);
         // title/alt belong to the initially embedded image — never reapply them
         titlebarTextEl.setText(getImageDisplayName(url));
       };
 
-      onArrowNav = (e: KeyboardEvent) => {
-        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-        if (isConstrainedViewerInactive(cloneEl, viewerDoc)) return;
-        e.preventDefault();
-        e.stopPropagation();
-        const direction = e.key === 'ArrowRight' ? 1 : -1;
+      stepImage = (direction: 1 | -1) => {
         const next = getNextImageIndex(
           currentIndex,
           direction,
@@ -1170,114 +1111,120 @@ function openImageViewer(
         if (next === -1) return;
         showIndex(next, direction);
       };
-      viewerDoc.addEventListener('keydown', onArrowNav, true);
     }
 
     // Desktop only: ⌘+C to copy image
-    let onCopy: ((e: KeyboardEvent) => void) | null = null;
-    if (!isMobile) {
-      onCopy = (e: KeyboardEvent) => {
-        const isCopyShortcut = (e.metaKey || e.ctrlKey) && e.key === 'c';
-        if (!isCopyShortcut) return;
-        if (isConstrainedViewerInactive(cloneEl, viewerDoc)) return;
-
-        e.preventDefault();
-        e.stopPropagation();
-
-        void (async () => {
-          try {
-            if (!viewerDoc.hasFocus()) {
-              viewerWin.focus();
-              await new Promise((r) => setTimeout(r, 50));
-            }
-
-            // For external images, reload with crossOrigin to avoid tainted canvas
-            const isExternal = /^https?:\/\//i.test(imgEl.src);
-            let sourceImg: HTMLImageElement = imgEl;
-
-            if (isExternal) {
-              sourceImg = await new Promise<HTMLImageElement>(
-                (resolve, reject) => {
-                  const img = new Image();
-                  img.crossOrigin = 'anonymous';
-                  img.onload = () => resolve(img);
-                  img.onerror = () => reject(new Error('Failed to load image'));
-                  img.src = imgEl.src;
-                }
-              );
-            }
-
-            if (!sourceImg.naturalWidth || !sourceImg.naturalHeight) {
-              throw new Error('Image not loaded');
-            }
-
-            // Clipboard API only supports PNG - convert via canvas
-            const canvas = viewerDoc.createElement('canvas');
-            canvas.width = sourceImg.naturalWidth;
-            canvas.height = sourceImg.naturalHeight;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) throw new Error('Failed to get canvas context');
-            ctx.drawImage(sourceImg, 0, 0);
-
-            const blob = await new Promise<Blob>((resolve, reject) => {
-              canvas.toBlob((b) => {
-                if (b) resolve(b);
-                else reject(new Error('Failed to create blob'));
-              }, 'image/png');
-            });
-
-            await navigator.clipboard.write([
-              new ClipboardItem({ 'image/png': blob }),
-            ]);
-            new Notice('Copied to your clipboard');
-          } catch (error) {
-            console.error('Failed to copy image:', error);
-            new Notice('Failed to copy image');
+    const copyViewerImage = (): void => {
+      void (async () => {
+        try {
+          if (!viewerDoc.hasFocus()) {
+            viewerWin.focus();
+            await new Promise((r) => setTimeout(r, 50));
           }
-        })();
-      };
-    }
 
-    // Desktop only: Enter to open the image's file
-    let onEnter: ((e: KeyboardEvent) => void) | null = null;
-    if (!isMobile) {
-      onEnter = (e: KeyboardEvent) => {
-        if (e.key !== 'Enter') return;
-        if (isConstrainedViewerInactive(cloneEl, viewerDoc)) return;
-        const src = imgEl.src;
-        const vaultPath = getVaultPathFromResourceUrl(src);
-        if (!vaultPath) return;
-        const file = app.vault.getAbstractFileByPath(vaultPath);
-        if (!(file instanceof TFile)) return;
-        e.preventDefault();
-        closeImageViewer(cloneEl, viewerCleanupFns, viewerClones);
-        void app.workspace.getLeaf(false).openFile(file);
-      };
-    }
+          // For external images, reload with crossOrigin to avoid tainted canvas
+          const isExternal = /^https?:\/\//i.test(imgEl.src);
+          let sourceImg: HTMLImageElement = imgEl;
 
-    // Mobile: block desktop hotkeys so Obsidian doesn't activate underlying card/link
-    let onBlockKeys: ((e: KeyboardEvent) => void) | null = null;
-    if (isMobile) {
-      onBlockKeys = (e: KeyboardEvent) => {
-        if (
-          e.code === 'Space' ||
+          if (isExternal) {
+            sourceImg = await new Promise<HTMLImageElement>(
+              (resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => resolve(img);
+                img.onerror = () => reject(new Error('Failed to load image'));
+                img.src = imgEl.src;
+              }
+            );
+          }
+
+          if (!sourceImg.naturalWidth || !sourceImg.naturalHeight) {
+            throw new Error('Image not loaded');
+          }
+
+          // Clipboard API only supports PNG - convert via canvas
+          const canvas = viewerDoc.createElement('canvas');
+          canvas.width = sourceImg.naturalWidth;
+          canvas.height = sourceImg.naturalHeight;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error('Failed to get canvas context');
+          ctx.drawImage(sourceImg, 0, 0);
+
+          const blob = await new Promise<Blob>((resolve, reject) => {
+            canvas.toBlob((b) => {
+              if (b) resolve(b);
+              else reject(new Error('Failed to create blob'));
+            }, 'image/png');
+          });
+
+          await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob }),
+          ]);
+          new Notice('Copied to your clipboard');
+        } catch (error) {
+          console.error('Failed to copy image:', error);
+          new Notice('Failed to copy image');
+        }
+      })();
+    };
+
+    // Keyboard runs through Obsidian's keymap stack rather than a document
+    // listener, because a document listener cannot win against a modal.
+    // Obsidian's own keydown listener is capture-phase on `window`
+    // (app.js:59501-59504), and the capture path reaches Window before Document
+    // whatever the registration order, so every document listener is downstream
+    // by construction. A modal's Escape handler preventDefaults and closes
+    // synchronously (app.js:63741), and `close()` detaches `.modal-container` in
+    // the same tick on desktop (app.js:63699), so by the time a document handler
+    // runs there is no modal left to detect. Checking keymap state instead is
+    // worse: `popScope` runs at app.js:63689, before that detach.
+    //
+    // A Scope removes the question. `Modal.open` pushes a parentless scope
+    // (app.js:63628, :63493) and `Scope.handleKey` only walks `parent`
+    // (app.js:59473), so while a modal is up the viewer's scope is never
+    // consulted at all — the first Escape closes the modal, the second reaches
+    // the viewer. Registered as a catch-all, the shape Obsidian's own
+    // HotkeyManager uses (app.js:65672): an entry bound to a specific key
+    // swallows that key even when the callback declines (app.js:59471-59472),
+    // which would eat Escape for other panes when the leaf guard bails.
+    // Returning `false` makes Obsidian preventDefault + stopPropagation at the
+    // window listener (app.js:59570-59571), which also keeps the event off the
+    // card's own handler — the job the mobile block list was hand-rolling.
+    const viewerScope = new Scope(app.scope);
+
+    viewerScope.register(null, null, (e: KeyboardEvent): false | undefined => {
+      if (isConstrainedViewerInactive(cloneEl, viewerDoc)) return undefined;
+
+      // Tested before the mobile block list, which would otherwise shadow arrow
+      // navigation on keyboard-equipped tablets
+      if (stepImage && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        stepImage(e.key === 'ArrowRight' ? 1 : -1);
+        return false;
+      }
+
+      if (isMobile) {
+        return e.code === 'Space' ||
           e.key === 'Enter' ||
           e.key === 'Escape' ||
           e.key === 'r' ||
           e.key === 'R' ||
           e.key === 'ArrowDown'
-        ) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-      };
-    }
+          ? false
+          : undefined;
+      }
 
-    // Add all listeners synchronously (isOpening flag prevents immediate trigger)
-    if (onEscape) viewerDoc.addEventListener('keydown', onEscape, true);
-    if (onEnter) viewerDoc.addEventListener('keydown', onEnter, true);
-    if (onBlockKeys) viewerDoc.addEventListener('keydown', onBlockKeys, true);
-    if (onCopy) viewerDoc.addEventListener('keydown', onCopy, true);
+      // Space would otherwise scroll the pane or re-activate the card underneath
+      if (e.key === 'Escape' || e.code === 'Space') {
+        closeImageViewer(cloneEl, viewerCleanupFns, viewerClones);
+        return false;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'c') {
+        copyViewerImage();
+        return false;
+      }
+      return undefined;
+    });
+
     cloneEl.addEventListener('click', onOverlayClick);
 
     // stopPropagation keeps the click off the overlay-dismiss path
@@ -1287,48 +1234,18 @@ function openImageViewer(
     };
     closeEl.addEventListener('click', onCloseClick);
 
-    // Desktop-only: Alt+drag to drag image out of viewer
-    let onAltKeyDown: ((e: KeyboardEvent) => void) | null = null;
-    let onAltKeyUp: ((e: KeyboardEvent) => void) | null = null;
-    let onAltBlur: (() => void) | null = null;
+    // Dragging the image out into the vault. Constrained only: a fullscreen
+    // viewer covers everything droppable, so there is nowhere for a drag to
+    // land. Within constrained mode it is further gated on being at 1x —
+    // `imgEl.draggable` is toggled by the gesture backend as zoom changes, so
+    // panning keeps the pointer once zoomed. The listener re-checks rather than
+    // trusting `draggable` alone, since the attribute is only refreshed when
+    // the pannable state flips.
     let onDragStart: ((e: DragEvent) => void) | null = null;
-    let onDragEnd: (() => void) | null = null;
 
-    if (!isMobile && gestureControls) {
-      let altHeld = false;
-
-      const enableAltDrag = () => {
-        altHeld = true;
-        gestureControls.setAltDragMode(true);
-        imgEl.draggable = true;
-        cloneEl.classList.add('is-alt-drag');
-      };
-
-      const disableAltDrag = () => {
-        altHeld = false;
-        gestureControls.setAltDragMode(false);
-        imgEl.draggable = false;
-        cloneEl.classList.remove('is-alt-drag');
-      };
-
-      onAltKeyDown = (e: KeyboardEvent) => {
-        if (e.key !== 'Alt' || altHeld) return;
-        if (isConstrainedViewerInactive(cloneEl, viewerDoc)) return;
-        enableAltDrag();
-      };
-
-      onAltKeyUp = (e: KeyboardEvent) => {
-        if (e.key !== 'Alt' || !altHeld) return;
-        disableAltDrag();
-      };
-
-      // Reset on window blur (handles Alt+Tab leaving Alt stuck)
-      onAltBlur = () => {
-        if (altHeld) disableAltDrag();
-      };
-
+    if (!isMobile && !isFullscreen) {
       onDragStart = (e: DragEvent) => {
-        if (!altHeld) {
+        if (cloneEl.classList.contains('is-pannable')) {
           e.preventDefault();
           return;
         }
@@ -1348,27 +1265,15 @@ function openImageViewer(
         }
       };
 
-      onDragEnd = () => {
-        // Clean up even if user releases Alt during drag
-        disableAltDrag();
-      };
-
-      viewerDoc.addEventListener('keydown', onAltKeyDown, true);
-      viewerDoc.addEventListener('keyup', onAltKeyUp, true);
-      viewerWin.addEventListener('blur', onAltBlur);
       imgEl.addEventListener('dragstart', onDragStart);
-      imgEl.addEventListener('dragend', onDragEnd);
     }
 
     // Cleanup removes all listeners (removeEventListener is no-op if never added)
     viewerListenerCleanups.set(cloneEl, () => {
-      if (onEscape) viewerDoc.removeEventListener('keydown', onEscape, true);
-      if (onEnter) viewerDoc.removeEventListener('keydown', onEnter, true);
-      if (onBlockKeys)
-        viewerDoc.removeEventListener('keydown', onBlockKeys, true);
-      if (onCopy) viewerDoc.removeEventListener('keydown', onCopy, true);
-      if (onArrowNav)
-        viewerDoc.removeEventListener('keydown', onArrowNav, true);
+      // `popScope` is inert once the scope's window reference is cleared
+      // (app.js:59545-59548), so the closeImageViewer + cleanupAllViewers double
+      // path is safe
+      app.keymap.popScope(viewerScope);
       if (pendingNavError) imgEl.removeEventListener('error', pendingNavError);
       cloneEl.removeEventListener('click', onOverlayClick);
       closeEl.removeEventListener('click', onCloseClick);
@@ -1376,20 +1281,8 @@ function openImageViewer(
         cloneEl.removeEventListener('touchstart', onTouchStart);
         cloneEl.removeEventListener('touchend', onTouchEnd);
       }
-      if (onAltKeyDown) {
-        viewerDoc.removeEventListener('keydown', onAltKeyDown, true);
-      }
-      if (onAltKeyUp) {
-        viewerDoc.removeEventListener('keyup', onAltKeyUp, true);
-      }
-      if (onAltBlur) {
-        viewerWin.removeEventListener('blur', onAltBlur);
-      }
       if (onDragStart) {
         imgEl.removeEventListener('dragstart', onDragStart);
-      }
-      if (onDragEnd) {
-        imgEl.removeEventListener('dragend', onDragEnd);
       }
       // Clear pending gesture timeout to prevent dangling callbacks
       if (gestureTimeoutId !== null) {
@@ -1398,7 +1291,6 @@ function openImageViewer(
       if (resizeObserver) {
         resizeObserver.disconnect();
       }
-      modalObserver?.disconnect();
     });
 
     // Focus viewer clone to prevent :focus-visible on cards during keyboard input.
@@ -1416,6 +1308,10 @@ function openImageViewer(
       cloneEl.setAttribute('tabindex', '-1');
       cloneEl.focus({ preventScroll: true });
     }
+
+    // Pushed after the focus above so the card's own blur-driven `popScope`
+    // (shared-renderer.ts) has already unwound its scope first
+    app.keymap.pushScope(viewerScope);
 
     // Track cursor position over overlay so closeImageViewer has fresh coordinates
     // for the synthetic mousemove that resumes thumbnail scrubbing
@@ -1445,7 +1341,6 @@ function openImageViewer(
     viewerListenerCleanups.delete(cloneEl);
 
     // 3. Disconnect observers (may be null if error was early)
-    modalObserver?.disconnect();
     resizeObserver?.disconnect();
 
     // 4. Remove DOM element last

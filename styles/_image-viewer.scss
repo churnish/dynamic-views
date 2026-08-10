@@ -1,6 +1,10 @@
-/* Image viewer clone (appended to body with is-zoomed class) */
+/* Image viewer clone. Descendant combinators throughout, not child: the
+   fullscreen clone is a child of `body`, the constrained one a child of
+   `.workspace-leaf`, and during a tab drag Obsidian deep-clones the drop target
+   so a third copy hangs off `body` under the fake-target wrapper chain. A `>`
+   rule would leave that preview copy unstyled. */
 body:not(.dynamic-views-image-viewer-disabled)
-  > .dynamic-views-image-embed.is-zoomed {
+  .dynamic-views-image-embed.is-zoomed {
   cursor: default;
   display: flex;
   align-items: center;
@@ -19,11 +23,24 @@ body:not(.dynamic-views-image-viewer-disabled)
   contain: strict;
 }
 
+/* Constrained mode pins the overlay to the leaf it was mounted in rather than
+   the viewport. The inset drives the box, so the fullscreen rule's fixed
+   `100%` sizing is released; JS writes only `top`, to clear the view header.
+   Specificity has to beat the rule above (0,3,1), which is why the class alone
+   would not do. */
+body:not(.dynamic-views-image-viewer-disabled)
+  .dynamic-views-image-embed.is-zoomed.dynamic-views-viewer-fixed {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+}
+
 /* Overlay chrome — declarations replicated from Obsidian's native lightbox
    (.lightbox-titlebar / .modal-close-button) rather than reusing its class names:
    none of that CSS exists before 1.13, and the plugin supports 1.11+. */
 body:not(.dynamic-views-image-viewer-disabled)
-  > .dynamic-views-image-embed.is-zoomed
+  .dynamic-views-image-embed.is-zoomed
   .dynamic-views-viewer-titlebar {
   --dynamic-views-viewer-close-top: var(--size-2-3);
   --dynamic-views-viewer-close-size: calc(
@@ -49,7 +66,7 @@ body:not(.dynamic-views-image-viewer-disabled)
 }
 
 body.is-mobile:not(.dynamic-views-image-viewer-disabled)
-  > .dynamic-views-image-embed.is-zoomed
+  .dynamic-views-image-embed.is-zoomed
   .dynamic-views-viewer-titlebar {
   --dynamic-views-viewer-close-top: max(
     var(--dynamic-views-safe-area-inset-top),
@@ -59,7 +76,7 @@ body.is-mobile:not(.dynamic-views-image-viewer-disabled)
 }
 
 body:not(.dynamic-views-image-viewer-disabled)
-  > .dynamic-views-image-embed.is-zoomed
+  .dynamic-views-image-embed.is-zoomed
   .dynamic-views-viewer-titlebar-text {
   max-width: calc(100% - var(--size-4-12) * 2);
   white-space: nowrap;
@@ -72,20 +89,34 @@ body:not(.dynamic-views-image-viewer-disabled)
    (`.lightbox.is-zoomed .lightbox-titlebar`). `.is-pannable` is the plugin's
    equivalent zoom-level class, set from both gesture backends. */
 body:not(.dynamic-views-image-viewer-disabled)
-  > .dynamic-views-image-embed.is-zoomed.is-pannable
+  .dynamic-views-image-embed.is-zoomed.is-pannable
   .dynamic-views-viewer-titlebar {
   opacity: 0;
 }
 
-/* File name hidden via Style Settings (inverted toggle — absence of class shows it) */
-body.dynamic-views-image-viewer-hide-filename
-  > .dynamic-views-image-embed.is-zoomed
+/* Constrained mode chrome is theme-coloured, not lightbox-white.
+   The overlay is tinted with --background-primary rather than lightbox black, so
+   white text and a dark scrim are unreadable in a light theme. Constrained mode
+   has no native counterpart, so this diverges from the lightbox by design. */
+body:not(.dynamic-views-image-viewer-disabled):not(
+    .is-phone
+  ).dynamic-views-image-viewer-constrain-to-pane
+  .dynamic-views-image-embed.is-zoomed
   .dynamic-views-viewer-titlebar {
-  display: none;
+  background: none;
+  color: var(--dynamic-views-text-normal);
+}
+
+body:not(.dynamic-views-image-viewer-disabled):not(
+    .is-phone
+  ).dynamic-views-image-viewer-constrain-to-pane
+  .dynamic-views-image-embed.is-zoomed
+  .dynamic-views-viewer-close {
+  color: var(--dynamic-views-icon-color);
 }
 
 body:not(.dynamic-views-image-viewer-disabled)
-  > .dynamic-views-image-embed.is-zoomed
+  .dynamic-views-image-embed.is-zoomed
   .dynamic-views-viewer-close {
   position: absolute;
   top: var(--size-2-3);
@@ -103,7 +134,7 @@ body:not(.dynamic-views-image-viewer-disabled)
 }
 
 body:not(.dynamic-views-image-viewer-disabled)
-  > .dynamic-views-image-embed.is-zoomed
+  .dynamic-views-image-embed.is-zoomed
   .dynamic-views-viewer-close
   .svg-icon {
   width: var(--dynamic-views-icon-m);
@@ -118,13 +149,13 @@ body:not(.dynamic-views-image-viewer-disabled)
    plate and the svg opacity change, which is what reads as "lighten". */
 @media (any-hover: hover) {
   body:not(.dynamic-views-image-viewer-disabled)
-    > .dynamic-views-image-embed.is-zoomed
+    .dynamic-views-image-embed.is-zoomed
     .dynamic-views-viewer-close:hover {
     background-color: var(--dynamic-views-background-modifier-hover);
   }
 
   body:not(.dynamic-views-image-viewer-disabled)
-    > .dynamic-views-image-embed.is-zoomed
+    .dynamic-views-image-embed.is-zoomed
     .dynamic-views-viewer-close:hover
     .svg-icon {
     opacity: var(--dynamic-views-icon-opacity-hover);
@@ -132,7 +163,7 @@ body:not(.dynamic-views-image-viewer-disabled)
 }
 
 body.is-mobile:not(.dynamic-views-image-viewer-disabled)
-  > .dynamic-views-image-embed.is-zoomed
+  .dynamic-views-image-embed.is-zoomed
   .dynamic-views-viewer-close {
   top: max(var(--dynamic-views-safe-area-inset-top), var(--size-4-3));
   color: var(--dynamic-views-icon-color);
@@ -143,17 +174,21 @@ body.is-mobile:not(.dynamic-views-image-viewer-disabled)
    Tablets keep the pointer-sized button and get only the mobile colour and
    safe-area offset from the `.is-mobile` rule above, exactly as native does. */
 body.is-phone:not(.dynamic-views-image-viewer-disabled)
-  > .dynamic-views-image-embed.is-zoomed
+  .dynamic-views-image-embed.is-zoomed
   .dynamic-views-viewer-close {
   height: var(--dynamic-views-touch-size-m);
   width: var(--dynamic-views-touch-size-m);
   background: var(--dynamic-views-raised-background);
 }
 
-/* Ensure drag ghost appears above image viewer overlay */
-body.dynamic-views-image-zoomed {
-  --layer-dragged-item: 51;
-}
+/* No drag-layer overrides here any more. Both the drop indicator and the drop
+   preview live outside `.workspace-leaf`, and the constrained overlay now lives
+   inside it — paint containment plus the leaf's own stacking isolation
+   (app.css:6394-6401) put every `body`-level workspace element above it without
+   help. The previous rules raised `.workspace-drop-overlay` by redefining
+   `--layer-dragged-item` as 51, which silently demoted Obsidian's drag ghost
+   from its native 80 (app.css:2415) to below notices, menus and tooltips for as
+   long as any viewer was open — fullscreen included, where it bought nothing. */
 
 /* Suppress card focus ring while viewer is open — keyboard events trigger
    :focus-visible on the still-focused card, which is a visual artifact.
@@ -163,15 +198,17 @@ body.dynamic-views-image-zoomed .dynamic-views .card:focus-visible::after {
     var(--card-border-color, var(--dynamic-views-background-modifier-border));
 }
 
-/* Constrained mode: overlay styling (non-phone, fullscreen disabled) */
+/* Constrained mode: overlay styling (non-phone, fullscreen disabled).
+   Constrained mode has no native counterpart, so it keeps the pane-blended
+   --background-primary tint rather than the lightbox black — but it matches the
+   native lightbox's 0.9 alpha so the two modes dim by the same amount. */
 body:not(.dynamic-views-image-viewer-disabled):not(
     .is-phone
   ).dynamic-views-image-viewer-constrain-to-pane
-  > .dynamic-views-image-embed.is-zoomed {
+  .dynamic-views-image-embed.is-zoomed {
   background: color-mix(
     in srgb,
-    var(--dynamic-views-background-primary)
-      calc(var(--overlay-opacity, 0.4) * 100%),
+    var(--dynamic-views-background-primary) 90%,
     transparent
   );
   transition: background var(--dynamic-views-anim-duration-fast) ease;
@@ -179,11 +216,11 @@ body:not(.dynamic-views-image-viewer-disabled):not(
 
 /* Fullscreen image viewer: phone (always) or desktop/tablet with fullscreen enabled */
 body:not(.dynamic-views-image-viewer-disabled).is-phone
-  > .dynamic-views-image-embed.is-zoomed,
+  .dynamic-views-image-embed.is-zoomed,
 body:not(.dynamic-views-image-viewer-disabled):not(
     .dynamic-views-image-viewer-constrain-to-pane
   ):not(.is-phone)
-  > .dynamic-views-image-embed.is-zoomed {
+  .dynamic-views-image-embed.is-zoomed {
   /* 0.9 alpha matches Obsidian's native lightbox backdrop opacity */
   background: color-mix(
     in srgb,
@@ -195,7 +232,7 @@ body:not(.dynamic-views-image-viewer-disabled):not(
 }
 
 body:not(.dynamic-views-image-viewer-disabled)
-  > .dynamic-views-image-embed.is-zoomed
+  .dynamic-views-image-embed.is-zoomed
   img {
   /* Sizing matches the native lightbox: fill the container inset by 8px, and
      never upscale — `width/height: auto` leaves smaller images at natural size.
@@ -219,7 +256,7 @@ body:not(.dynamic-views-image-viewer-disabled)
 body:not(.dynamic-views-image-viewer-disabled):not(
     .is-phone
   ).dynamic-views-image-viewer-constrain-to-pane
-  > .dynamic-views-image-embed.is-zoomed
+  .dynamic-views-image-embed.is-zoomed
   img {
   max-height: 90%;
   max-width: 90%;
@@ -227,7 +264,7 @@ body:not(.dynamic-views-image-viewer-disabled):not(
 
 /* Disable drag in fullscreen mode (desktop only — mobile uses system drag & drop) */
 body:not(.is-mobile):not(.dynamic-views-image-viewer-constrain-to-pane)
-  > .dynamic-views-image-embed.is-zoomed
+  .dynamic-views-image-embed.is-zoomed
   img {
   -webkit-user-drag: none;
   user-drag: none;
@@ -239,17 +276,13 @@ body:not(.is-mobile):not(.dynamic-views-image-viewer-constrain-to-pane)
    `.lightbox.is-zoomed .media-wrapper img`. `.is-pannable` is added by JS from
    the gesture backends' scale; at 1x the img inherits `cursor: default` from the
    overlay, so 1x never advertises a pan that cannot happen.
-   Full selector on purpose — (0,3,1) ties with the alt-drag rule below, which
-   then wins on source order. */
+   Dragging out is suppressed here for the same reason the cursor changes: once
+   zoomed the pointer belongs to panning. Fullscreen suppresses it unconditionally
+   in the rule above, so this only ever bites in constrained mode. */
 .dynamic-views-image-embed.is-zoomed.is-pannable img {
   cursor: grab;
-}
-
-/* Allow drag when Alt is held (is-alt-drag class added by JS) */
-.dynamic-views-image-embed.is-zoomed.is-alt-drag img {
-  -webkit-user-drag: auto;
-  user-drag: auto;
-  cursor: default;
+  -webkit-user-drag: none;
+  user-drag: none;
 }
 
 /* Image viewer cursor — requires hover intent (.interact) */

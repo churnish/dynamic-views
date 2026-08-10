@@ -128,15 +128,15 @@ body:is(
 }
 
 /* Circular cover: 50% makes any shape circular */
-body.dynamic-views-cover-circular
+body.dynamic-views-round-covers
   .dynamic-views
   .card.image-format-cover
   .card-cover-wrapper,
-body.dynamic-views-cover-circular
+body.dynamic-views-round-covers
   .dynamic-views
   .card.image-format-cover
   .card-cover,
-body.dynamic-views-cover-circular
+body.dynamic-views-round-covers
   .dynamic-views
   .card.image-format-cover
   .card-cover-placeholder {
@@ -223,27 +223,27 @@ body:not(.dynamic-views-cover-disable-hover-zoom)
    ============================================ */
 
 /* Border between cover and card content — inherits --card-border-color from card */
-body.dynamic-views-show-cover-border
+body.dynamic-views-show-cover-divider
   .dynamic-views
   .card.card-cover-top.image-format-cover
   .card-cover-wrapper {
   border-bottom: var(--card-border-thickness-fixed) solid
     var(--card-border-color);
 }
-body.dynamic-views-show-cover-border
+body.dynamic-views-show-cover-divider
   .dynamic-views
   .card.card-cover-bottom.image-format-cover
   .card-cover-wrapper {
   border-top: var(--card-border-thickness-fixed) solid var(--card-border-color);
 }
-body.dynamic-views-show-cover-border
+body.dynamic-views-show-cover-divider
   .dynamic-views
   .card.card-cover-left.image-format-cover
   .card-cover-wrapper {
   border-right: var(--card-border-thickness-fixed) solid
     var(--card-border-color);
 }
-body.dynamic-views-show-cover-border
+body.dynamic-views-show-cover-divider
   .dynamic-views
   .card.card-cover-right.image-format-cover
   .card-cover-wrapper {

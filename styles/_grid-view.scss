@@ -122,7 +122,7 @@ body.is-ios .dynamic-views-grid .card.dynamic-views-height-locked {
 }
 
 /* Padding is retained so hiding the line does not also collapse group spacing. */
-body.dynamic-views-hide-group-separator
+body.dynamic-views-hide-group-divider
   .is-grouped
   .dynamic-views-group-section
   > .dynamic-views-group::after {

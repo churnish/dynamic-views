@@ -415,12 +415,12 @@ settings:
         description: Make cards slightly bigger on hover. Does not apply in embedded views.
         type: class-toggle
     -
-        id: dynamic-views-card-hover-disable-elevate
+        id: dynamic-views-card-hover-disable-lift
         title: Disable lift
         description: Do not elevate cards on hover.
         type: class-toggle
     -
-        id: dynamic-views-no-fade-truncated-text
+        id: dynamic-views-hide-scroll-gradients
         title: Hide scroll gradients
         description: Do not show gradient fade on scrollable text elements.
         type: class-toggle
@@ -520,7 +520,7 @@ settings:
         type: variable-text
         default: 150px
     -
-        id: dynamic-views-cover-circular
+        id: dynamic-views-round-covers
         title: Round covers
         description: Make cover corners perfectly rounded.
         type: class-toggle
@@ -550,7 +550,7 @@ settings:
         description: Do not enlarge images on hover.
         type: class-toggle
     -
-        id: dynamic-views-show-cover-border
+        id: dynamic-views-show-cover-divider
         title: Divider line
         description: Show border between cover and card content.
         type: class-toggle
@@ -655,7 +655,7 @@ settings:
         type: class-toggle
         default: false
     -
-        id: dynamic-views-hide-group-separator
+        id: dynamic-views-hide-group-divider
         title: Hide divider line
         description: Do not show horizontal line between groups.
         type: class-toggle
@@ -1072,8 +1072,8 @@ settings:
         default-light: '#'
         default-dark: '#'
     -
-        id: image-viewer-heading
-        title: Image viewer
+        id: images-heading
+        title: Images
         type: heading
         level: 2
         collapsed: true
@@ -1083,30 +1083,15 @@ settings:
         description: Do not enlarge image when pressing on thumbnail or cover.
         type: class-toggle
     -
-        id: dynamic-views-image-viewer-hide-filename
-        title: Hide file name
-        description: Do not show the image file name at the top of the image viewer.
-        type: class-toggle
-    -
-        id: dynamic-views-zoom-disabled
-        title: Disable pan & zoom
-        description: Disable pan and pinch-to-zoom gestures.
-        type: class-toggle
-    -
         id: dynamic-views-image-viewer-constrain-to-pane
-        title: Constrain to pane
+        title: Constrain image viewer to pane
         description: Keep image within pane bounds rather than open in full screen.
         type: class-toggle
     -
-        id: dynamic-views-zoom-sensitivity
-        title: Zoom sensitivity
-        description: How quickly images zoom.
-        type: variable-number-slider
-        default: 0.08
-        min: 0.01
-        max: 1
-        step: 0.01
-        format: ''
+        id: dynamic-views-disable-image-hdr
+        title: Disable HDR
+        description: Show HDR images in standard dynamic range instead of at full brightness.
+        type: class-toggle
     -
         id: poster-heading
         title: Poster
@@ -1433,7 +1418,7 @@ settings:
                 value: dynamic-views-property-color-without-names-custom
     -
         id: dynamic-views-property-color-without-names-custom
-        title: Custom color (labels hidden)
+        title: Custom color (names hidden)
         description: Set custom color.
         type: variable-themed-color
         format: hsl-split
@@ -1446,7 +1431,7 @@ settings:
         type: class-toggle
         default: false
     -
-        id: dynamic-views-hide-empty-properties
+        id: dynamic-views-empty-properties
         title: Empty properties
         description: How to display properties with empty values.
         type: class-select
@@ -1620,7 +1605,7 @@ settings:
         default-light: '#'
         default-dark: '#'
     -
-        id: subtitle
+        id: subtitle-heading
         title: Subtitle
         type: heading
         level: 2
@@ -2124,12 +2109,12 @@ settings:
                 label: Never
                 value: dynamic-views-omit-first-line-never
     -
-        id: dynamic-views-text-preview-keep-headings
+        id: dynamic-views-text-preview-preserve-headings
         title: Preserve headings
         description: Show heading text in text preview rather than omit it.
         type: class-toggle
     -
-        id: dynamic-views-text-preview-keep-newlines
+        id: dynamic-views-text-preview-preserve-line-breaks
         title: Preserve line breaks
         description: Do not collapse newlines when showing note content.
         type: class-toggle
@@ -2427,7 +2412,7 @@ settings:
         description: Break words at syllable boundaries when wrapping. Not available on Windows or Linux.
         type: class-toggle
     -
-        id: layout-heading
+        id: view-heading
         title: View
         type: heading
         level: 2
@@ -2558,8 +2543,10 @@ body.dynamic-views-hide-group-property-names
   ),
 body.dynamic-views-image-viewer-disabled
   .style-settings-container
-  .setting-item[data-id='dynamic-views-image-viewer-disabled']
-  ~ .setting-item,
+  .setting-item[data-id='dynamic-views-image-viewer-constrain-to-pane'],
+/* Named explicitly rather than `[data-id='…-image-viewer-disabled'] ~ .setting-item`:
+   the sibling sweep hid every row added after it, so "Disable HDR" — which has
+   nothing to do with the viewer — disappeared along with the constrain toggle. */
 body:not(.dynamic-views-property-color-with-names-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-property-color-with-names-custom'],
@@ -2603,15 +2590,12 @@ body:not(.dynamic-views-text-preview-color-custom)
 body:not(.dynamic-views-text-preview-size-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-text-preview-size-custom'],
-body.dynamic-views-cover-circular
+body.dynamic-views-round-covers
   .style-settings-container
   .setting-item[data-id='dynamic-views-cover-border-radius'],
 body.is-phone
   .style-settings-container
   .setting-item[data-id='dynamic-views-image-viewer-constrain-to-pane'],
-body.is-phone
-  .style-settings-container
-  .setting-item[data-id='dynamic-views-zoom-sensitivity'],
 body.dynamic-views-thumbnail-disable-navigation
   .style-settings-container
   .setting-item[data-id='dynamic-views-hide-thumbnail-icon'],
@@ -2639,14 +2623,6 @@ body.dynamic-views-poster-color-scheme-light
 // Border-radius fixes for items that become visually first/last when a neighbor is hidden.
 // :nth-child(... of S) counts DOM position, not visibility — hidden items steal radius from visible neighbors.
 // When adding a new display:none rule for a setting that can be first or last in its group, add a compensating border-radius rule here.
-
-// Image viewer: constrain-to-pane and zoom-sensitivity hidden on phone → zoom-disabled becomes visually last
-body.is-phone
-  .style-settings-container
-  .setting-item[data-id='dynamic-views-zoom-disabled'] {
-  border-bottom-right-radius: var(--setting-items-radius);
-  border-bottom-left-radius: var(--setting-items-radius);
-}
 
 // Each Groups sub-heading is its own container, so each needs its own visually-last row.
 // Every sub-section ends with a Custom color row that is hidden unless Custom is selected;

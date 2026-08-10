@@ -76,7 +76,7 @@ body.dynamic-views-card-hover-enlarge
   z-index: 21;
 }
 
-body:not(.dynamic-views-card-hover-disable-elevate)
+body:not(.dynamic-views-card-hover-disable-lift)
   .workspace-leaf-content[data-type='bases']
   .dynamic-views
   .card.interact {
@@ -89,7 +89,7 @@ body:not(.dynamic-views-card-hover-disable-elevate)
    Grid: defensive — prevents overlap clipping with small card spacing. */
 body:is(
     .dynamic-views-card-hover-enlarge,
-    :not(.dynamic-views-card-hover-disable-elevate)
+    :not(.dynamic-views-card-hover-disable-lift)
   )
   .workspace-leaf-content[data-type='bases']
   :is(.dynamic-views-masonry, .dynamic-views-grid)

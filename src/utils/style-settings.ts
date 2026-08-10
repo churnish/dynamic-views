@@ -289,13 +289,6 @@ export function shouldHideMissingProperties(): boolean {
   return hasBodyClass('dynamic-views-hide-missing-properties');
 }
 
-/**
- * Get zoom sensitivity from Style Settings (desktop)
- */
-export function getZoomSensitivityDesktop(): number {
-  return getCSSVariableAsNumber('--dynamic-views-zoom-sensitivity', 0.08);
-}
-
 /** Check if fixed-height Style Settings is active for masonry views. */
 export function isFixedHeightForMasonry(
   body: Element,
@@ -333,18 +326,18 @@ export function isThumbnailScrubbingDisabled(): boolean {
 
 /**
  * Check if heading text should be kept in text previews
- * Returns true when user enables "Keep headings"
+ * Returns true when user enables "Preserve headings"
  */
 export function preserveTextPreviewHeadings(): boolean {
-  return hasBodyClass('dynamic-views-text-preview-keep-headings');
+  return hasBodyClass('dynamic-views-text-preview-preserve-headings');
 }
 
 /**
  * Check if newlines should be preserved in text previews
- * Returns true when user enables "Keep newlines"
+ * Returns true when user enables "Preserve line breaks"
  */
 export function preserveTextPreviewNewlines(): boolean {
-  return hasBodyClass('dynamic-views-text-preview-keep-newlines');
+  return hasBodyClass('dynamic-views-text-preview-preserve-line-breaks');
 }
 
 export type OmitFirstLineMode = 'always' | 'ifMatchesTitle' | 'never';
@@ -393,7 +386,6 @@ export function getStyleSettingsHash(): string {
     getSlideshowMaxImages(),
     // Layout
     getCompactBreakpoint(),
-    getZoomSensitivityDesktop(),
     // Body classes for overflow and layout modes
     hasBodyClass('dynamic-views-title-overflow-scroll'),
     hasBodyClass('dynamic-views-subtitle-overflow-scroll'),

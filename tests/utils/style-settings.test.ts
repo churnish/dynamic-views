@@ -423,8 +423,8 @@ describe('style-settings', () => {
   });
 
   describe('preserveTextPreviewHeadings', () => {
-    it('should return true when keep-headings class is present', () => {
-      mockClassList.add('dynamic-views-text-preview-keep-headings');
+    it('should return true when preserve-headings class is present', () => {
+      mockClassList.add('dynamic-views-text-preview-preserve-headings');
       expect(preserveTextPreviewHeadings()).toBe(true);
     });
 
@@ -434,8 +434,8 @@ describe('style-settings', () => {
   });
 
   describe('preserveTextPreviewNewlines', () => {
-    it('should return true when keep-newlines class is present', () => {
-      mockClassList.add('dynamic-views-text-preview-keep-newlines');
+    it('should return true when preserve-line-breaks class is present', () => {
+      mockClassList.add('dynamic-views-text-preview-preserve-line-breaks');
       expect(preserveTextPreviewNewlines()).toBe(true);
     });
 
