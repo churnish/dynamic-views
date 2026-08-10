@@ -122,6 +122,18 @@ describe('image', () => {
       expect(stripWikilinkSyntax(null)).toBe('');
       expect(stripWikilinkSyntax(undefined)).toBe('');
     });
+
+    it('should keep square brackets in the file name', () => {
+      expect(stripWikilinkSyntax('![[Image[1355x762].png]]')).toBe(
+        'Image[1355x762].png'
+      );
+      expect(stripWikilinkSyntax('[[Image[1].png|Caption]]')).toBe(
+        'Image[1].png'
+      );
+      expect(stripWikilinkSyntax('[[folder/Image[1].png#heading]]')).toBe(
+        'folder/Image[1].png'
+      );
+    });
   });
 
   describe('processImagePaths', () => {

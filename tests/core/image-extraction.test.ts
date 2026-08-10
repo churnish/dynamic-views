@@ -401,5 +401,143 @@ key: value
         expect(result).toContain('app://local/image.jpg');
       });
     });
+
+    // Obsidian hides comment contents in Reading view, so embeds inside them
+    // are not note images (#379). Verified against Obsidian's own renderer.
+    describe('comment exclusions', () => {
+      beforeEach(() => {
+        mockApp.metadataCache.getFirstLinkpathDest = vi
+          .fn()
+          .mockReturnValue({ extension: 'jpg' } as TFile);
+        mockApp.vault.getResourcePath = vi
+          .fn()
+          .mockReturnValue('app://local/image.jpg');
+      });
+
+      it('should skip embeds in a block Obsidian comment', async () => {
+        mockApp.vault.cachedRead = vi
+          .fn()
+          .mockResolvedValue('Text\n%%\n![[image.jpg]]\n%%\nMore');
+
+        expect(await extractImageEmbeds(mockFile, mockApp)).toEqual([]);
+      });
+
+      it('should skip embeds in an inline Obsidian comment', async () => {
+        mockApp.vault.cachedRead = vi
+          .fn()
+          .mockResolvedValue('Text %%![[image.jpg]]%% more');
+
+        expect(await extractImageEmbeds(mockFile, mockApp)).toEqual([]);
+      });
+
+      it('should skip embeds in an HTML comment', async () => {
+        mockApp.vault.cachedRead = vi
+          .fn()
+          .mockResolvedValue('Text\n<!-- ![[image.jpg]] -->\nMore');
+
+        expect(await extractImageEmbeds(mockFile, mockApp)).toEqual([]);
+      });
+
+      it('should skip Markdown images in an HTML comment', async () => {
+        mockApp.vault.cachedRead = vi
+          .fn()
+          .mockResolvedValue('<!-- ![alt](https://example.org/a.png) -->');
+
+        expect(await extractImageEmbeds(mockFile, mockApp)).toEqual([]);
+      });
+
+      it('should skip embeds after an unclosed Obsidian comment', async () => {
+        mockApp.vault.cachedRead = vi
+          .fn()
+          .mockResolvedValue('Text\n%%\n![[image.jpg]]\nno closing delimiter');
+
+        expect(await extractImageEmbeds(mockFile, mockApp)).toEqual([]);
+      });
+
+      it('should skip embeds after an unclosed HTML comment', async () => {
+        mockApp.vault.cachedRead = vi
+          .fn()
+          .mockResolvedValue(
+            'Text\n<!--\n![[image.jpg]]\nno closing delimiter'
+          );
+
+        expect(await extractImageEmbeds(mockFile, mockApp)).toEqual([]);
+      });
+
+      it('should still extract embeds outside a comment', async () => {
+        mockApp.vault.cachedRead = vi
+          .fn()
+          .mockResolvedValue('%%hidden%%\n![[image.jpg]]');
+
+        expect(await extractImageEmbeds(mockFile, mockApp)).toContain(
+          'app://local/image.jpg'
+        );
+      });
+
+      it('should not treat a comment delimiter inside code as a comment', async () => {
+        mockApp.vault.cachedRead = vi
+          .fn()
+          .mockResolvedValue('`%%`\n![[image.jpg]]');
+
+        expect(await extractImageEmbeds(mockFile, mockApp)).toContain(
+          'app://local/image.jpg'
+        );
+      });
+
+      it('should skip cardlink blocks inside a comment', async () => {
+        mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`%%
+\`\`\`cardlink
+url: https://example.com
+image: https://example.com/cover.png
+\`\`\`
+%%`);
+
+        expect(await extractImageEmbeds(mockFile, mockApp)).toEqual([]);
+      });
+    });
+
+    // Obsidian resolves link targets containing square brackets (#200)
+    describe('square brackets in file names', () => {
+      it('should extract a wikilink embed with brackets in the name', async () => {
+        mockApp.vault.cachedRead = vi
+          .fn()
+          .mockResolvedValue('![[Image[1355x762].png]]');
+        const getDest = vi.fn().mockReturnValue({ extension: 'png' } as TFile);
+        mockApp.metadataCache.getFirstLinkpathDest = getDest;
+        mockApp.vault.getResourcePath = vi
+          .fn()
+          .mockReturnValue('app://local/bracket.png');
+
+        const result = await extractImageEmbeds(mockFile, mockApp);
+
+        expect(getDest).toHaveBeenCalledWith('Image[1355x762].png', 'note.md');
+        expect(result).toContain('app://local/bracket.png');
+      });
+
+      it('should keep the caption out of a bracketed wikilink path', async () => {
+        mockApp.vault.cachedRead = vi
+          .fn()
+          .mockResolvedValue('![[Image[1].png|A caption]]');
+        const getDest = vi.fn().mockReturnValue({ extension: 'png' } as TFile);
+        mockApp.metadataCache.getFirstLinkpathDest = getDest;
+        mockApp.vault.getResourcePath = vi
+          .fn()
+          .mockReturnValue('app://local/bracket.png');
+
+        await extractImageEmbeds(mockFile, mockApp);
+
+        expect(getDest).toHaveBeenCalledWith('Image[1].png', 'note.md');
+      });
+
+      it('should extract a Markdown image with brackets in the alt text', async () => {
+        mockApp.vault.cachedRead = vi
+          .fn()
+          .mockResolvedValue('![Alt [1355x762]](https://example.org/a.png)');
+
+        expect(await extractImageEmbeds(mockFile, mockApp)).toContain(
+          'https://example.org/a.png'
+        );
+      });
+    });
   });
 });

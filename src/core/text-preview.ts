@@ -4,52 +4,95 @@
  */
 
 import { App, TFile } from 'obsidian';
+import {
+  parseLines,
+  findIndentedCodeBlocks,
+  findCommentRanges,
+  isInsideCode,
+  removeRanges,
+} from './markdown-ranges';
 
 /**
  * Markdown patterns for syntax stripping
  *
  * ORDERING MATTERS - patterns are applied sequentially:
- * 1. Inline code first (preserves content in backticks)
- * 2. Bold+italic (***) before bold (**) before italic (*) - longer patterns first
- * 3. Same for underscores: ___ before __ before _
- * 4. Task markers before bare checkboxes (so "- [ ]" strips fully, not to "[ ]")
- * 5. Task markers before bullet markers (so "- [ ]" isn't just stripped to "[ ]")
- * 6. HTML tag pairs before remaining tags (to preserve inner content)
+ * 1. Comments first (their contents never render, so nothing inside should survive)
+ * 2. Inline code next (preserves content in backticks)
+ * 3. Bold+italic (***) before bold (**) before italic (*) - longer patterns first
+ * 4. Same for underscores: ___ before __ before _
+ * 5. Task markers before bare checkboxes (so "- [ ]" strips fully, not to "[ ]")
+ * 6. Task markers before bullet markers (so "- [ ]" isn't just stripped to "[ ]")
+ * 7. Raw-text HTML elements before the generic tag sweep (their text is not content)
  *
  * Code blocks and escaped characters are handled separately before these patterns.
+ *
+ * Each entry carries its own replacement rather than inferring one from the match,
+ * because capture-group counts differ per pattern and a shared heuristic silently
+ * mis-substitutes when a pattern has no groups.
  */
 /** Heading lines — extracted so `stripMarkdownSyntax` can skip it by reference */
 const headingPattern = /^#{1,6}(?:[ \t].*)?$/gm;
 
-const markdownPatterns = [
-  /%%[\s\S]*?%%/g, // Obsidian comments
-  /`([^`]+)`/g, // Inline code
-  /\*\*\*((?:(?!\*\*\*).)+)\*\*\*/g, // Bold + italic asterisks (before ** and *)
-  /___((?:(?!___).)+)___/g, // Bold + italic underscores (before __ and _)
-  /\*\*((?:(?!\*\*).)+)\*\*/g, // Bold asterisks (before *)
-  /__((?:(?!__).)+)__/g, // Bold underscores (before _)
-  /\*((?:(?!\*).)+)\*/g, // Italic asterisks
-  /_((?:(?!_).)+)_/g, // Italic underscores
-  /~~((?:(?!~~).)+)~~/g, // Strikethrough
-  /==((?:(?!==).)+)==/g, // Highlight
-  /!\[[^\]\n]*\]\([^)]*\)/g, // Markdown images (before links, strip entirely)
-  /\[([^\]\n]*)\]\([^)]*\)/g, // Links — no checkbox exclusion needed: valid checkboxes require \s after ]
-  /!\[\[(?:[^\]]|\](?!\]))+\]\]/g, // Embedded wikilinks (images, etc.)
-  /\[\[(?:[^\]|]|\](?!\]))+\|((?:[^\]]|\](?!\]))*)\]\]/g, // Wikilinks with alias → keep alias
-  /\[\[((?:[^\]]|\](?!\]))+)\]\]/g, // Wikilinks → keep link text
-  /(^|\s)#[a-zA-Z0-9_\-/]+/g, // Tags (require whitespace/line-start before #)
-  /^\s*[-*+]\s*\[[^\]]\]\s*/gm, // Task list markers (bullet-style) - before bare checkbox
-  /^\s*(\d+[.)]\s*)\[[^\]]\]\s*/gm, // Task list markers (numbered) - preserves number
-  /\[[^\]]\](?=\s|$)/g, // Bare task checkboxes (after task markers, only before whitespace/EOL)
-  /^\s*[-*+]\s+/gm, // Bullet list markers (after task markers)
-  headingPattern, // Heading lines (full removal, [ \t] prevents cross-newline matching)
-  /^\s*(?:[-_*])\s*(?:[-_*])\s*(?:[-_*])[\s\-_*]*$/gm, // Horizontal rules
-  /^\s*\|.*\|.*$/gm, // Tables
-  /\^\[[^\]]*?]/g, // Inline footnotes
-  /\[\^[^\]]+]/g, // Footnote markers
-  /^\s*\[\^[^\]]+]:.*$/gm, // Footnote details
-  /<([a-z][a-z0-9]*)\b[^>]*>(.*?)<\/\1>/gi, // HTML tag pairs (before remaining tags)
-  /<[^>]+>/g, // Remaining HTML tags
+/**
+ * Bracket-balanced link label: plain characters, or one nested `[...]` group.
+ * Obsidian renders `[[FR] Feature request](url)` as a link, so the label must be
+ * allowed to contain brackets instead of terminating at the first `]`.
+ */
+const LINK_LABEL = String.raw`(?:[^[\]\n]|\[[^[\]\n]*])*`;
+
+interface MarkdownPattern {
+  pattern: RegExp;
+  /** Replacement string — `''` drops the match, `'$1'` keeps a capture group */
+  replacement: string;
+}
+
+const markdownPatterns: MarkdownPattern[] = [
+  { pattern: /\*\*\*((?:(?!\*\*\*).)+)\*\*\*/g, replacement: '$1' }, // Bold + italic asterisks (before ** and *)
+  { pattern: /___((?:(?!___).)+)___/g, replacement: '$1' }, // Bold + italic underscores (before __ and _)
+  { pattern: /\*\*((?:(?!\*\*).)+)\*\*/g, replacement: '$1' }, // Bold asterisks (before *)
+  { pattern: /__((?:(?!__).)+)__/g, replacement: '$1' }, // Bold underscores (before _)
+  { pattern: /\*((?:(?!\*).)+)\*/g, replacement: '$1' }, // Italic asterisks
+  { pattern: /_((?:(?!_).)+)_/g, replacement: '$1' }, // Italic underscores
+  { pattern: /~~((?:(?!~~).)+)~~/g, replacement: '$1' }, // Strikethrough
+  { pattern: /==((?:(?!==).)+)==/g, replacement: '$1' }, // Highlight
+  {
+    pattern: new RegExp(String.raw`!\[${LINK_LABEL}]\([^)]*\)`, 'g'),
+    replacement: '', // Markdown images (before links, strip entirely)
+  },
+  {
+    pattern: new RegExp(String.raw`\[(${LINK_LABEL})]\([^)]*\)`, 'g'),
+    replacement: '$1', // Links — no checkbox exclusion needed: valid checkboxes require \s after ]
+  },
+  { pattern: /!\[\[(?:[^\]]|\](?!\]))+\]\]/g, replacement: '' }, // Embedded wikilinks (images, etc.)
+  {
+    pattern: /\[\[(?:[^\]|]|\](?!\]))+\|((?:[^\]]|\](?!\]))*)\]\]/g,
+    replacement: '$1', // Wikilinks with alias → keep alias
+  },
+  { pattern: /\[\[((?:[^\]]|\](?!\]))+)\]\]/g, replacement: '$1' }, // Wikilinks → keep link text
+  { pattern: /(^|\s)#[a-zA-Z0-9_\-/]+/g, replacement: '$1' }, // Tags (require whitespace/line-start before #)
+  { pattern: /^\s*[-*+]\s*\[[^\]]\]\s*/gm, replacement: '' }, // Task list markers (bullet-style) - before bare checkbox
+  { pattern: /^\s*(\d+[.)]\s*)\[[^\]]\]\s*/gm, replacement: '$1' }, // Task list markers (numbered) - preserves number
+  { pattern: /\[[^\]]\](?=\s|$)/g, replacement: '' }, // Bare task checkboxes (after task markers, only before whitespace/EOL)
+  { pattern: /^\s*[-*+]\s+/gm, replacement: '' }, // Bullet list markers (after task markers)
+  { pattern: headingPattern, replacement: '' }, // Heading lines (full removal, [ \t] prevents cross-newline matching)
+  {
+    pattern: /^\s*(?:[-_*])\s*(?:[-_*])\s*(?:[-_*])[\s\-_*]*$/gm,
+    replacement: '', // Horizontal rules
+  },
+  { pattern: /^\s*\|.*\|.*$/gm, replacement: '' }, // Tables
+  { pattern: /\^\[[^\]]*?]/g, replacement: '' }, // Inline footnotes
+  { pattern: /\[\^[^\]]+]/g, replacement: '' }, // Footnote markers
+  { pattern: /^\s*\[\^[^\]]+]:.*$/gm, replacement: '' }, // Footnote details
+  {
+    pattern: /<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi,
+    replacement: '', // Raw-text elements — their text is code, not prose
+  },
+  {
+    // Tags only, at any nesting depth — dropping open and close markers alike keeps
+    // the text between them, so `<b>a <i>b</i> c</b>` collapses to `a b c`
+    pattern: /<\/?[a-zA-Z][^>]*>/g,
+    replacement: '',
+  },
 ];
 
 /**
@@ -75,14 +118,39 @@ function protectEscapedChars(text: string): {
 }
 
 /**
- * Restore escaped characters from placeholders
+ * Restore placeholder substitutions (escaped characters, inline code)
  */
-function restoreEscapedChars(text: string, map: Map<string, string>): string {
+function restorePlaceholders(text: string, map: Map<string, string>): string {
   let result = text;
   map.forEach((char, placeholder) => {
     result = result.split(placeholder).join(char);
   });
   return result;
+}
+
+/**
+ * Replace inline code spans with placeholders holding their literal text.
+ *
+ * Obsidian renders a code span verbatim — `` `%%` `` is two percent signs, not a
+ * comment opener, and `` `**x**` `` is not bold (verified in Reading view). Hiding
+ * spans from the pattern pass is what keeps a stray delimiter inside code from
+ * being read as syntax that swallows the rest of the note.
+ */
+function protectInlineCode(text: string): {
+  text: string;
+  map: Map<string, string>;
+} {
+  const map = new Map<string, string>();
+  let counter = 0;
+
+  const result = text.replace(/`([^`]+)`/g, (_match: string, code: string) => {
+    const placeholder = `§§CODE${counter}§§`;
+    map.set(placeholder, code);
+    counter++;
+    return placeholder;
+  });
+
+  return { text: result, map };
 }
 
 /**
@@ -166,38 +234,41 @@ export function stripMarkdownSyntax(
   // Remove code blocks before other processing (important for tildes before strikethrough)
   let result = removeCodeBlocks(protectedText);
 
+  // Set inline code aside so its literal text is never read as Markdown syntax
+  const { text: codeProtected, map: inlineCodeMap } = protectInlineCode(result);
+  result = codeProtected;
+
+  // Cut comments before any other pattern runs — nothing inside one renders.
+  // Fenced code is already gone and inline code is masked, so indented code is
+  // the only place left where a bare delimiter is literal text rather than an
+  // opener; the shared scanner needs those ranges to leave it alone.
+  const indentedCode = findIndentedCodeBlocks(parseLines(result), []);
+  result = removeRanges(
+    result,
+    // isInsideCode, not isInsideRange — indented ranges carry an inclusive end
+    findCommentRanges(result, (position) =>
+      isInsideCode(position, [], indentedCode, [])
+    )
+  );
+
   // Strip heading markers but keep content (requires space after #, so #hashtag is safe)
   if (options?.preserveHeadings) {
     result = result.replace(/^#{1,6}[ \t]+/gm, '');
   }
 
   // Apply each pattern
-  markdownPatterns.forEach((pattern) => {
+  markdownPatterns.forEach(({ pattern, replacement }) => {
     // Skip heading removal when preserving headings (markers already stripped above)
     if (options?.preserveHeadings && pattern === headingPattern) return;
 
-    result = result.replace(pattern, (match: string, ...groups: string[]) => {
-      // Special handling for HTML tag pairs - return content (group 2)
-      if (match[0] === '<' && match.includes('</')) {
-        return groups[1] || '';
-      }
-
-      // For patterns with capture groups, return the captured content
-      if (groups.length > 0 && groups[0] !== undefined) {
-        for (let i = 0; i < groups.length - 2; i++) {
-          if (typeof groups[i] === 'string') {
-            return groups[i];
-          }
-        }
-      }
-
-      // For other patterns, remove completely
-      return '';
-    });
+    result = result.replace(pattern, replacement);
   });
 
+  // Restore inline code before escapes, so escapes inside code resolve too
+  result = restorePlaceholders(result, inlineCodeMap);
+
   // Restore escaped characters
-  result = restoreEscapedChars(result, escapedCharsMap);
+  result = restorePlaceholders(result, escapedCharsMap);
 
   return result;
 }

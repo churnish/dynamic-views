@@ -364,6 +364,88 @@ More content`;
       expect(result).toBe('Text with and tags');
     });
 
+    it('should strip nested HTML tags but preserve content', () => {
+      const input = '# Test\n<b>Bold <i>italic</i> bold.</b>';
+      const result = sanitizeForTextPreview(input);
+      expect(result).toBe('Bold italic bold.');
+    });
+
+    it('should strip an unmatched closing HTML tag without duplicating content', () => {
+      const input = 'Text <b>a</b> then </div> stray';
+      const result = sanitizeForTextPreview(input);
+      expect(result).toBe('Text a then stray');
+    });
+
+    it('should drop raw-text element contents', () => {
+      const input = 'Before <style>.a { color: red; }</style> after';
+      const result = sanitizeForTextPreview(input);
+      expect(result).toBe('Before after');
+    });
+
+    it('should leave comparison operators alone', () => {
+      const input = 'Value a < b and c > d here';
+      const result = sanitizeForTextPreview(input);
+      expect(result).toBe('Value a < b and c > d here');
+    });
+
+    it('should strip HTML comments', () => {
+      expect(sanitizeForTextPreview('Before <!-- hidden --> after')).toBe(
+        'Before after'
+      );
+      // A `>` inside the comment must not end it early
+      expect(sanitizeForTextPreview('Before <!-- a > b --> after')).toBe(
+        'Before after'
+      );
+    });
+
+    it('should hide everything after an unclosed comment', () => {
+      expect(sanitizeForTextPreview('Visible %% rest is hidden')).toBe(
+        'Visible'
+      );
+      expect(sanitizeForTextPreview('Visible <!-- rest is hidden')).toBe(
+        'Visible'
+      );
+    });
+
+    it('should treat a comment delimiter inside inline code as literal text', () => {
+      expect(sanitizeForTextPreview('Code `%%` here.\nTail survives.')).toBe(
+        'Code %% here. Tail survives.'
+      );
+      expect(sanitizeForTextPreview('Code `<!--` here.\nTail survives.')).toBe(
+        'Code <!-- here. Tail survives.'
+      );
+    });
+
+    it('should keep text after a comment holding the other delimiter', () => {
+      // The `%%` is comment text inside the HTML comment, so it opens nothing
+      expect(sanitizeForTextPreview('A <!-- %% --> tail')).toBe('A tail');
+      expect(sanitizeForTextPreview('B %% <!-- %% tail')).toBe('B tail');
+    });
+
+    it('should treat a comment delimiter inside indented code as literal text', () => {
+      expect(
+        sanitizeForTextPreview('C text\n\n    %% indented code\n\ntail')
+      ).toBe('C text %% indented code tail');
+    });
+
+    it('should keep Markdown syntax inside inline code literal', () => {
+      expect(sanitizeForTextPreview('Literal `**bold**` span')).toBe(
+        'Literal **bold** span'
+      );
+    });
+
+    it('should strip link syntax when the link text contains brackets', () => {
+      const input = '[[FR] Feature request](https://github.com/path/to/repo)';
+      const result = sanitizeForTextPreview(input);
+      expect(result).toBe('[FR] Feature request');
+    });
+
+    it('should strip image syntax when the alt text contains brackets', () => {
+      const input = 'Image: ![Alt [1355x762]](https://example.org/a.png) end';
+      const result = sanitizeForTextPreview(input);
+      expect(result).toBe('Image: end');
+    });
+
     it('should handle code blocks with backticks', () => {
       const input = `Before code
 \`\`\`

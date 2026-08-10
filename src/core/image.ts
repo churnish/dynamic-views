@@ -76,8 +76,12 @@ export function stripWikilinkSyntax(path: string | null | undefined): string {
   if (!path) return '';
   // Trim before matching - wikilinks may have surrounding whitespace
   const trimmed = path.trim();
-  // Capture path before any | (caption) or # (fragment/heading/block)
-  const wikilinkMatch = trimmed.match(/^!?\[\[([^\]|#]+)(?:[|#][^\]]*)?\]\]$/);
+  // Capture path before any | (caption) or # (fragment/heading/block).
+  // A single `]` stays in the path so bracketed names like `Image[1355x762].png`
+  // survive; only `]]` closes the link.
+  const wikilinkMatch = trimmed.match(
+    /^!?\[\[((?:[^\]|#]|](?!]))+)(?:[|#](?:[^\]]|](?!]))*)?]]$/
+  );
   return wikilinkMatch ? wikilinkMatch[1].trim() : trimmed;
 }
 
