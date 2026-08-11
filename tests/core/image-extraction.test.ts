@@ -484,6 +484,48 @@ key: value
         );
       });
 
+      it('should not treat a delimiter inside a cardlink block as a comment', async () => {
+        // Cardlink blocks are exempt from code detection so their image field is
+        // parsed — a delimiter in one must still be literal, or it opens a
+        // comment that never closes and hides every later image
+        mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`\`\`\`cardlink
+url: https://example.com
+image: https://example.com/cover.png
+description: Save 50%% now
+\`\`\`
+
+![[image.jpg]]`);
+
+        expect(await extractImageEmbeds(mockFile, mockApp)).toContain(
+          'app://local/image.jpg'
+        );
+      });
+
+      it('should not treat an HTML delimiter inside a cardlink block as a comment', async () => {
+        mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`\`\`\`cardlink
+url: https://example.com
+description: a <!-- b
+\`\`\`
+
+![[image.jpg]]`);
+
+        expect(await extractImageEmbeds(mockFile, mockApp)).toContain(
+          'app://local/image.jpg'
+        );
+      });
+
+      it('should not treat a delimiter inside a plain fenced block as a comment', async () => {
+        mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`\`\`\`
+%%
+\`\`\`
+
+![[image.jpg]]`);
+
+        expect(await extractImageEmbeds(mockFile, mockApp)).toContain(
+          'app://local/image.jpg'
+        );
+      });
+
       it('should skip cardlink blocks inside a comment', async () => {
         mockApp.vault.cachedRead = vi.fn().mockResolvedValue(`%%
 \`\`\`cardlink

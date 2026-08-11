@@ -7,7 +7,7 @@ import { App, TFile } from 'obsidian';
 import { VALID_IMAGE_EXTENSIONS } from '../constants';
 import { getSlideshowMaxImages } from '../utils/style-settings';
 import { getYouTubeVideoId, getYouTubeThumbnailUrl } from './youtube-preview';
-import { stripWikilinkSyntax, isExternalUrl } from './image';
+import { stripWikilinkSyntax, isExternalUrl, WIKILINK_TARGET } from './image';
 import {
   parseLines,
   findFencedCodeBlocks,
@@ -23,18 +23,14 @@ import {
  */
 const MAX_IMAGE_EXTRACTION_CONTENT_SIZE = 100_000;
 
-// ============================================================================
-// Image Embed Extraction
-// ============================================================================
-
 /**
  * Regex patterns for image extraction
  */
 // Wikilink embed: ![[image.png]] or ![[image.png|caption]] or ![[image.png#heading]]
-// A single `]` is part of the path — Obsidian resolves names like `Image[1355x762].png`
-// (verified against its own parser) — but `]]` always closes the embed
-const WIKILINK_EMBED_REGEX =
-  /!\[\[((?:[^\]|#]|](?!]))+)(?:[|#](?:[^\]]|](?!]))*)?]]/g;
+const WIKILINK_EMBED_REGEX = new RegExp(
+  String.raw`!\[\[${WIKILINK_TARGET}]]`,
+  'g'
+);
 
 // Markdown image: ![...](url) - alt text and URL each allow one level of nesting
 const MD_IMAGE_REGEX = /!\[(?:[^[\]]|\[[^[\]]*])*]\(((?:[^)(]|\([^)(]*\))+)\)/g;
@@ -127,8 +123,16 @@ export async function extractImageEmbeds(
   const isInCode = (position: number) =>
     isInsideCode(position, fencedBlocks, indentedBlocks, inlineRanges);
 
-  // Find commented-out ranges — their embeds never render, so they aren't card images
-  const commentRanges = findCommentRanges(content, isInCode);
+  // Find commented-out ranges — their embeds never render, so they aren't card images.
+  // Cardlink blocks are exempt from isInCode so their image field can be parsed, but a
+  // delimiter in a cardlink title or description is still literal text: without this,
+  // a `%%` in one opens a comment that never closes and hides every image after it.
+  const commentRanges = findCommentRanges(
+    content,
+    (position) =>
+      isInCode(position) ||
+      fencedBlocks.some((b) => position >= b.start && position <= b.end)
+  );
 
   const isSkipped = (position: number) =>
     isInCode(position) || isInsideRange(position, commentRanges);

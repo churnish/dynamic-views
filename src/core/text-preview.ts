@@ -8,23 +8,27 @@ import {
   parseLines,
   findIndentedCodeBlocks,
   findCommentRanges,
+  hasCommentDelimiter,
   isInsideCode,
   removeRanges,
+  INLINE_CODE_REGEX,
 } from './markdown-ranges';
 
 /**
  * Markdown patterns for syntax stripping
  *
  * ORDERING MATTERS - patterns are applied sequentially:
- * 1. Comments first (their contents never render, so nothing inside should survive)
- * 2. Inline code next (preserves content in backticks)
- * 3. Bold+italic (***) before bold (**) before italic (*) - longer patterns first
- * 4. Same for underscores: ___ before __ before _
- * 5. Task markers before bare checkboxes (so "- [ ]" strips fully, not to "[ ]")
- * 6. Task markers before bullet markers (so "- [ ]" isn't just stripped to "[ ]")
- * 7. Raw-text HTML elements before the generic tag sweep (their text is not content)
+ * 1. Bold+italic (***) before bold (**) before italic (*) - longer patterns first
+ * 2. Same for underscores: ___ before __ before _
+ * 3. Wikilinks before Markdown links (a wikilink's inner brackets look like a label)
+ * 4. Task markers before bare checkboxes (so "- [ ]" strips fully, not to "[ ]")
+ * 5. Task markers before bullet markers (so "- [ ]" isn't just stripped to "[ ]")
+ * 6. Raw-text HTML elements before the generic tag sweep (their text is not content)
  *
- * Code blocks and escaped characters are handled separately before these patterns.
+ * Four steps run before this array, in `stripMarkdownSyntax`, in this order:
+ * escaped characters are protected, fenced code blocks are removed, inline code
+ * is masked, and comments are cut. Inline code is masked before comments so that
+ * a delimiter inside a code span is not read as an opener.
  *
  * Each entry carries its own replacement rather than inferring one from the match,
  * because capture-group counts differ per pattern and a shared heuristic silently
@@ -55,6 +59,15 @@ const markdownPatterns: MarkdownPattern[] = [
   { pattern: /_((?:(?!_).)+)_/g, replacement: '$1' }, // Italic underscores
   { pattern: /~~((?:(?!~~).)+)~~/g, replacement: '$1' }, // Strikethrough
   { pattern: /==((?:(?!==).)+)==/g, replacement: '$1' }, // Highlight
+  // Wikilinks run before Markdown links: the bracket-balanced link label matches a
+  // wikilink's inner brackets, so `[[Some Note]](url)` would otherwise be eaten as a
+  // Markdown link and preview as literal `[Some Note]` with the URL dropped
+  { pattern: /!\[\[(?:[^\]]|\](?!\]))+\]\]/g, replacement: '' }, // Embedded wikilinks (images, etc.)
+  {
+    pattern: /\[\[(?:[^\]|]|\](?!\]))+\|((?:[^\]]|\](?!\]))*)\]\]/g,
+    replacement: '$1', // Wikilinks with alias → keep alias
+  },
+  { pattern: /\[\[((?:[^\]]|\](?!\]))+)\]\]/g, replacement: '$1' }, // Wikilinks → keep link text
   {
     pattern: new RegExp(String.raw`!\[${LINK_LABEL}]\([^)]*\)`, 'g'),
     replacement: '', // Markdown images (before links, strip entirely)
@@ -63,12 +76,6 @@ const markdownPatterns: MarkdownPattern[] = [
     pattern: new RegExp(String.raw`\[(${LINK_LABEL})]\([^)]*\)`, 'g'),
     replacement: '$1', // Links — no checkbox exclusion needed: valid checkboxes require \s after ]
   },
-  { pattern: /!\[\[(?:[^\]]|\](?!\]))+\]\]/g, replacement: '' }, // Embedded wikilinks (images, etc.)
-  {
-    pattern: /\[\[(?:[^\]|]|\](?!\]))+\|((?:[^\]]|\](?!\]))*)\]\]/g,
-    replacement: '$1', // Wikilinks with alias → keep alias
-  },
-  { pattern: /\[\[((?:[^\]]|\](?!\]))+)\]\]/g, replacement: '$1' }, // Wikilinks → keep link text
   { pattern: /(^|\s)#[a-zA-Z0-9_\-/]+/g, replacement: '$1' }, // Tags (require whitespace/line-start before #)
   { pattern: /^\s*[-*+]\s*\[[^\]]\]\s*/gm, replacement: '' }, // Task list markers (bullet-style) - before bare checkbox
   { pattern: /^\s*(\d+[.)]\s*)\[[^\]]\]\s*/gm, replacement: '$1' }, // Task list markers (numbered) - preserves number
@@ -88,6 +95,13 @@ const markdownPatterns: MarkdownPattern[] = [
     replacement: '', // Raw-text elements — their text is code, not prose
   },
   {
+    // Declarations and processing instructions render as nothing. The tag sweep
+    // below deliberately requires a letter after `<` so `a < b` survives, which
+    // leaves these to be handled here.
+    pattern: /<!(?:DOCTYPE|\[CDATA\[)[\s\S]*?>|<\?[\s\S]*?\?>/gi,
+    replacement: '',
+  },
+  {
     // Tags only, at any nesting depth — dropping open and close markers alike keeps
     // the text between them, so `<b>a <i>b</i> c</b>` collapses to `a b c`
     pattern: /<\/?[a-zA-Z][^>]*>/g,
@@ -96,19 +110,33 @@ const markdownPatterns: MarkdownPattern[] = [
 ];
 
 /**
+ * Build a placeholder fence that does not occur in the text being processed.
+ *
+ * A note may legitimately contain the literal placeholder text, in which case a
+ * fixed fence would see the author's own words rewritten with mapped content.
+ * Widening until the text is clean makes the substitution collision-proof.
+ * `§` is used because no Markdown pattern in this module treats it as syntax.
+ */
+function uniqueFence(text: string): string {
+  let fence = '§§';
+  while (text.includes(fence)) fence += '§';
+  return fence;
+}
+
+/**
  * Replace escaped characters with placeholders to protect from Markdown processing
  * Returns the text with placeholders and a map to restore them later
- * Using § character to avoid conflicts with Markdown syntax patterns
  */
 function protectEscapedChars(text: string): {
   text: string;
   map: Map<string, string>;
 } {
   const map = new Map<string, string>();
+  const fence = uniqueFence(text);
   let counter = 0;
 
   const result = text.replace(/\\(.)/g, (_match: string, char: string) => {
-    const placeholder = `§§ESCAPED${counter}§§`;
+    const placeholder = `${fence}ESCAPED${counter}${fence}`;
     map.set(placeholder, char); // Store escaped character (without backslash - the escape is consumed)
     counter++;
     return placeholder;
@@ -118,14 +146,24 @@ function protectEscapedChars(text: string): {
 }
 
 /**
- * Restore placeholder substitutions (escaped characters, inline code)
+ * Restore placeholder substitutions (escaped characters, inline code).
+ *
+ * One pass over the text rather than one pass per entry: placeholders are
+ * disjoint literals, so a single scan resolves them all and the cost stops
+ * scaling with how many escapes or code spans a note happens to contain.
+ * Replacing in one pass also means a restored value cannot itself be re-read as
+ * another placeholder.
  */
 function restorePlaceholders(text: string, map: Map<string, string>): string {
-  let result = text;
-  map.forEach((char, placeholder) => {
-    result = result.split(placeholder).join(char);
-  });
-  return result;
+  if (map.size === 0) return text;
+  // Built from the map's own keys, so it matches this call's fence width exactly
+  const alternatives = [...map.keys()]
+    .map((key) => key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('|');
+  return text.replace(
+    new RegExp(alternatives, 'g'),
+    (placeholder) => map.get(placeholder) ?? placeholder
+  );
 }
 
 /**
@@ -141,14 +179,18 @@ function protectInlineCode(text: string): {
   map: Map<string, string>;
 } {
   const map = new Map<string, string>();
+  const fence = uniqueFence(text);
   let counter = 0;
 
-  const result = text.replace(/`([^`]+)`/g, (_match: string, code: string) => {
-    const placeholder = `§§CODE${counter}§§`;
-    map.set(placeholder, code);
-    counter++;
-    return placeholder;
-  });
+  const result = text.replace(
+    INLINE_CODE_REGEX,
+    (_match: string, code: string) => {
+      const placeholder = `${fence}CODE${counter}${fence}`;
+      map.set(placeholder, code);
+      counter++;
+      return placeholder;
+    }
+  );
 
   return { text: result, map };
 }
@@ -242,14 +284,19 @@ export function stripMarkdownSyntax(
   // Fenced code is already gone and inline code is masked, so indented code is
   // the only place left where a bare delimiter is literal text rather than an
   // opener; the shared scanner needs those ranges to leave it alone.
-  const indentedCode = findIndentedCodeBlocks(parseLines(result), []);
-  result = removeRanges(
-    result,
-    // isInsideCode, not isInsideRange — indented ranges carry an inclusive end
-    findCommentRanges(result, (position) =>
-      isInsideCode(position, [], indentedCode, [])
-    )
-  );
+  //
+  // Gated on a delimiter actually being present: line parsing plus indented-code
+  // detection is pure waste on the majority of notes, and it runs per card.
+  if (hasCommentDelimiter(result)) {
+    const indentedCode = findIndentedCodeBlocks(parseLines(result), []);
+    result = removeRanges(
+      result,
+      // isInsideCode, not isInsideRange — indented ranges carry an inclusive end
+      findCommentRanges(result, (position) =>
+        isInsideCode(position, [], indentedCode, [])
+      )
+    );
+  }
 
   // Strip heading markers but keep content (requires space after #, so #hashtag is safe)
   if (options?.preserveHeadings) {

@@ -428,6 +428,65 @@ More content`;
       ).toBe('C text %% indented code tail');
     });
 
+    it('should not let an unpaired backtick shield later block syntax', () => {
+      // A code span is line-bounded, so a stray backtick cannot swallow the
+      // table/heading/list markup that follows it
+      expect(
+        sanitizeForTextPreview(
+          'Cost is 5` per unit\n\n| Item | Price |\n| --- | --- |\n| A | 1 |\n\nEnd `note` here'
+        )
+      ).toBe('Cost is 5` per unit End note here');
+      expect(
+        sanitizeForTextPreview(
+          "Don't use ` here\n# Heading text\n- item with `code`"
+        )
+      ).toBe("Don't use ` here item with code");
+    });
+
+    it('should treat a wikilink followed by parentheses as a wikilink', () => {
+      // The bracket-balanced link label matches a wikilink's inner brackets, so
+      // wikilink patterns must win — otherwise the URL is silently swallowed
+      expect(
+        sanitizeForTextPreview('[[Some Note]](https://example.com) tail')
+      ).toBe('Some Note(https://example.com) tail');
+      expect(sanitizeForTextPreview('[[Note|Alias]](url) tail')).toBe(
+        'Alias(url) tail'
+      );
+      expect(sanitizeForTextPreview('![[img.png]](url) tail')).toBe(
+        '(url) tail'
+      );
+    });
+
+    it('should treat degenerate empty HTML comments as closed', () => {
+      expect(sanitizeForTextPreview('Alpha <!--> Beta gamma')).toBe(
+        'Alpha Beta gamma'
+      );
+      expect(sanitizeForTextPreview('Alpha <!---> Beta gamma')).toBe(
+        'Alpha Beta gamma'
+      );
+      expect(sanitizeForTextPreview('Alpha <!----> Beta gamma')).toBe(
+        'Alpha Beta gamma'
+      );
+    });
+
+    it('should strip HTML declarations and processing instructions', () => {
+      expect(sanitizeForTextPreview('<!DOCTYPE html> Some text')).toBe(
+        'Some text'
+      );
+      expect(sanitizeForTextPreview('<?xml version="1.0"?> Some text')).toBe(
+        'Some text'
+      );
+    });
+
+    it('should not rewrite placeholder text an author wrote themselves', () => {
+      expect(sanitizeForTextPreview('literal §§CODE0§§ and `real` code')).toBe(
+        'literal §§CODE0§§ and real code'
+      );
+      expect(sanitizeForTextPreview('literal §§ESCAPED0§§ and \\* star')).toBe(
+        'literal §§ESCAPED0§§ and * star'
+      );
+    });
+
     it('should keep Markdown syntax inside inline code literal', () => {
       expect(sanitizeForTextPreview('Literal `**bold**` span')).toBe(
         'Literal **bold** span'

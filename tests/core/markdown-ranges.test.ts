@@ -88,6 +88,55 @@ describe('markdown-ranges', () => {
     it('should treat every position as code when told to', () => {
       expect(findCommentRanges('%%x%%', () => true)).toEqual([]);
     });
+
+    it('should handle degenerate delimiter forms', () => {
+      // `%%` opens and closes with the same token, and `<!-->` closes inside the
+      // opener's own characters — both are easy to scan into an infinite or
+      // runaway range
+      expect(findCommentRanges('%%%%')).toEqual([{ start: 0, end: 4 }]);
+      expect(findCommentRanges('%%%')).toEqual([{ start: 0, end: 3 }]);
+      expect(stripComments('%%a%%b%%c%%')).toBe('b');
+      expect(stripComments('x<!-->y')).toBe('xy');
+      expect(stripComments('x<!--->y')).toBe('xy');
+      expect(stripComments('x<!---->y')).toBe('xy');
+    });
+
+    it('should handle an opener at the very end of content', () => {
+      expect(findCommentRanges('tail %%')).toEqual([{ start: 5, end: 7 }]);
+      expect(findCommentRanges('tail <!--')).toEqual([{ start: 5, end: 9 }]);
+    });
+
+    it('should handle empty content', () => {
+      expect(findCommentRanges('')).toEqual([]);
+    });
+  });
+
+  describe('isInsideCode', () => {
+    // Fenced and indented ranges carry an INCLUSIVE end; inline ranges are
+    // exclusive. This asymmetry is why callers must not reach for isInsideRange.
+    const fenced = [{ start: 0, end: 10, isCardlink: false, content: '' }];
+    const indented = [{ start: 20, end: 30 }];
+    const inline = [{ start: 40, end: 50 }];
+
+    it('should treat a fenced range end as inside', () => {
+      expect(isInsideCode(10, fenced, [], [])).toBe(true);
+      expect(isInsideCode(11, fenced, [], [])).toBe(false);
+    });
+
+    it('should treat an indented range end as inside', () => {
+      expect(isInsideCode(30, [], indented, [])).toBe(true);
+      expect(isInsideCode(31, [], indented, [])).toBe(false);
+    });
+
+    it('should treat an inline range end as outside', () => {
+      expect(isInsideCode(49, [], [], inline)).toBe(true);
+      expect(isInsideCode(50, [], [], inline)).toBe(false);
+    });
+
+    it('should not treat a cardlink block as code', () => {
+      const cardlink = [{ start: 0, end: 10, isCardlink: true, content: '' }];
+      expect(isInsideCode(5, cardlink, [], [])).toBe(false);
+    });
   });
 
   describe('isInsideRange', () => {

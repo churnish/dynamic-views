@@ -170,9 +170,20 @@ export function findIndentedCodeBlocks(
   return ranges;
 }
 
-// Match inline code: `...` (backticks with content, not spanning newlines)
-// Module-level to avoid recreation on each call
-const INLINE_CODE_REGEX = /`[^`\n]+`/g;
+/**
+ * Match inline code: `` `...` ``, capturing the span's literal text.
+ *
+ * Deliberately line-bounded, which is stricter than Obsidian. A real code span
+ * does cross a soft line break — `` `a\nb` `` renders as one `<code>` element —
+ * but it cannot cross a *block* boundary, and modelling where blocks begin is a
+ * far larger job than this buys. Line-bounded fails safe: the worst case is a
+ * multi-line span whose backticks stay visible, whereas allowing line breaks
+ * lets one unpaired backtick swallow the headings, lists, and tables after it.
+ *
+ * Module-level to avoid recreation on each call, and shared so the extractor and
+ * the preview stripper classify inline code identically.
+ */
+export const INLINE_CODE_REGEX = /`([^`\n]+)`/g;
 
 /**
  * Find all inline code ranges (single backticks).
@@ -254,6 +265,17 @@ const COMMENT_DELIMITERS = [
 ] as const;
 
 /**
+ * Cheap test for whether content could contain a comment at all.
+ *
+ * Lets callers skip the line parsing and code detection that `findCommentRanges`
+ * needs, on the majority of notes where no opener is present. Derived from
+ * `COMMENT_DELIMITERS` so a third syntax cannot be added to one and not the other.
+ */
+export function hasCommentDelimiter(content: string): boolean {
+  return COMMENT_DELIMITERS.some(({ open }) => content.includes(open));
+}
+
+/**
  * Find all comment ranges in content.
  *
  * Scanning is strictly left to right and each comment consumes its whole span,
@@ -294,6 +316,19 @@ export function findCommentRanges(
       continue;
     }
 
+    // CommonMark's degenerate empty comments `<!-->` and `<!--->`, whose closing
+    // `>` overlaps the opener's own characters and so is unreachable by the close
+    // search below. Without this they read as unclosed and hide the rest of the
+    // note, while the four-dash `<!---->` works — an inconsistency, not a rule.
+    const degenerate =
+      opener.open === '<!--' && /^-?>/.exec(content.slice(contentStart));
+    if (degenerate) {
+      const end = contentStart + degenerate[0].length;
+      ranges.push({ start: opener.start, end });
+      cursor = end;
+      continue;
+    }
+
     const closeIndex = content.indexOf(opener.close, contentStart);
     ranges.push({
       start: opener.start,
@@ -309,6 +344,9 @@ export function findCommentRanges(
 
 /**
  * Check if a position falls inside any half-open range.
+ *
+ * Comment ranges only. Fenced and indented code ranges carry an inclusive `end`
+ * and will be off by one here — test those with `isInsideCode`.
  */
 export function isInsideRange(position: number, ranges: TextRange[]): boolean {
   return ranges.some((r) => position >= r.start && position < r.end);

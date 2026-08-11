@@ -67,6 +67,15 @@ function hasValidImageExtension(path: string): boolean {
 }
 
 /**
+ * Wikilink body: the target in group 1, then an optional caption or fragment.
+ *
+ * A single `]` stays in the target so bracketed names like `Image[1355x762].png`
+ * survive — Obsidian's own parser resolves those — while `]]` still closes the
+ * link. Shared so the path form and the embed form cannot drift apart.
+ */
+export const WIKILINK_TARGET = String.raw`((?:[^\]|#]|](?!]))+)(?:[|#](?:[^\]]|](?!]))*)?`;
+
+/**
  * Strip wikilink syntax from image path
  * Handles: [[path]], ![[path]], [[path|caption]], [[path#heading]], [[path#^block]]
  * @param path - Path that may contain wikilink syntax
@@ -76,11 +85,9 @@ export function stripWikilinkSyntax(path: string | null | undefined): string {
   if (!path) return '';
   // Trim before matching - wikilinks may have surrounding whitespace
   const trimmed = path.trim();
-  // Capture path before any | (caption) or # (fragment/heading/block).
-  // A single `]` stays in the path so bracketed names like `Image[1355x762].png`
-  // survive; only `]]` closes the link.
+  // Capture path before any | (caption) or # (fragment/heading/block)
   const wikilinkMatch = trimmed.match(
-    /^!?\[\[((?:[^\]|#]|](?!]))+)(?:[|#](?:[^\]]|](?!]))*)?]]$/
+    new RegExp(String.raw`^!?\[\[${WIKILINK_TARGET}]]$`)
   );
   return wikilinkMatch ? wikilinkMatch[1].trim() : trimmed;
 }
