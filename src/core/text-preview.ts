@@ -213,10 +213,16 @@ function removeCodeBlocks(text: string): string {
     const fenceLength = fence.length;
     const openIndex = openMatch.index!;
 
-    // Build regex for matching closing fence (same char, exact count)
+    // Build regex for matching closing fence (same char, exact count).
+    // The closer may be indented, matching the opener above and
+    // `findFencedCodeBlocks` — a fence inside a list item is indented on both
+    // sides, and requiring a flush-left closer left the block open, so its code
+    // body leaked into the preview while the extractor correctly hid it.
+    // `[ \t]*` rather than `\s*`: the latter crosses newlines and would let a
+    // blank line plus a later fence close the block.
     const escapedChar = fenceChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const closePattern = new RegExp(
-      `^${escapedChar}{${fenceLength}}\\s*$`,
+      `^[ \\t]*${escapedChar}{${fenceLength}}[ \\t]*$`,
       'm'
     );
 

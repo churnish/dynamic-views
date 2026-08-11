@@ -763,6 +763,30 @@ After`;
       expect(result).toBe('Text After');
     });
 
+    it('should close an indented fence inside a list item', () => {
+      // A flush-left-only closer left the block open, leaking the code body into
+      // the preview while the extractor correctly treated it as code
+      const input = `- item:
+
+    \`\`\`js
+    const secret = 1;
+    \`\`\`
+
+Tail text.`;
+      expect(sanitizeForTextPreview(input)).toBe('item: Tail text.');
+    });
+
+    it('should not let a comment inside an indented fence escape', () => {
+      const input = `- item:
+
+    \`\`\`js
+    %%
+    \`\`\`
+
+Tail text.`;
+      expect(sanitizeForTextPreview(input)).toBe('item: Tail text.');
+    });
+
     it('should handle malformed/unclosed Markdown links', () => {
       const input = 'Text with [unclosed link and more text';
       const result = sanitizeForTextPreview(input);

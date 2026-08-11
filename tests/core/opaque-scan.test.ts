@@ -262,10 +262,23 @@ describe('opaque-scan', () => {
     it('should agree on an opener inside a fenced block', async () => {
       // The region sits after the block on purpose: an embed written inside a
       // fence is dropped by both consumers for reasons that have nothing to do
-      // with the comment scan, so that phrasing would pass vacuously. Fences must
-      // be flush left — an indented closer never closes in `removeCodeBlocks`
+      // with the comment scan, so that phrasing would pass vacuously
       expect(
         await verdicts(['```', '%%', '```', '', REGION].join('\n'))
+      ).toEqual(KEPT);
+    });
+
+    it('should agree on an opener inside an indented fenced block', async () => {
+      // A fence inside a list item is indented on both sides. `removeCodeBlocks`
+      // once required a flush-left closer, so the block stayed open and its body
+      // leaked into the preview while the extractor hid it — the one shape where
+      // the two consumers disagreed outright
+      expect(
+        await verdicts(
+          ['- item:', '', '    ```js', '    %%', '    ```', '', REGION].join(
+            '\n'
+          )
+        )
       ).toEqual(KEPT);
     });
 
