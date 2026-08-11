@@ -1,11 +1,51 @@
 import { vi } from 'vitest';
 import { extractImageEmbeds } from '../../src/core/image-extraction';
+import { getSlideshowMaxImages } from '../../src/utils/style-settings';
+import { clearYouTubeThumbnailCache } from '../../src/core/youtube-preview';
 import { App, TFile } from 'obsidian';
 
 // Mock style settings
 vi.mock('../../src/utils/style-settings', () => ({
   getSlideshowMaxImages: vi.fn(() => 10),
 }));
+
+/** The subset of the mock `Image` from `tests/setup.ts` these tests drive. */
+interface MockImage {
+  src: string;
+  naturalWidth: number;
+  onload: (() => void) | null;
+  onerror: (() => void) | null;
+}
+
+const mockImages = (): MockImage[] => (global as any).__imageInstances;
+
+/**
+ * Wait until a probe has requested `videoId` at `quality`, then return it.
+ *
+ * Probes run concurrently, so instances land in the global array interleaved and
+ * cannot be addressed by creation index the way the sequential
+ * `youtube-preview` tests do — match on `src` instead.
+ */
+async function waitForProbe(
+  videoId: string,
+  quality: string
+): Promise<MockImage> {
+  const url = `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
+  for (let tick = 0; tick < 50; tick++) {
+    const img = mockImages().find((candidate) => candidate.src === url);
+    if (img) return img;
+    await Promise.resolve();
+  }
+  throw new Error(`No probe requested ${url}`);
+}
+
+async function succeedProbe(videoId: string, quality = 'maxresdefault') {
+  (await waitForProbe(videoId, quality)).onload?.();
+}
+
+async function failProbe(videoId: string, quality: string) {
+  (await waitForProbe(videoId, quality)).onerror?.();
+}
 
 describe('image-extraction', () => {
   describe('extractImageEmbeds', () => {
@@ -16,6 +56,9 @@ describe('image-extraction', () => {
       mockApp = new App();
       mockFile = { path: 'note.md' } as TFile;
       mockApp.vault.cachedRead = vi.fn().mockResolvedValue('');
+      // Resolved thumbnails persist for the life of the module, so fixtures
+      // reusing a video ID would otherwise inherit a previous test's answer
+      clearYouTubeThumbnailCache();
     });
 
     it('should return empty array for empty file', async () => {
@@ -535,6 +578,106 @@ image: https://example.com/cover.png
 %%`);
 
         expect(await extractImageEmbeds(mockFile, mockApp)).toEqual([]);
+      });
+    });
+
+    // Probes are pre-started concurrently, bounded by the slideshow image cap,
+    // and fall back to a lazy call for embeds the cap did not cover
+    describe('YouTube thumbnail resolution', () => {
+      const VIDEO_A = 'AAAAAAAAAAA';
+      const VIDEO_B = 'BBBBBBBBBBB';
+      const thumbnail = (videoId: string) =>
+        `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+
+      beforeEach(() => {
+        vi.useFakeTimers();
+        (global as any).__imageInstances = [];
+        (global as any).__lastImage = null;
+        vi.mocked(getSlideshowMaxImages).mockReturnValue(10);
+      });
+
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      it('should resolve two YouTube embeds in document order', async () => {
+        mockApp.vault.cachedRead = vi
+          .fn()
+          .mockResolvedValue(
+            `![](https://www.youtube.com/watch?v=${VIDEO_A})\n\n![](https://youtu.be/${VIDEO_B})`
+          );
+
+        const promise = extractImageEmbeds(mockFile, mockApp);
+
+        // Settling the second video first proves both probes were in flight at
+        // once — resolving one at a time would not have requested B yet — and
+        // that the result still follows document order
+        await succeedProbe(VIDEO_B);
+        await succeedProbe(VIDEO_A);
+
+        expect(await promise).toEqual([thumbnail(VIDEO_A), thumbnail(VIDEO_B)]);
+      });
+
+      it('should share one probe between two URL forms of the same video', async () => {
+        mockApp.vault.cachedRead = vi
+          .fn()
+          .mockResolvedValue(
+            `![](https://youtu.be/${VIDEO_A})\n\n![](https://www.youtube.com/watch?v=${VIDEO_A})`
+          );
+
+        const promise = extractImageEmbeds(mockFile, mockApp);
+        await succeedProbe(VIDEO_A);
+        const result = await promise;
+
+        // Dedup upstream is by path, so both embeds survive it — keying probes
+        // by video ID is what stops the same thumbnail being fetched twice
+        expect(mockImages()).toHaveLength(1);
+        expect(result).toEqual([thumbnail(VIDEO_A), thumbnail(VIDEO_A)]);
+      });
+
+      it('should resolve past the pre-start cap lazily', async () => {
+        // A YouTube embed that resolves to nothing fills no result slot, so the
+        // loop can run further than the cap's worth of pre-started probes
+        vi.mocked(getSlideshowMaxImages).mockReturnValue(1);
+        mockApp.vault.cachedRead = vi
+          .fn()
+          .mockResolvedValue(
+            `![](https://www.youtube.com/watch?v=${VIDEO_A})\n\n![](https://youtu.be/${VIDEO_B})`
+          );
+
+        const promise = extractImageEmbeds(mockFile, mockApp);
+
+        await waitForProbe(VIDEO_A, 'maxresdefault');
+        expect(mockImages()).toHaveLength(1);
+
+        await failProbe(VIDEO_A, 'maxresdefault');
+        await failProbe(VIDEO_A, 'hqdefault');
+        await failProbe(VIDEO_A, 'mqdefault');
+        await succeedProbe(VIDEO_B);
+
+        expect(await promise).toEqual([thumbnail(VIDEO_B)]);
+      });
+
+      it('should start no probes when YouTube is disabled', async () => {
+        mockApp.vault.cachedRead = vi
+          .fn()
+          .mockResolvedValue(`![](https://www.youtube.com/watch?v=${VIDEO_A})`);
+
+        expect(
+          await extractImageEmbeds(mockFile, mockApp, { includeYoutube: false })
+        ).toEqual([]);
+        expect(mockImages()).toEqual([]);
+      });
+
+      it('should start no probes for a non-YouTube external image', async () => {
+        mockApp.vault.cachedRead = vi
+          .fn()
+          .mockResolvedValue('![](https://example.org/a.png)');
+
+        expect(await extractImageEmbeds(mockFile, mockApp)).toEqual([
+          'https://example.org/a.png',
+        ]);
+        expect(mockImages()).toEqual([]);
       });
     });
 

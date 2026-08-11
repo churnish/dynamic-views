@@ -39,8 +39,8 @@ dynamic-views/
 │   │   ├── image-loader.ts           # Image aspect ratio caching + fallbacks
 │   │   ├── image-viewer.ts           # Image viewer (hand-rolled zoom/pan gestures)
 │   │   ├── keyboard-nav.ts           # Keyboard focus management for cards
-│   │   ├── markdown-ranges.ts        # Shared code + comment range scanning (positions of fenced/indented/inline code and %%/<!-- --> comments)
 │   │   ├── notebook-navigator.ts     # Notebook Navigator plugin integration
+│   │   ├── opaque-scan.ts            # Lazy per-note scan of regions where syntax is literal (fenced/indented/inline code, %% and <!-- --> comments) + cardlink block bodies
 │   │   ├── poster.ts                 # Poster format utilities (static clipping, scroll reset)
 │   │   ├── poster-stretch.ts         # Pure poster row stretch algorithm (extracted for testability)
 │   │   ├── property-display.ts       # Property display names, settings normalization
@@ -133,7 +133,7 @@ dynamic-views/
 │   │   ├── image.test.ts
 │   │   ├── image-extraction.test.ts
 │   │   ├── image-loader.test.ts
-│   │   ├── markdown-ranges.test.ts
+│   │   ├── opaque-scan.test.ts
 │   │   ├── poster.test.ts
 │   │   ├── property-display.test.ts
 │   │   ├── property-extraction.test.ts

@@ -4,15 +4,7 @@
  */
 
 import { App, TFile } from 'obsidian';
-import {
-  parseLines,
-  findIndentedCodeBlocks,
-  findCommentRanges,
-  hasCommentDelimiter,
-  isInsideCode,
-  removeRanges,
-  INLINE_CODE_REGEX,
-} from './markdown-ranges';
+import { scanOpaque, INLINE_CODE_REGEX } from './opaque-scan';
 
 /**
  * Markdown patterns for syntax stripping
@@ -26,9 +18,10 @@ import {
  * 6. Raw-text HTML elements before the generic tag sweep (their text is not content)
  *
  * Four steps run before this array, in `stripMarkdownSyntax`, in this order:
- * escaped characters are protected, fenced code blocks are removed, inline code
- * is masked, and comments are cut. Inline code is masked before comments so that
- * a delimiter inside a code span is not read as an opener.
+ * escaped characters are protected, fenced code blocks are removed, comments are
+ * cut, and inline code is set aside. Comments are cut before inline code is set
+ * aside because the comment scan does its own code detection and needs the real
+ * backticks — see the call site.
  *
  * Each entry carries its own replacement rather than inferring one from the match,
  * because capture-group counts differ per pattern and a shared heuristic silently
@@ -169,10 +162,13 @@ function restorePlaceholders(text: string, map: Map<string, string>): string {
 /**
  * Replace inline code spans with placeholders holding their literal text.
  *
- * Obsidian renders a code span verbatim — `` `%%` `` is two percent signs, not a
- * comment opener, and `` `**x**` `` is not bold (verified in Reading view). Hiding
- * spans from the pattern pass is what keeps a stray delimiter inside code from
- * being read as syntax that swallows the rest of the note.
+ * Obsidian renders a code span verbatim — `` `**x**` `` is not bold (verified in
+ * Reading view). Setting spans aside keeps a stray delimiter inside code from
+ * being read as syntax by the pattern pass.
+ *
+ * Comment delimiters are not part of that job. The comment cut runs first and
+ * classifies code itself, so by the time this runs an opener inside a code span
+ * has already been ruled out.
  */
 function protectInlineCode(text: string): {
   text: string;
@@ -253,6 +249,70 @@ function removeCodeBlocks(text: string): string {
 }
 
 /**
+ * Maximum raw content stripped for one preview (20KB).
+ *
+ * A preview is capped at 1,000 characters, and the worst measured *finite*
+ * stripped-to-raw ratio is 0.26 (link-dense reference lists). Rounding that down
+ * to 0.20 gives 5,000 raw characters per 1,000 of output; 20KB is that with 4x
+ * headroom for a note whose lead-in is not prose.
+ *
+ * Accepted limitation: a note whose first 20KB is entirely images, tables, or
+ * code now previews as empty, where before the cap it reached the prose below.
+ */
+const MAX_TEXT_PREVIEW_CONTENT_SIZE = 20_000;
+
+/**
+ * Index of the fence opener left unclosed at the end of `text`, or -1.
+ *
+ * Fence matching mirrors `removeCodeBlocks`: an opener may be indented and carry
+ * an info string, while a closer must start the line and repeat the same
+ * character exactly as many times with nothing after it.
+ */
+function findUnclosedFenceStart(text: string): number {
+  let openIndex = -1;
+  let openFence = '';
+  let position = 0;
+
+  for (const line of text.split('\n')) {
+    const fenceMatch = /^(\s*)([`~]{3,})(.*)$/.exec(line);
+    if (fenceMatch) {
+      const [, indent, fence, info] = fenceMatch;
+      if (openIndex === -1) {
+        openIndex = position;
+        openFence = fence;
+      } else if (indent === '' && fence === openFence && info.trim() === '') {
+        openIndex = -1;
+      }
+    }
+    position += line.length + 1; // +1 for newline
+  }
+
+  return openIndex;
+}
+
+/**
+ * Truncate content to the preview cap at a line boundary.
+ *
+ * Backing off past a fence the cut landed inside is not cosmetic: an unclosed
+ * opener makes `removeCodeBlocks` drop only the opener line, so the code body
+ * survives as prose and becomes the preview. That was observed putting a
+ * credential-shaped string on a card.
+ */
+function truncateForPreview(content: string): string {
+  if (content.length <= MAX_TEXT_PREVIEW_CONTENT_SIZE) return content;
+
+  // Cut at a line boundary so no wikilink, fence, or comment is split mid-syntax
+  const lastNewline = content.lastIndexOf('\n', MAX_TEXT_PREVIEW_CONTENT_SIZE);
+  const truncated = content.slice(
+    0,
+    lastNewline !== -1 ? lastNewline : MAX_TEXT_PREVIEW_CONTENT_SIZE
+  );
+
+  const unclosedFence = findUnclosedFenceStart(truncated);
+  return unclosedFence === -1 ? truncated : truncated.slice(0, unclosedFence);
+}
+
+/**
  * Strip Markdown syntax from text while preserving content
  * @param options.preserveHeadings - Strip `#` markers but keep heading text
  */
@@ -276,27 +336,19 @@ export function stripMarkdownSyntax(
   // Remove code blocks before other processing (important for tildes before strikethrough)
   let result = removeCodeBlocks(protectedText);
 
-  // Set inline code aside so its literal text is never read as Markdown syntax
+  // Cut comments before any other pattern runs — nothing inside one renders.
+  // The scanner classifies code itself, so it must see the real backticks: only
+  // openers are code-aware, and a closer written inside a code span still closes
+  // the comment. Masking spans first would hide those closers from it.
+  result = scanOpaque(result).cutComments();
+
+  // Set inline code aside so its literal text is never read as Markdown syntax.
+  // `scanOpaque` matched code spans against the pre-cut string while this
+  // re-matches the post-cut one, so the two sets can differ — a comment ending
+  // inside a span leaves that span's opening backtick unpaired and visible. That
+  // mirrors how the renderer re-tokenizes what survives, and is intended.
   const { text: codeProtected, map: inlineCodeMap } = protectInlineCode(result);
   result = codeProtected;
-
-  // Cut comments before any other pattern runs — nothing inside one renders.
-  // Fenced code is already gone and inline code is masked, so indented code is
-  // the only place left where a bare delimiter is literal text rather than an
-  // opener; the shared scanner needs those ranges to leave it alone.
-  //
-  // Gated on a delimiter actually being present: line parsing plus indented-code
-  // detection is pure waste on the majority of notes, and it runs per card.
-  if (hasCommentDelimiter(result)) {
-    const indentedCode = findIndentedCodeBlocks(parseLines(result), []);
-    result = removeRanges(
-      result,
-      // isInsideCode, not isInsideRange — indented ranges carry an inclusive end
-      findCommentRanges(result, (position) =>
-        isInsideCode(position, [], indentedCode, [])
-      )
-    );
-  }
 
   // Strip heading markers but keep content (requires space after #, so #hashtag is safe)
   if (options?.preserveHeadings) {
@@ -338,7 +390,7 @@ export function sanitizeForTextPreview(
 ): string {
   // Remove frontmatter (supports both LF and CRLF line endings)
   const cleaned = content.replace(/^---\r?\n[\s\S]*?\r?\n---/, '').trim();
-  let stripped = stripMarkdownSyntax(cleaned, {
+  let stripped = stripMarkdownSyntax(truncateForPreview(cleaned), {
     preserveHeadings: options?.preserveHeadings,
   });
 

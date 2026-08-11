@@ -8,15 +8,7 @@ import { VALID_IMAGE_EXTENSIONS } from '../constants';
 import { getSlideshowMaxImages } from '../utils/style-settings';
 import { getYouTubeVideoId, getYouTubeThumbnailUrl } from './youtube-preview';
 import { stripWikilinkSyntax, isExternalUrl, WIKILINK_TARGET } from './image';
-import {
-  parseLines,
-  findFencedCodeBlocks,
-  findIndentedCodeBlocks,
-  findInlineCodeRanges,
-  isInsideCode,
-  findCommentRanges,
-  isInsideRange,
-} from './markdown-ranges';
+import { scanOpaque } from './opaque-scan';
 
 /**
  * Maximum content size to parse for image extraction (100KB)
@@ -108,61 +100,34 @@ export async function extractImageEmbeds(
     }
   }
 
-  // Parse lines once for all code detection passes
-  const lines = parseLines(content);
-
-  // Find all fenced code blocks (``` or ~~~)
-  const fencedBlocks = findFencedCodeBlocks(content, lines);
-
-  // Find all indented code blocks (requires preceding blank line per CommonMark)
-  const indentedBlocks = findIndentedCodeBlocks(lines, fencedBlocks);
-
-  // Find all inline code ranges (excludes fenced blocks)
-  const inlineRanges = findInlineCodeRanges(content, fencedBlocks);
-
-  const isInCode = (position: number) =>
-    isInsideCode(position, fencedBlocks, indentedBlocks, inlineRanges);
-
-  // Find commented-out ranges — their embeds never render, so they aren't card images.
-  // Cardlink blocks are exempt from isInCode so their image field can be parsed, but a
-  // delimiter in a cardlink title or description is still literal text: without this,
-  // a `%%` in one opens a comment that never closes and hides every image after it.
-  const commentRanges = findCommentRanges(
-    content,
-    (position) =>
-      isInCode(position) ||
-      fencedBlocks.some((b) => position >= b.start && position <= b.end)
-  );
-
-  const isSkipped = (position: number) =>
-    isInCode(position) || isInsideRange(position, commentRanges);
+  // Code and comment regions: an embed inside either one never renders, so it is
+  // not a card image
+  const scan = scanOpaque(content);
 
   // Collect all embeds with positions
   const embeds: EmbedMatch[] = [];
 
   // Extract cardlink images first
   if (includeCardLink) {
-    for (const block of fencedBlocks) {
-      if (block.isCardlink && !isInsideRange(block.start, commentRanges)) {
-        const match = CARDLINK_IMAGE_REGEX.exec(block.content);
-        if (match) {
-          let imagePath = match[1].trim();
-          // Remove surrounding quotes if present
-          if (
-            (imagePath.startsWith('"') && imagePath.endsWith('"')) ||
-            (imagePath.startsWith("'") && imagePath.endsWith("'"))
-          ) {
-            imagePath = imagePath.slice(1, -1);
-          }
-          // Strip wikilink syntax if present
-          imagePath = stripWikilinkSyntax(imagePath);
-          if (imagePath) {
-            embeds.push({
-              type: 'cardlink',
-              path: imagePath,
-              position: block.start,
-            });
-          }
+    for (const block of scan.cardlinkBlocks) {
+      const match = CARDLINK_IMAGE_REGEX.exec(block.content);
+      if (match) {
+        let imagePath = match[1].trim();
+        // Remove surrounding quotes if present
+        if (
+          (imagePath.startsWith('"') && imagePath.endsWith('"')) ||
+          (imagePath.startsWith("'") && imagePath.endsWith("'"))
+        ) {
+          imagePath = imagePath.slice(1, -1);
+        }
+        // Strip wikilink syntax if present
+        imagePath = stripWikilinkSyntax(imagePath);
+        if (imagePath) {
+          embeds.push({
+            type: 'cardlink',
+            path: imagePath,
+            position: block.start,
+          });
         }
       }
     }
@@ -171,7 +136,7 @@ export async function extractImageEmbeds(
   // Extract wikilink embeds
   for (const match of content.matchAll(WIKILINK_EMBED_REGEX)) {
     const position = match.index;
-    if (!isSkipped(position)) {
+    if (!scan.isOpaque(position)) {
       embeds.push({
         type: 'wikilink',
         path: match[1].trim(),
@@ -183,7 +148,7 @@ export async function extractImageEmbeds(
   // Extract Markdown image embeds
   for (const match of content.matchAll(MD_IMAGE_REGEX)) {
     const position = match.index;
-    if (!isSkipped(position)) {
+    if (!scan.isOpaque(position)) {
       // Strip optional title from URL
       let url = match[1].trim().replace(MD_IMAGE_TITLE_REGEX, '');
       // Decode URL-encoded characters (e.g., %20 -> space) for local paths
@@ -213,6 +178,34 @@ export async function extractImageEmbeds(
     return true;
   });
 
+  // Pre-start YouTube probes so their network waits overlap. Each probe walks up
+  // to three quality levels with a 5s timeout apiece, and resolving them one at a
+  // time inside the loop below serialises every one of those waits.
+  //
+  // Bounded by `maxImages` rather than started for every embed: a 100KB link dump
+  // admits roughly two thousand YouTube embeds, and firing three requests for each
+  // would compete with real card images on a phone when at most `maxImages` of
+  // them can ever be shown. The trade-off is that probes start for embeds the cap
+  // may never reach — bounded waste in exchange for bounded load.
+  //
+  // Keyed by video ID rather than path, because the dedup above is by path and
+  // `youtu.be/X` and `watch?v=X` are two embeds sharing one thumbnail.
+  const youtubeProbes = new Map<string, Promise<string | null>>();
+  if (includeYoutube) {
+    for (const embed of uniqueEmbeds) {
+      if (youtubeProbes.size >= maxImages) break;
+      if (!isExternalUrl(embed.path)) continue;
+      const videoId = getYouTubeVideoId(embed.path);
+      if (!videoId || youtubeProbes.has(videoId)) continue;
+      // A probe the loop below never reaches is abandoned with nothing awaiting
+      // it, so attach the handler here rather than leave a rejection unobserved
+      youtubeProbes.set(
+        videoId,
+        getYouTubeThumbnailUrl(videoId).catch(() => null)
+      );
+    }
+  }
+
   // Process embeds and resolve to URLs
   const resultUrls: string[] = [];
 
@@ -226,7 +219,10 @@ export async function extractImageEmbeds(
       const videoId = getYouTubeVideoId(path);
       if (videoId) {
         if (includeYoutube) {
-          const thumbnailUrl = await getYouTubeThumbnailUrl(videoId);
+          // A YouTube embed resolving to null fills no result slot, so this loop
+          // can run past the last pre-started probe — resolve those lazily
+          const thumbnailUrl = await (youtubeProbes.get(videoId) ??
+            getYouTubeThumbnailUrl(videoId));
           if (thumbnailUrl) {
             resultUrls.push(thumbnailUrl);
           }

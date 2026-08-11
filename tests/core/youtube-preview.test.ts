@@ -2,9 +2,16 @@ import { vi } from 'vitest';
 import {
   getYouTubeVideoId,
   getYouTubeThumbnailUrl,
+  clearYouTubeThumbnailCache,
 } from '../../src/core/youtube-preview';
 
 describe('youtube-preview', () => {
+  // Resolved thumbnails persist for the life of the module, so fixtures reusing
+  // a video ID would otherwise inherit the previous test's answer
+  beforeEach(() => {
+    clearYouTubeThumbnailCache();
+  });
+
   describe('getYouTubeVideoId', () => {
     it('should extract video ID from standard watch URL', () => {
       expect(getYouTubeVideoId('https://youtube.com/watch?v=dQw4w9WgXcQ')).toBe(
@@ -37,6 +44,43 @@ describe('youtube-preview', () => {
       expect(getYouTubeVideoId('https://youtube.com/shorts/dQw4w9WgXcQ')).toBe(
         'dQw4w9WgXcQ'
       );
+    });
+
+    it('should extract video ID from any YouTube subdomain', () => {
+      expect(
+        getYouTubeVideoId('https://music.youtube.com/watch?v=dQw4w9WgXcQ')
+      ).toBe('dQw4w9WgXcQ');
+      expect(
+        getYouTubeVideoId('https://gaming.youtube.com/watch?v=dQw4w9WgXcQ')
+      ).toBe('dQw4w9WgXcQ');
+    });
+
+    it('should ignore a trailing dot in a fully-qualified host', () => {
+      expect(
+        getYouTubeVideoId('https://www.youtube.com./watch?v=dQw4w9WgXcQ')
+      ).toBe('dQw4w9WgXcQ');
+    });
+
+    it('should extract video ID from a live URL', () => {
+      expect(getYouTubeVideoId('https://youtube.com/live/dQw4w9WgXcQ')).toBe(
+        'dQw4w9WgXcQ'
+      );
+    });
+
+    it('should ignore trailing slashes on a short URL', () => {
+      // A slash left in the ID produces a thumbnail URL that 404s
+      expect(getYouTubeVideoId('https://youtu.be/dQw4w9WgXcQ/')).toBe(
+        'dQw4w9WgXcQ'
+      );
+    });
+
+    it('should not treat a lookalike host as YouTube', () => {
+      expect(
+        getYouTubeVideoId('https://notyoutube.com/watch?v=dQw4w9WgXcQ')
+      ).toBeNull();
+      expect(
+        getYouTubeVideoId('https://youtube.com.evil.test/watch?v=dQw4w9WgXcQ')
+      ).toBeNull();
     });
 
     it('should return null for non-YouTube URLs', () => {
@@ -104,6 +148,38 @@ describe('youtube-preview', () => {
       expect(result).toBe(
         'https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg'
       );
+    });
+
+    it('should reuse a resolved thumbnail without probing again', async () => {
+      const first = getYouTubeThumbnailUrl('dQw4w9WgXcQ');
+      const img = (global as any).__imageInstances[0];
+      img.naturalWidth = 1280;
+      img.onload();
+      expect(await first).toBe(
+        'https://img.youtube.com/vi/dQw4w9WgXcQ/maxresdefault.jpg'
+      );
+
+      const probesAfterFirst = (global as any).__imageInstances.length;
+      const second = getYouTubeThumbnailUrl('dQw4w9WgXcQ');
+
+      expect(await second).toBe(await first);
+      expect((global as any).__imageInstances.length).toBe(probesAfterFirst);
+    });
+
+    it('should reuse a miss without probing again', async () => {
+      const first = getYouTubeThumbnailUrl('jNQXAC9IVRw');
+      // Every level returns the 120px placeholder
+      for (let level = 0; level < 3; level++) {
+        const img = (global as any).__imageInstances[level];
+        img.naturalWidth = 120;
+        img.onload();
+        await Promise.resolve();
+      }
+      expect(await first).toBeNull();
+
+      const probesAfterFirst = (global as any).__imageInstances.length;
+      expect(await getYouTubeThumbnailUrl('jNQXAC9IVRw')).toBeNull();
+      expect((global as any).__imageInstances.length).toBe(probesAfterFirst);
     });
 
     it('should return null when all thumbnails are below mqdefault width (320px)', async () => {

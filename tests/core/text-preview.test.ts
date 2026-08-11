@@ -398,11 +398,22 @@ More content`;
       );
     });
 
-    it('should hide everything after an unclosed comment', () => {
-      expect(sanitizeForTextPreview('Visible %% rest is hidden')).toBe(
+    it('should render an unclosed inline opener literally', () => {
+      // An opener with text before it must close on its own line or it is not a
+      // comment at all — verified against Obsidian's renderer
+      expect(sanitizeForTextPreview('Visible %% rest of this line')).toBe(
+        'Visible %% rest of this line'
+      );
+      expect(sanitizeForTextPreview('Visible <!-- rest of this line')).toBe(
+        'Visible <!-- rest of this line'
+      );
+    });
+
+    it('should hide everything after an unclosed block opener', () => {
+      expect(sanitizeForTextPreview('Visible\n%%\nrest is hidden')).toBe(
         'Visible'
       );
-      expect(sanitizeForTextPreview('Visible <!-- rest is hidden')).toBe(
+      expect(sanitizeForTextPreview('Visible\n<!--\nrest is hidden')).toBe(
         'Visible'
       );
     });
@@ -414,6 +425,16 @@ More content`;
       expect(sanitizeForTextPreview('Code `<!--` here.\nTail survives.')).toBe(
         'Code <!-- here. Tail survives.'
       );
+    });
+
+    it('should let a closer inside inline code close the comment', () => {
+      // Only openers are code-aware. Obsidian renders this fixture as
+      // ``Alpha ` still hidden %% Beta`` — the comment ends at the backticked
+      // closer, the span's opening backtick is left unpaired and visible, and
+      // the trailing `%%` is an unclosed inline opener that stays literal
+      expect(
+        sanitizeForTextPreview('Alpha %% hidden `%%` still hidden %% Beta')
+      ).toBe('Alpha ` still hidden %% Beta');
     });
 
     it('should keep text after a comment holding the other delimiter', () => {
@@ -609,6 +630,34 @@ Regular text`;
       const result = sanitizeForTextPreview(input);
       expect(result).toBe('Short content');
       expect(result.endsWith('…')).toBe(false);
+    });
+
+    it('should ignore content past the input cap', () => {
+      // Heading lines strip to nothing, so without the 20KB cap the marker below
+      // them would reach the preview — the accepted limitation, stated as a test
+      const input =
+        'Lead prose.\n' + '# Heading\n'.repeat(2500) + 'TAIL_MARKER';
+      expect(sanitizeForTextPreview(input, 'never')).toBe('Lead prose.');
+    });
+
+    it('should keep prose from within the input cap', () => {
+      const input = 'Lead prose.\n' + 'padding line\n'.repeat(2000);
+      expect(sanitizeForTextPreview(input, 'never')).toMatch(
+        /^Lead prose\. padding line/
+      );
+    });
+
+    it('should not leak a code block the input cap cut in half', () => {
+      // Cutting mid-block leaves an unclosed opener, and `removeCodeBlocks` drops
+      // only the opener line — the block body would become the preview. Padding
+      // with headings keeps the output short enough for a leak to be visible
+      const input =
+        'Lead prose.\n' +
+        '# Heading\n'.repeat(1900) +
+        '```\n' +
+        'SECRET_TOKEN=abcdef\n'.repeat(500) +
+        '```\n';
+      expect(sanitizeForTextPreview(input, 'never')).toBe('Lead prose.');
     });
 
     it('should omit first line when omitFirstLine is always', () => {

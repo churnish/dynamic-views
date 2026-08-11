@@ -2,7 +2,7 @@
 title: Image loading and caching pipeline
 description: Image URL resolution, two-tier dedup cache, broken URL tracking, aspect ratio caching, and load handler wiring for both backends.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-10
+updated: 2026-08-11
 ---
 # Image loading and caching pipeline
 
@@ -17,6 +17,7 @@ The image loading pipeline resolves property values and in-note embeds into rend
 | `src/core/content-loader.ts` | Async image/text loading with two-tier dedup (in-flight + per-caller).                       |
 | `src/core/image-loader.ts`   | Image load/error handlers, aspect ratio caching, broken URL tracking, placeholder injection. |
 | `src/core/image.ts`           | Image path processing, embed extraction, YouTube thumbnail validation.                       |
+| `src/core/opaque-scan.ts`     | Positions where Markdown syntax is literal — code and comments — plus cardlink block bodies. |
 | `src/bases/shared-renderer.ts` | Imperative image load handler setup.                                                         |
 
 ## Two-tier deduplication
@@ -95,10 +96,28 @@ Parses file content to find image references not declared in properties.
 
 1. Read file content via `vault.cachedRead()`, truncate at 100KB on line boundary
 2. Strip frontmatter (handles Unix `\n` and Windows `\r\n` line endings)
-3. Multi-pass code detection: fenced code blocks -> indented code blocks -> inline code
+3. Build an opaque scan of the content via `scanOpaque()` (see [Opaque regions](#opaque-regions))
 4. Extract three embed types sequentially (wikilink, markdown, cardlink), collect with document positions
 5. Sort by document position, deduplicate by path
 6. Resolve internal paths, validate YouTube thumbnails, limit to `maxImages`
+
+### Opaque regions
+
+`src/core/opaque-scan.ts` answers a single question for both the extractor and the text preview stripper: does syntax at this position render at all? Regions where it does not are "opaque" — fenced code, indented code, inline code, and comments (`%%` and `<!-- -->`). Embeds inside one are skipped, because Obsidian renders nothing there.
+
+| Member | Used by | Purpose |
+| --- | --- | --- |
+| `isOpaque(position)` | `extractImageEmbeds()` | Skip a wikilink or Markdown embed found inside code or a comment |
+| `cutComments()` | `stripMarkdownSyntax()` | Drop comment spans before Markdown patterns run |
+| `cardlinkBlocks` | `extractImageEmbeds()` | Cardlink fence bodies to read `image:` from, minus any that are commented out |
+
+Every pass is lazy and memoized — the scan runs per card, and most notes never need all of it.
+
+Two details are load-bearing:
+
+- **Cardlink fences are transparent to `isOpaque`, opaque to the comment scan.** The `image:` field is read from the block's own body by regex and never consults a position predicate, so transparency does not protect it — its only effect is that an `![[...]]` written in a cardlink body is extracted. The comment scan needs the opposite: a `%%` in a cardlink title or description is literal text, and reading it as an opener would start a comment that never closes and hide every image after it.
+- **Comments have an inline form and a block form.** An opener with text before it on its line must close on that same line, or it is not a comment and renders literally. An opener that starts its own line, with nothing on the rest of it that could close it, opens a block comment whose closer may be anywhere — unclosed, it hides the remainder of the note.
+- **Openers respect inline code, closers do not.** This is why `stripMarkdownSyntax()` cuts comments *before* it sets code spans aside: the scan must see the real backticks. Cutting a comment that ends inside a span leaves that span's opening backtick unpaired and visible, which is what the renderer does too.
 
 ### Embed types
 
@@ -114,6 +133,8 @@ Parses file content to find image references not declared in properties.
 - Quality cascade: `maxresdefault` (1280x720) -> `hqdefault` (480x360) -> `mqdefault` (320x180)
 - Each quality validated with 5s timeout, `naturalWidth >= 320px` check (placeholders are ~120px)
 - Returns `null` if all qualities fail
+
+Probes are pre-started concurrently before the resolution loop, keyed by **video ID** so `youtu.be/X` and `watch?v=X` share one (upstream dedup is by path). At most `maxImages` pre-start: a 100KB link dump admits thousands of YouTube embeds, and three sequential requests each would compete with real card images on a phone when only `maxImages` can be shown. Embeds past that bound resolve lazily inside the loop, which is reachable because a YouTube embed resolving to `null` fills no result slot.
 
 ## Broken URL tracking
 
