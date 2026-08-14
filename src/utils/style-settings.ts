@@ -151,15 +151,6 @@ export function getCompactBreakpoint(): number {
 }
 
 /**
- * Get tag style from body class
- */
-export function getTagStyle(): 'plain' | 'theme' | 'minimal' {
-  if (hasBodyClass('dynamic-views-tag-style-minimal')) return 'minimal';
-  if (hasBodyClass('dynamic-views-tag-style-theme')) return 'theme';
-  return 'plain';
-}
-
-/**
  * Check if tag hash (#) prefix should be shown
  */
 export function showTagHashPrefix(): boolean {

@@ -1,7 +1,6 @@
 import { vi } from 'vitest';
 import type { MockInstance } from 'vitest';
 import {
-  getTagStyle,
   getCardSpacing,
   shouldShowRecentTimeOnly,
   shouldShowOlderDateOnly,
@@ -47,34 +46,6 @@ describe('style-settings', () => {
   afterEach(() => {
     mockGetComputedStyle.mockRestore();
     mockClassList.clear();
-  });
-
-  describe('getTagStyle', () => {
-    it('should return "plain" by default', () => {
-      expect(getTagStyle()).toBe('plain');
-    });
-
-    it('should return "minimal" when minimal class is present', () => {
-      mockClassList.add('dynamic-views-tag-style-minimal');
-      expect(getTagStyle()).toBe('minimal');
-    });
-
-    it('should return "theme" when theme class is present', () => {
-      mockClassList.add('dynamic-views-tag-style-theme');
-      expect(getTagStyle()).toBe('theme');
-    });
-
-    it('should prefer minimal over theme when both are present', () => {
-      mockClassList.add('dynamic-views-tag-style-minimal');
-      mockClassList.add('dynamic-views-tag-style-theme');
-      expect(getTagStyle()).toBe('minimal');
-    });
-
-    it('should return plain when both classes are removed', () => {
-      mockClassList.add('dynamic-views-tag-style-minimal');
-      mockClassList.delete('dynamic-views-tag-style-minimal');
-      expect(getTagStyle()).toBe('plain');
-    });
   });
 
   describe('getCardSpacing', () => {

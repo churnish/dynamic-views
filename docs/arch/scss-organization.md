@@ -2,7 +2,7 @@
 title: SCSS organization
 description: SCSS partial structure, loading order rationale, dependency relationships, and file categories — documents the stylesheet architecture and why partials are organized as they are.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-06
+updated: 2026-08-14
 ---
 # SCSS organization
 
@@ -29,7 +29,7 @@ The plugin's styles are authored as SCSS partials compiled via Dart Sass (`npm r
 
 ### Why this sequence matters
 
-1. **`_style-settings` must be first.** It contains the `/* @settings */` YAML comment block that the Style Settings plugin parses. Sass `--style=expanded` output preserves it as-is. The block defines `class-toggle`, `class-select`, and `variable-number-slider` options that set body classes and CSS variables consumed by every other partial.
+1. **`_style-settings` must be first.** It contains the `/* @settings */` YAML comment block that the Style Settings plugin parses. Sass `--style=expanded` output preserves it as-is. The block defines `class-toggle` and `class-select` options that set body classes, and `variable-text`, `variable-number-slider` and `variable-themed-color` options that set CSS variables — all consumed by every other partial.
 
 2. **`_variables` must precede all consumers.** It declares ~78 plugin-namespaced CSS variable wrappers on `body` (e.g., `--dynamic-views-text-normal: var(--text-normal, #222222)`) plus derived values (clamped aspect ratios, HSL color compositions, title hover color resolution). Nearly every other partial references these wrappers. See [css-variable-wrapping.md](../patterns/css-variable-wrapping.md) for the wrapping pattern.
 
@@ -51,7 +51,7 @@ The plugin's styles are authored as SCSS partials compiled via Dart Sass (`npm r
 
 ### Configuration (`_style-settings`)
 
-Contains two parts: (1) the `/* @settings */` YAML comment block parsed by the Style Settings plugin to generate the settings UI, defining `class-toggle`, `class-select`, and `variable-number-slider` options; and (2) executable CSS rules for conditional Style Settings visibility and plugin settings divider styling.
+Contains two parts: (1) the `/* @settings */` YAML comment block parsed by the Style Settings plugin to generate the settings UI, defining `class-toggle`, `class-select`, `variable-text`, `variable-number-slider` and `variable-themed-color` options; and (2) executable CSS rules for conditional Style Settings visibility and plugin settings divider styling.
 
 ### Foundation (`_variables`, `_focus`, `_container`)
 

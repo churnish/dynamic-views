@@ -2,7 +2,7 @@
 title: Config reactivity
 description: How config changes propagate from onDataUpdated through dirty-checking, render hash comparison, and the CSS fast-path to re-render decisions — covers all hash inputs, stale config guards, incremental update paths, and Style Settings reactivity.
 author: 🤖 Generated with Claude Code
-updated: 2026-08-09
+updated: 2026-08-14
 ---
 # Config reactivity
 
@@ -190,7 +190,7 @@ Rebuilds `CardData` and updates DOM title/subtitle/properties without full re-re
 `setupStyleSettingsObserver()` in `style-settings.ts` watches two mutation sources:
 
 1. **Body class mutations**: `MutationObserver` on `document.body` with `attributeFilter: ['class']`. Detects `class-toggle` and `class-select` changes (body classes prefixed with `dynamic-views-*`).
-2. **Stylesheet mutations**: `MutationObserver` on `#css-settings-manager` style element. Detects `variable-number-slider` changes that update CSS variables.
+2. **Stylesheet mutations**: `MutationObserver` on `#css-settings-manager` style element. Detects changes to any setting that writes a CSS variable — `variable-text`, `variable-number-slider` and `variable-themed-color` alike.
 
 The **body class observer** uses hash-based deduplication: filters for `dynamic-views-*` class changes, then calls `clearStyleSettingsCache()` and compares `getStyleSettingsHash()` against the previous hash. Only fires `onDataUpdated()` if JS-relevant values actually changed.
 

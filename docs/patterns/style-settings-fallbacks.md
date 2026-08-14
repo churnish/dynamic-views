@@ -2,7 +2,7 @@
 title: Style Settings fallback selectors
 description: Patterns for CSS defaults that work with or without the Style Settings plugin installed.
 author: 🤖 Generated with Claude Code
-updated: 2026-08-09
+updated: 2026-08-14
 ---
 # Style Settings fallback selectors
 
@@ -43,7 +43,7 @@ body:not([class*='dynamic-views-card-background-hover-'])
 ## When a fallback is NOT needed
 
 - **Natural CSS baseline**: The default is the browser/theme default with no rule needed (e.g., "Faint" border color uses the base `--background-modifier-border` variable — no class-gated rule exists).
-- **JS-driven defaults**: The JS code has its own fallback. Example: `getTagStyle()` returns `"outline"` when no body class matches — tag rendering uses the JS return value, not CSS body class gating.
+- **JS-driven defaults**: The JS code has its own fallback, so the default holds with no body class present. Example: `getOmitFirstLineMode()` returns `"ifMatchesTitle"` when no class matches, and that value is passed into text preview extraction. This only counts where the returned value genuinely reaches rendering — tag appearance, by contrast, is entirely CSS-driven in [_tags.scss](../../styles/_tags.scss), where `:not()` exclusion on the non-default modes makes Outline fire with or without Style Settings. No JS reads the tag style at all.
 - **Unreachable without Style Settings**: If a setting group's parent requires a body class that only Style Settings sets, the child settings are unreachable without the plugin.
 
 ## `class-select` — `:not()` exclusion (CSS)
