@@ -90,8 +90,7 @@
     .dynamic-views-group-section:not(:last-child)
     > .masonry-container {
     height: calc(
-      var(--masonry-height, auto) +
-        var(--dynamic-views-card-gap, var(--size-4-3))
+      var(--masonry-height, auto) + var(--dynamic-views-card-gap-floored)
     );
   }
 

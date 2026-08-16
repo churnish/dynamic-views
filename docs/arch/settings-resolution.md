@@ -162,7 +162,7 @@ New view detection: `!config || config.get('id') == null`. The `id` field is ass
 | `getBool(key, fallback)` | `boolean` | Non-boolean → fallback |
 | `getNumber(key, fallback)` | `number` (finite only) | Non-number or `NaN`/`Infinity` → fallback |
 
-Enum fields (`imageFormat`, `propertyNames`, `fallbackToEmbeds`, etc.) use `getValidEnum()` instead. It validates against `VALID_VIEW_VALUES` and optionally falls back to `previousSettings` before the default — this is the stale config guard mechanism.
+Enum fields (`imageFormat`, `propertyNames`, `showFileImages`, etc.) use `getValidEnum()` instead. It validates against `VALID_VIEW_VALUES` and optionally falls back to `previousSettings` before the default — this is the stale config guard mechanism.
 
 ### When each layer is consulted
 

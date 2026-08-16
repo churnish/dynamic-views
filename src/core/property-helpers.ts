@@ -98,25 +98,6 @@ export function hasWrappedPairs(card: HTMLElement): boolean {
 const compactWidthCache = new WeakMap<HTMLElement, number>();
 const pendingCardsByDoc = new Map<Document, Set<HTMLElement>>();
 const batchRafIds = new Map<Document, number>();
-const compactSettleCallbacks = new Map<Document, Set<() => void>>();
-
-/** Register a callback invoked after processCompactStackedBatch write phase. Returns unregister function. */
-export function registerCompactSettleCallback(
-  doc: Document,
-  cb: () => void
-): () => void {
-  let cbs = compactSettleCallbacks.get(doc);
-  if (!cbs) {
-    cbs = new Set();
-    compactSettleCallbacks.set(doc, cbs);
-  }
-  cbs.add(cb);
-  const registered = cbs;
-  return () => {
-    registered.delete(cb);
-    if (registered.size === 0) compactSettleCallbacks.delete(doc);
-  };
-}
 
 /**
  * Queue a compact card for batched wrapping detection.
@@ -228,21 +209,17 @@ function processCompactStackedBatch(doc: Document): void {
   }
 
   // Re-clip poster cards — stacked state just changed property heights,
-  // invalidating the clip calculated in the card RO callback
-  const isUniformHeight = doc.body.classList.contains(
-    'dynamic-views-poster-uniform-height'
-  );
+  // invalidating the clip calculated in the card RO callback. Imageless cards
+  // are clipped unconditionally, but only in Grid — the aspect-ratio constraint
+  // that makes them overflow is Grid-only.
   const clippableCards = eligible.filter(
     (c) =>
       c.classList.contains('image-format-poster') &&
-      ((c.classList.contains('has-poster') && c.closest('.poster-static')) ||
-        (!c.classList.contains('has-poster') && isUniformHeight))
+      (c.classList.contains('has-poster')
+        ? !!c.closest('.poster-static')
+        : !!c.closest('.dynamic-views-grid'))
   );
   if (clippableCards.length > 0) clipPosterStaticOverflowBatch(clippableCards);
-
-  // Notify subscribers (grid-view re-runs poster stretch with settled heights)
-  const cbs = compactSettleCallbacks.get(doc);
-  if (cbs) for (const cb of cbs) cb();
 }
 
 /**

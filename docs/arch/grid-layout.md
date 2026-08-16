@@ -176,7 +176,7 @@ Triggered when file **content** changed (mtime differs) but file paths and setti
 1. Clear content cache for changed paths only.
 2. Load fresh text previews and images for changed entries.
 3. For each changed path: find fresh `BasesEntry` from `changedEntries` (pre-filtered to changed paths), rebuild `CardData` via `basesEntryToCardData()`, update `cardDataByPath` with fresh entry and cardData.
-4. Call `updateCardContent()` on each card element — updates title, subtitle, properties, and text preview DOM in-place.
+4. Call `updateCardContent()` on each card element — updates title, subtitle, properties, text preview and URL icon DOM in-place, then re-derives the structural classes.
 5. **No relayout needed** — CSS Grid auto-adjusts row heights when content changes.
 
 #### Image change detection
@@ -188,7 +188,7 @@ When `hasImageChanged(oldCard, newCard)` returns `true`, the card cannot be surg
 3. Insert new card at same DOM position with height-lock. Immediate passes: `syncResponsiveClasses`, `setHoverScaleForCards`
 4. Deferred passes via `scheduleMountRemeasure`: `initializeScrollGradientsForCards`, `initializeTextPreviewClampForCards`, then release height lock
 
-When image is unchanged, `updateCardContent()` handles title, subtitle, properties, text preview, and URL icon (`updateUrlButton`) surgically.
+When image is unchanged, `updateCardContent()` handles title, subtitle, properties, text preview, and URL icon (`updateUrlButton`) surgically, then re-derives the structural classes (`syncStructuralClasses`).
 
 **Guard**: `changedPaths.size === 0` on the `renderHash` early return prevents content-only changes (mtime changed, paths/settings unchanged) from being skipped.
 
@@ -538,7 +538,9 @@ Title truncation is CSS-only (`-webkit-line-clamp` for both multi-line and singl
 
 The per-card sequence in `updateCardContent` ([shared-renderer.ts](../../src/bases/shared-renderer.ts)):
 
-1. `updateTitleText` → 2. `rerenderSubtitle` → 3. `rerenderProperties` → 4. `updateTextPreviewDOM` + `applyPerParagraphClamp` → 5. `updateUrlButton`
+1. `updateTitleText` → 2. `rerenderSubtitle` → 3. `rerenderProperties` → 4. `updateTextPreviewDOM` + `applyPerParagraphClamp` → 5. `updateUrlButton` → 6. `syncStructuralClasses`
+
+Step 6 runs last because every class it derives depends on the DOM the five steps before it rewrite — `rerenderProperties` in particular tears down and rebuilds `.card-properties-*`.
 
 ## Render guard system
 

@@ -29,6 +29,7 @@ import {
   setupBackdropImageLoader,
   handleImageLoad,
   handleAllImagesFailed,
+  setKnownAspectRatio,
   DEFAULT_ASPECT_RATIO,
   filterBrokenUrls,
   markImageBroken,
@@ -43,7 +44,11 @@ import {
   setupElementScrollGradient,
   setupVerticalScrollGradient,
 } from '../core/scroll-gradient';
-import { getTimestampIcon, isTimestampProperty } from '../core/render-utils';
+import {
+  getTimestampIcon,
+  isTimestampProperty,
+  splitDateSegments,
+} from '../core/render-utils';
 import {
   createCardDragHandler,
   createExternalLinkDragHandler,
@@ -113,6 +118,7 @@ import {
   CONTEXT_MENU_SUPPRESS_MS,
   THUMBNAIL_STACK_MULTIPLIER,
   TOUCH_TAP_THRESHOLD_MS,
+  URL_ICON_SELECTOR,
   VISIBLE_BODY_SELECTOR,
 } from '../core/constants';
 import {
@@ -210,8 +216,141 @@ const PAIRED_PROPERTY_CLASSES = [
 /** Obsidian's own inset variable — the plugin's SCSS seeds it, per-view gap overrides it */
 const VIEW_PADDING_VAR = '--bases-view-padding';
 
+/** Fixed inset the view chrome is measured against; also the floor for the above */
+const CHROME_INSET_VAR = '--dynamic-views-chrome-inset';
+
+/* Mirrors the SCSS seed (--size-4-3). Only reached if the token read fails, which
+   means the stylesheet has not applied — a plain length is still required here
+   because overflow-clip-margin rejects calc(). */
+const DEFAULT_CHROME_INSET = 12;
+
 /** Platform-resolved card gap, for CSS that needs the value without an .is-phone branch */
+/* applyViewContainerStyles writes this before first paint, so the fallbacks in
+   the consuming CSS are dead paths kept only to keep the rules readable */
 const CARD_GAP_VAR = '--dynamic-views-card-gap';
+
+/**
+ * Line-count and display-mode values for the view container.
+ *
+ * Every field is optional: an absent field skips BOTH its variable write and its
+ * class toggle. That is how the CSS fast-path keeps its per-key type guards —
+ * it omits keys Bases returned a non-number for instead of writing a default.
+ */
+interface LineAndModeValues {
+  titleLines?: number;
+  subtitleLines?: number;
+  textPreviewLines?: number;
+  imageRatio?: number;
+  thumbnailSize?: number;
+  posterDisplayMode?: 'fade' | 'overlay';
+  imageFit?: 'crop' | 'contain';
+}
+
+/**
+ * Write the container's line-count variables and display-mode classes.
+ *
+ * Shared by applyViewContainerStyles (values from ResolvedSettings) and
+ * applyCssOnlySettings (values straight from config.get()). The poster-static
+ * toggle and its clipping transitions deliberately stay in the callers — they
+ * are stateful, not a plain value-to-variable mapping.
+ */
+function applyLineAndModeVariables(
+  el: HTMLElement,
+  values: LineAndModeValues
+): void {
+  if (values.titleLines !== undefined) {
+    el.style.setProperty(
+      '--dynamic-views-title-lines',
+      String(values.titleLines)
+    );
+    el.classList.toggle('title-single-line', values.titleLines === 1);
+  }
+
+  if (values.subtitleLines !== undefined) {
+    el.style.setProperty(
+      '--dynamic-views-subtitle-lines',
+      String(values.subtitleLines)
+    );
+    // Scroll mode only applies to single-line subtitles — a wrapped subtitle has
+    // nothing to scroll, so the wrap rules must stay live in that state.
+    // Body-class read is the sanctioned popout exception (Style Settings syncs
+    // its classes to every document).
+    el.classList.toggle(
+      'subtitle-scroll',
+      values.subtitleLines === 1 &&
+        document.body.classList.contains(
+          'dynamic-views-subtitle-overflow-scroll'
+        )
+    );
+  }
+
+  if (values.textPreviewLines !== undefined) {
+    el.style.setProperty(
+      '--dynamic-views-text-preview-lines',
+      String(values.textPreviewLines)
+    );
+  }
+
+  if (values.imageRatio !== undefined) {
+    el.style.setProperty(
+      '--dynamic-views-image-aspect-ratio',
+      String(values.imageRatio)
+    );
+  }
+
+  if (values.thumbnailSize !== undefined) {
+    el.style.setProperty(
+      '--dynamic-views-thumbnail-size',
+      `${values.thumbnailSize}px`
+    );
+  }
+
+  // Both swaps run on every onDataUpdated(), so compare before touching
+  // classList — an unconditional remove+add invalidates style for every card.
+  if (values.posterDisplayMode !== undefined) {
+    const prevMode = readPosterDisplayMode(el);
+    if (prevMode !== values.posterDisplayMode) {
+      el.classList.remove('poster-mode-fade', 'poster-mode-overlay');
+      el.classList.add(`poster-mode-${values.posterDisplayMode}`);
+    }
+  }
+
+  if (values.imageFit !== undefined) {
+    const prevFit = el.classList.contains('image-fit-contain')
+      ? 'contain'
+      : el.classList.contains('image-fit-crop')
+        ? 'crop'
+        : null;
+    if (prevFit !== values.imageFit) {
+      el.classList.remove('image-fit-crop', 'image-fit-contain');
+      el.classList.add(`image-fit-${values.imageFit}`);
+    }
+  }
+}
+
+/** Append a formatted date with its separator runs wrapped for dimming */
+function appendDateSegments(parent: HTMLElement, formatted: string): void {
+  const wrapper = parent.createSpan('date-wrapper');
+  for (const segment of splitDateSegments(formatted)) {
+    if (segment.isSeparator) {
+      // Runs carrying their own whitespace (`, `, or the space before AM/PM) are
+      // already spaced — padding them too would double the gap.
+      const cls = /\s/.test(segment.text)
+        ? 'date-separator date-separator-spaced'
+        : 'date-separator';
+      wrapper.createSpan({ cls, text: segment.text });
+    } else {
+      wrapper.appendText(segment.text);
+    }
+  }
+}
+
+/** Current poster display mode from container classes. `null` means neither class is set yet (first call). */
+function readPosterDisplayMode(el: HTMLElement): 'fade' | 'overlay' | null {
+  if (el.classList.contains('poster-mode-overlay')) return 'overlay';
+  if (el.classList.contains('poster-mode-fade')) return 'fade';
+  return null;
+}
 
 /**
  * Apply per-view CSS classes and variables from settings to the view container
@@ -235,31 +374,17 @@ export function applyViewContainerStyles(
       break;
   }
 
-  // CSS variables
-  container.style.setProperty(
-    '--dynamic-views-thumbnail-size',
-    `${settings.thumbnailSize}px`
-  );
-  container.style.setProperty(
-    '--dynamic-views-text-preview-lines',
-    String(settings.textPreviewLines)
-  );
-  container.style.setProperty(
-    '--dynamic-views-title-lines',
-    String(settings.titleLines)
-  );
-  container.classList.toggle('title-single-line', settings.titleLines === 1);
-  container.style.setProperty(
-    '--dynamic-views-subtitle-lines',
-    String(settings.subtitleLines)
-  );
-  // Scroll mode only applies to single-line subtitles — a wrapped subtitle has
-  // nothing to scroll, so the wrap rules must stay live in that state.
-  container.classList.toggle(
-    'subtitle-scroll',
-    settings.subtitleLines === 1 &&
-      document.body.classList.contains('dynamic-views-subtitle-overflow-scroll')
-  );
+  // Line counts, image sizing, and display-mode classes — shared with the CSS
+  // fast-path so both entry points leave the container in the same state.
+  applyLineAndModeVariables(container, {
+    titleLines: settings.titleLines,
+    subtitleLines: settings.subtitleLines,
+    textPreviewLines: settings.textPreviewLines,
+    imageRatio: settings.imageRatio,
+    thumbnailSize: settings.thumbnailSize,
+    posterDisplayMode: settings.posterDisplayMode,
+    imageFit: settings.imageFit,
+  });
 
   // Gap feeds both the CSS `gap` rules and getCardSpacing()'s layout math, so it
   // is written once here. Compare before writing: clearing the spacing cache on
@@ -280,30 +405,49 @@ export function applyViewContainerStyles(
     container.style.setProperty(CARD_GAP_VAR, gapValue);
   }
 
-  // Edge inset matches the gap so spacing reads evenly from card to card and from
-  // card to pane edge. Scoped to the scroll element because --bases-view-padding
-  // lives there. Skipped inside embeds: an embedded .bases-view keeps a 1px inset
-  // no matter what this variable says, so writing the gap would desync it from the
-  // group heading, whose width and negative margins cancel the inset by reading
-  // the same variable — at gap 64 that overflowed the heading 51px on each side.
+  // Edge inset follows the gap so spacing reads evenly from card to card and from
+  // card to pane edge, but floored at the standard inset — gaps below it would
+  // otherwise crowd the cards against the pane, and the gap reaches 0.
+  //
+  // The floor is resolved to a plain length HERE rather than written as a CSS
+  // `max()`: Masonry feeds this variable to overflow-clip-margin, which accepts
+  // only a plain length and rejects calc()/max() outright — computing 0 and
+  // clipping the sticky group header's background at the container edge instead
+  // of letting it reach the pane edge. Verified in Chromium: even calc(12px) is
+  // rejected. The floor is read from the token rather than hardcoded so it stays
+  // tied to --size-4-3, and the dataset guard keeps that to one computed-style
+  // read per gap change rather than one per render.
+  //
+  // Scoped to the scroll element because --bases-view-padding lives there.
+  // Skipped inside embeds: an embedded .bases-view keeps a 1px inset no matter
+  // what this variable says, so writing the gap would desync it from the group
+  // heading, whose width and negative margins cancel the inset by reading the
+  // same variable — at gap 64 that overflowed the heading 51px on each side.
   const scrollEl = container.closest<HTMLElement>('.bases-view');
   const isEmbedded = !!container.closest('.bases-embed');
+  const gapPx = Platform.isPhone
+    ? settings.cardGapPhone
+    : settings.cardGapDesktop;
   if (
     scrollEl &&
     !isEmbedded &&
-    scrollEl.style.getPropertyValue(VIEW_PADDING_VAR) !== gapValue
+    scrollEl.dataset.dynamicViewsGap !== gapValue
   ) {
-    scrollEl.style.setProperty(VIEW_PADDING_VAR, gapValue);
+    const chromeInset =
+      parseFloat(
+        getComputedStyle(scrollEl).getPropertyValue(CHROME_INSET_VAR)
+      ) || DEFAULT_CHROME_INSET;
+    scrollEl.style.setProperty(
+      VIEW_PADDING_VAR,
+      `${Math.max(chromeInset, gapPx)}px`
+    );
+    scrollEl.dataset.dynamicViewsGap = gapValue;
   }
 
-  // Poster display mode — container class
-  container.classList.remove('poster-mode-fade', 'poster-mode-overlay');
-  container.classList.add(`poster-mode-${settings.posterDisplayMode}`);
+  // Stays here rather than in applyLineAndModeVariables: the CSS fast-path pairs
+  // this toggle with clip/reset transitions that have no counterpart on the
+  // full-render path, where cards are rebuilt from scratch anyway.
   container.classList.toggle('poster-static', !settings.posterInteractToReveal);
-
-  // Image fit — container class
-  container.classList.remove('image-fit-crop', 'image-fit-contain');
-  container.classList.add(`image-fit-${settings.imageFit}`);
 }
 
 /**
@@ -314,12 +458,26 @@ export function applyViewContainerStyles(
  * inline styles. Inline style outranks the per-view-type rules in app.css, so
  * leaving the override behind hands this view's gap to a native Table, List or
  * Cards view as its padding until the leaf is closed and reopened.
+ *
+ * The dataset guard goes with it: the element outlives the view, so a stale
+ * marker would make the next view skip the write and inherit whatever padding
+ * happened to be left behind.
  */
 export function clearViewContainerStyles(container: HTMLElement): void {
-  container
-    .closest<HTMLElement>('.bases-view')
-    ?.style.removeProperty(VIEW_PADDING_VAR);
+  const scrollEl = container.closest<HTMLElement>('.bases-view');
+  if (!scrollEl) return;
+  scrollEl.style.removeProperty(VIEW_PADDING_VAR);
+  delete scrollEl.dataset.dynamicViewsGap;
 }
+
+/**
+ * Last text preview line count a clip batch ran for, per container.
+ *
+ * config.get() falls back to schema defaults, so `textPreviewLines` is always a
+ * number — its typeof test is a shape check, not a change test, and without this
+ * map the clip batch would run on every onDataUpdated().
+ */
+const lastClippedTextPreviewLines = new WeakMap<HTMLElement, number>();
 
 /** Apply CSS-only settings immediately for instant feedback (bypasses throttle) */
 export function applyCssOnlySettings(
@@ -328,76 +486,55 @@ export function applyCssOnlySettings(
 ): void {
   if (!config || !containerEl) return;
 
-  const textPreviewLines = config.get('textPreviewLines');
-  if (typeof textPreviewLines === 'number') {
-    containerEl.style.setProperty(
-      '--dynamic-views-text-preview-lines',
-      String(textPreviewLines)
-    );
+  const readNumber = (key: string): number | undefined => {
+    const value = config.get(key);
+    return typeof value === 'number' ? value : undefined;
+  };
 
-    // Re-clip poster cards when text preview line count changes
-    if (containerEl.classList.contains('poster-static')) {
-      clipPosterStaticOverflowBatch([
-        ...containerEl.querySelectorAll<HTMLElement>(
-          '.card.image-format-poster.has-poster'
-        ),
-      ]);
-    }
-  }
-
-  const titleLines = config.get('titleLines');
-  if (typeof titleLines === 'number') {
-    containerEl.style.setProperty(
-      '--dynamic-views-title-lines',
-      String(titleLines)
-    );
-    containerEl.classList.toggle('title-single-line', titleLines === 1);
-  }
-
-  const subtitleLines = config.get('subtitleLines');
-  if (typeof subtitleLines === 'number') {
-    containerEl.style.setProperty(
-      '--dynamic-views-subtitle-lines',
-      String(subtitleLines)
-    );
-    containerEl.classList.toggle(
-      'subtitle-scroll',
-      subtitleLines === 1 &&
-        document.body.classList.contains(
-          'dynamic-views-subtitle-overflow-scroll'
-        )
-    );
-  }
-
-  const imageRatio = config.get('imageRatio');
-  if (typeof imageRatio === 'number') {
-    containerEl.style.setProperty(
-      '--dynamic-views-image-aspect-ratio',
-      String(imageRatio)
-    );
-  }
-
-  const thumbnailSize = config.get('thumbnailSize');
-  if (typeof thumbnailSize === 'number') {
-    containerEl.style.setProperty(
-      '--dynamic-views-thumbnail-size',
-      `${thumbnailSize}px`
-    );
-  }
-
-  // Poster display mode — container class
-  const prevMode = containerEl.classList.contains('poster-mode-overlay')
-    ? 'overlay'
-    : containerEl.classList.contains('poster-mode-fade')
-      ? 'fade'
-      : null;
-  containerEl.classList.remove('poster-mode-fade', 'poster-mode-overlay');
-  const rawPosterMode = config.get('posterDisplayMode') as string;
+  const rawPosterMode = config.get('posterDisplayMode');
   const posterDisplayMode =
     rawPosterMode === 'fade' || rawPosterMode === 'overlay'
       ? rawPosterMode
       : 'fade';
-  containerEl.classList.add(`poster-mode-${posterDisplayMode}`);
+  const rawImageFit = config.get('imageFit');
+  const imageFit =
+    rawImageFit === 'crop' || rawImageFit === 'contain' ? rawImageFit : 'crop';
+
+  // Read before the swap — the re-clip decision below needs the outgoing mode.
+  const prevMode = readPosterDisplayMode(containerEl);
+
+  const textPreviewLines = readNumber('textPreviewLines');
+  applyLineAndModeVariables(containerEl, {
+    titleLines: readNumber('titleLines'),
+    subtitleLines: readNumber('subtitleLines'),
+    textPreviewLines,
+    imageRatio: readNumber('imageRatio'),
+    thumbnailSize: readNumber('thumbnailSize'),
+    posterDisplayMode,
+    imageFit,
+  });
+
+  // Recorded outside the poster-static branch too, so re-entering static mode
+  // doesn't fire one spurious batch on the first update after the toggle.
+  if (
+    textPreviewLines !== undefined &&
+    lastClippedTextPreviewLines.get(containerEl) !== textPreviewLines
+  ) {
+    lastClippedTextPreviewLines.set(containerEl, textPreviewLines);
+    // Imageless Grid cards are clipped outside static mode too, so their re-clip
+    // cannot hang off the poster-static gate — textPreviewLines is CSS-only and
+    // never re-renders, so a skipped batch leaves a stale clamp forever.
+    const wasStaticBeforeToggle =
+      containerEl.classList.contains('poster-static');
+    const cards = [
+      ...containerEl.querySelectorAll<HTMLElement>('.card.image-format-poster'),
+    ].filter((c) =>
+      c.classList.contains('has-poster')
+        ? wasStaticBeforeToggle
+        : !!c.closest('.dynamic-views-grid')
+    );
+    if (cards.length > 0) clipPosterStaticOverflowBatch(cards);
+  }
 
   // Poster static mode — bidirectional: reset clipping on transition, re-clip if entering static
   const wasStatic = containerEl.classList.contains('poster-static');
@@ -414,23 +551,18 @@ export function applyCssOnlySettings(
     if (isStatic) {
       clipPosterStaticOverflowBatch([...posterCards]);
     } else {
-      for (const card of posterCards) resetPosterClipping(card);
+      resetPosterClipping([...posterCards]);
     }
   } else if (isStatic && prevMode !== null && posterDisplayMode !== prevMode) {
     // Display mode changed while static — content area size differs (fade has max-height: 70%)
     const win = getOwnerWindow(containerEl);
     win.requestAnimationFrame(() => {
       const posterCards = containerEl.querySelectorAll<HTMLElement>(
-        '.card.image-format-poster.has-poster'
+        '.card.image-format-poster'
       );
       clipPosterStaticOverflowBatch([...posterCards]);
     });
   }
-
-  // Image fit — container class
-  containerEl.classList.remove('image-fit-crop', 'image-fit-contain');
-  const imageFit = (config.get('imageFit') as string) ?? 'crop';
-  containerEl.classList.add(`image-fit-${imageFit}`);
 }
 
 /**
@@ -521,6 +653,69 @@ export function syncResponsiveClasses(cards: HTMLElement[]): boolean {
   // queueCompactStackedCheck() in property-helpers.ts (per-card RO queues).
 
   return anyChanged;
+}
+
+/**
+ * Derive the card's structural classes from its current DOM (replaces CSS
+ * `:has()` selectors, which invalidate upward across every card).
+ *
+ * Runs at render time and again after every in-place content update, so all
+ * five classes stay truthful when properties, previews, the header or the URL
+ * chip come and go. `toggle(name, condition)` throughout — the function must be
+ * idempotent and must clear a class as readily as it sets one.
+ *
+ * `bodyEl` is nullable only for cards whose body never existed; callers that
+ * have a card in hand must look it up rather than pass `null`, or
+ * `has-body-content` goes stale and the body stays `display: none`.
+ */
+export function syncStructuralClasses(
+  cardEl: HTMLElement,
+  bodyEl: HTMLElement | null
+): void {
+  // has-body-content: body has visible properties or previews.
+  // Drives card-body display:none when empty (prevents gap below subtitle).
+  bodyEl?.classList.toggle(
+    'has-body-content',
+    !!bodyEl.querySelector(VISIBLE_BODY_SELECTOR)
+  );
+  // has-card-content: card-level flag for cover padding and title divider CSS rules.
+  cardEl.classList.toggle(
+    'has-card-content',
+    !!cardEl.querySelector(VISIBLE_BODY_SELECTOR)
+  );
+  cardEl.classList.toggle(
+    'has-properties-bottom',
+    !!cardEl.querySelector('.card-properties-bottom')
+  );
+  // Prevents cover-only padding reset from zeroing padding on title-only cards.
+  cardEl.classList.toggle('has-header', !!cardEl.querySelector('.card-header'));
+  // Gates the poster header's icon containment strips — see _header.scss.
+  // Derived from the DOM rather than from hasValidUrl: a valid URL on a card
+  // with no header renders no icon, and the class must track the icon.
+  cardEl.classList.toggle(
+    'has-url-icon',
+    !!cardEl.querySelector(URL_ICON_SELECTOR)
+  );
+}
+
+/**
+ * Insert an empty `.card-header` as the first child of `.card-content`.
+ *
+ * Needed when a URL appears on a card that rendered without a header — the case
+ * whenever `displayFirstAsTitle` is OFF, since `readBasesSettings` then blanks
+ * the title and subtitle properties and `createHeader` has nothing to render. A
+ * bare header is complete there: `.card-title-block` only exists when a title or
+ * subtitle does.
+ *
+ * Returns null when the card has no `.card-content`. Unreachable in practice —
+ * every card renders one unconditionally — so this is defence, not a live case.
+ */
+function prependHeader(cardEl: HTMLElement): HTMLElement | null {
+  const contentEl = cardEl.querySelector<HTMLElement>('.card-content');
+  if (!contentEl) return null;
+  const headerEl = contentEl.createDiv('card-header');
+  contentEl.prepend(headerEl);
+  return headerEl;
 }
 
 export class SharedCardRenderer {
@@ -660,6 +855,15 @@ export class SharedCardRenderer {
       el.dataset.href = link.url;
       el.tabIndex = -1;
       el.draggable = true;
+      // Subpath is stripped before resolving — '#heading' and '#^block' are not part
+      // of the file path, and a bare subpath targets the source note itself.
+      const linkPath = link.url.split('#')[0];
+      if (
+        linkPath &&
+        !this.app.metadataCache.getFirstLinkpathDest(linkPath, sourcePath)
+      ) {
+        el.classList.add('is-unresolved');
+      }
       el.addEventListener(
         'click',
         (e) => {
@@ -825,7 +1029,7 @@ export class SharedCardRenderer {
 
     // Check if any image source is configured (property or embeds)
     const hasImageSource =
-      !!settings.imageProperty?.trim() || settings.fallbackToEmbeds !== 'never';
+      !!settings.imageProperty?.trim() || settings.showFileImages !== 'never';
 
     // Add format/position classes only when an image source is configured
     if (hasImageSource) {
@@ -1467,11 +1671,17 @@ export class SharedCardRenderer {
         shouldHideMissingProperties(),
         getHideEmptyMode(),
         signal,
-        true
+        true,
+        // isTimestampProperty covers file timestamps only; the flag catches a
+        // frontmatter date property
+        isTimestampProperty(subtitleProperty, settings) ||
+          card.subtitleIsDate === true
       );
 
-      // Setup scroll gradients if scroll mode is enabled
+      // Setup scroll gradients if scroll mode is enabled. Matches the CSS, which
+      // only scrolls single-line subtitles — a wrapped subtitle has nothing to scroll.
       if (
+        settings.subtitleLines === 1 &&
         document.body.classList.contains(
           'dynamic-views-subtitle-overflow-scroll'
         )
@@ -1559,50 +1769,7 @@ export class SharedCardRenderer {
       }
 
       if (card.hasValidUrl && card.urlValue) {
-        const iconEl = headerEl.createEl('a', {
-          cls: 'card-title-url-icon text-icon-button svg-icon',
-          href: card.urlValue,
-        });
-        iconEl.setAttribute('aria-label', card.urlValue);
-        if (/^https?:\/\//i.test(card.urlValue)) {
-          iconEl.target = '_blank';
-          iconEl.rel = 'noopener noreferrer';
-        }
-        setIcon(iconEl, 'arrow-up-right');
-        // Hidden text for native link drag ghost — Chromium uses textContent
-        // to generate the 2-line ghost (title + URL). Without text, only the
-        // SVG icon appears as the ghost.
-        const dragText = iconEl.createSpan('dynamic-views-drag-text');
-        dragText.textContent = card.urlValue;
-        // Store for freshness — surgical updates refresh this without
-        // re-binding event listeners
-        iconEl.dataset.dvUrlValue = card.urlValue;
-
-        iconEl.addEventListener(
-          'click',
-          (e) => {
-            e.stopPropagation();
-            iconEl.ownerDocument.body.querySelector('.tooltip')?.remove();
-          },
-          { signal }
-        );
-        iconEl.addEventListener(
-          'contextmenu',
-          (e) => {
-            showExternalLinkContextMenu(
-              e,
-              (iconEl.dataset.dvUrlValue ?? card.urlValue) as string
-            );
-          },
-          { signal }
-        );
-        const urlDrag = createUrlButtonDragHandlers(iconEl, card.urlValue);
-        iconEl.addEventListener('dragstart', urlDrag.onDragStart, { signal });
-        iconEl.addEventListener('dragend', urlDrag.onDragEnd, { signal });
-        iconEl.addEventListener('touchstart', urlDrag.onTouchStart, {
-          signal,
-          passive: true,
-        });
+        this.createUrlIcon(headerEl, card.urlValue, signal);
       }
     };
 
@@ -1738,47 +1905,19 @@ export class SharedCardRenderer {
       );
     }
 
-    // Structural content classes (replace CSS :has() selectors).
-    // has-body-content: body has visible properties or previews.
-    // Drives card-body display:none when empty (prevents gap below subtitle).
-    if (bodyEl.querySelector(VISIBLE_BODY_SELECTOR)) {
-      bodyEl.classList.add('has-body-content');
-    }
-    // has-card-content: card-level flag for cover padding and title divider CSS rules.
-    if (cardEl.querySelector(VISIBLE_BODY_SELECTOR)) {
-      cardEl.classList.add('has-card-content');
-    }
-    if (cardEl.querySelector('.card-properties-bottom')) {
-      cardEl.classList.add('has-properties-bottom');
-    }
-    // Prevents cover-only padding reset from zeroing padding on title-only cards.
-    if (cardEl.querySelector('.card-header')) {
-      cardEl.classList.add('has-header');
-    }
-    // Gates the poster header's icon containment strips — see _header.scss.
-    // Kept in sync by updateUrlButton() when the URL value comes or goes.
-    if (cardEl.querySelector('.card-title-url-icon')) {
-      cardEl.classList.add('has-url-icon');
-    }
+    syncStructuralClasses(cardEl, bodyEl);
 
     // Masonry cards don't have final dimensions at render time (width/height set later
     // by masonry positioning) — the per-card ResizeObserver handles clipping for masonry.
+    // Imageless Grid cards clip regardless of static mode: aspect-ratio constrains
+    // their height, so content overflows with nothing to reveal it. Kept as one
+    // condition — an imageless static card satisfies both arms, and two calls
+    // would pay two clear→measure→apply cycles for the same result.
     if (
       format === 'poster' &&
-      !settings.posterInteractToReveal &&
-      cardEl.closest('.dynamic-views-grid')
-    ) {
-      clipPosterStaticOverflow(cardEl);
-    }
-
-    // Uniform height: clip imageless cards constrained by aspect-ratio
-    if (
-      format === 'poster' &&
-      !cardEl.classList.contains('has-poster') &&
       cardEl.closest('.dynamic-views-grid') &&
-      cardEl.ownerDocument.body.classList.contains(
-        'dynamic-views-poster-uniform-height'
-      )
+      (!settings.posterInteractToReveal ||
+        !cardEl.classList.contains('has-poster'))
     ) {
       clipPosterStaticOverflow(cardEl);
     }
@@ -1860,14 +1999,18 @@ export class SharedCardRenderer {
           cardEl.classList.toggle('thumbnail-stack', shouldStack);
         }
 
-        // Re-clip poster content on resize (card dimensions changed)
+        // Re-clip poster content on resize (card dimensions changed).
+        // Imageless cards clip in Grid only — that is where aspect-ratio
+        // constrains their height. Selecting on has-poster rather than or-ing
+        // the two arms is what makes that true, and matches the batch call
+        // sites: a bare .poster-static test also caught imageless Masonry
+        // cards, whose height is free, and there the clipper hid the URL icon
+        // for the 4px its border box legitimately overhangs the header.
         if (
           format === 'poster' &&
-          (cardEl.closest('.poster-static') ||
-            (!cardEl.classList.contains('has-poster') &&
-              cardEl.ownerDocument.body.classList.contains(
-                'dynamic-views-poster-uniform-height'
-              )))
+          (cardEl.classList.contains('has-poster')
+            ? cardEl.closest('.poster-static')
+            : cardEl.closest('.dynamic-views-grid'))
         ) {
           const h = cardEl.offsetHeight;
           if (cardWidth !== lastClipWidth || h !== lastClipHeight) {
@@ -2255,10 +2398,8 @@ export class SharedCardRenderer {
             handleAllImagesFailed(cardEl);
             if (!cardEl.classList.contains('image-ready')) {
               cardEl.classList.add('image-ready');
-              cardEl.style.setProperty(
-                '--actual-aspect-ratio',
-                DEFAULT_ASPECT_RATIO.toString()
-              );
+              // Failed images still need a known ratio, or the cover stays collapsed
+              setKnownAspectRatio(cardEl, DEFAULT_ASPECT_RATIO);
               if (format === 'cover') this.imageLayoutCallback();
             }
           });
@@ -2454,6 +2595,12 @@ export class SharedCardRenderer {
     const previewEl = cardEl.querySelector<HTMLElement>('.card-text-preview');
     if (previewEl) applyPerParagraphClamp(previewEl);
     this.updateUrlButton(cardEl, card);
+    // Last — updateUrlButton() is the final body mutation, and every class here
+    // is derived from the DOM the calls above just rewrote.
+    syncStructuralClasses(
+      cardEl,
+      cardEl.querySelector<HTMLElement>('.card-body')
+    );
   }
 
   /** Compare old/new CardData image URLs to detect image changes */
@@ -2486,12 +2633,68 @@ export class SharedCardRenderer {
     return { displayTitle, isTitleEmpty };
   }
 
+  /**
+   * Build the URL chip anchor inside a card header.
+   *
+   * Shared by the render path and updateUrlButton(). The caller owns the
+   * listener lifecycle and passes its own signal — the per-render controller at
+   * render time, the per-card urlButtonRerenderController on update — so the two
+   * lifecycles stay distinct without branching in here.
+   */
+  private createUrlIcon(
+    headerEl: HTMLElement,
+    urlValue: string,
+    signal: AbortSignal
+  ): HTMLAnchorElement {
+    const iconEl = headerEl.createEl('a', {
+      cls: 'card-title-url-icon text-icon-button svg-icon',
+      href: urlValue,
+    });
+    iconEl.setAttribute('aria-label', urlValue);
+    if (/^https?:\/\//i.test(urlValue)) {
+      iconEl.target = '_blank';
+      iconEl.rel = 'noopener noreferrer';
+    }
+    setIcon(iconEl, 'arrow-up-right');
+    // Hidden text for native link drag ghost — Chromium uses textContent
+    // to generate the 2-line ghost (title + URL). Without text, only the
+    // SVG icon appears as the ghost.
+    const dragText = iconEl.createSpan('dynamic-views-drag-text');
+    dragText.textContent = urlValue;
+    // Store for freshness — surgical updates refresh this without
+    // re-binding event listeners
+    iconEl.dataset.dvUrlValue = urlValue;
+
+    iconEl.addEventListener(
+      'click',
+      (e) => {
+        e.stopPropagation();
+        iconEl.ownerDocument.body.querySelector('.tooltip')?.remove();
+      },
+      { signal }
+    );
+    iconEl.addEventListener(
+      'contextmenu',
+      (e) => {
+        showExternalLinkContextMenu(e, iconEl.dataset.dvUrlValue ?? urlValue);
+      },
+      { signal }
+    );
+    const urlDrag = createUrlButtonDragHandlers(iconEl, urlValue);
+    iconEl.addEventListener('dragstart', urlDrag.onDragStart, { signal });
+    iconEl.addEventListener('dragend', urlDrag.onDragEnd, { signal });
+    iconEl.addEventListener('touchstart', urlDrag.onTouchStart, {
+      signal,
+      passive: true,
+    });
+    return iconEl;
+  }
+
   /** Surgically update URL button in card header */
   private updateUrlButton(cardEl: HTMLElement, card: CardData): void {
     const headerEl = cardEl.querySelector<HTMLElement>('.card-header');
-    const existingIcon = cardEl.querySelector<HTMLAnchorElement>(
-      '.card-title-url-icon'
-    );
+    const existingIcon =
+      cardEl.querySelector<HTMLAnchorElement>(URL_ICON_SELECTOR);
 
     if (card.hasValidUrl && card.urlValue) {
       if (existingIcon) {
@@ -2507,64 +2710,29 @@ export class SharedCardRenderer {
         const dragText = existingIcon.querySelector('.dynamic-views-drag-text');
         if (dragText) dragText.textContent = card.urlValue;
         existingIcon.dataset.dvUrlValue = card.urlValue;
-      } else if (headerEl) {
-        this.urlButtonRerenderController.get(cardEl)?.abort();
-        const urlButtonAbort = new AbortController();
-        this.urlButtonRerenderController.set(cardEl, urlButtonAbort);
-        const { signal } = urlButtonAbort;
-        const iconEl = headerEl.createEl('a', {
-          cls: 'card-title-url-icon text-icon-button svg-icon',
-          href: card.urlValue,
-        });
-        iconEl.setAttribute('aria-label', card.urlValue);
-        if (/^https?:\/\//i.test(card.urlValue)) {
-          iconEl.target = '_blank';
-          iconEl.rel = 'noopener noreferrer';
+      } else {
+        // A card with no header is the displayFirstAsTitle-OFF case: nothing was
+        // renderable at render time, so the header has to be created now or the
+        // chip never appears until a full re-render.
+        const targetEl = headerEl ?? prependHeader(cardEl);
+        if (targetEl) {
+          this.urlButtonRerenderController.get(cardEl)?.abort();
+          const urlButtonAbort = new AbortController();
+          this.urlButtonRerenderController.set(cardEl, urlButtonAbort);
+          this.createUrlIcon(targetEl, card.urlValue, urlButtonAbort.signal);
         }
-        setIcon(iconEl, 'arrow-up-right');
-        const dragText = iconEl.createSpan('dynamic-views-drag-text');
-        dragText.textContent = card.urlValue;
-        // Store for freshness — contextmenu handler reads from dataset
-        iconEl.dataset.dvUrlValue = card.urlValue;
-
-        iconEl.addEventListener(
-          'click',
-          (e) => {
-            e.stopPropagation();
-            iconEl.ownerDocument.body.querySelector('.tooltip')?.remove();
-          },
-          { signal }
-        );
-        iconEl.addEventListener(
-          'contextmenu',
-          (e) => {
-            showExternalLinkContextMenu(
-              e,
-              (iconEl.dataset.dvUrlValue ?? card.urlValue) as string
-            );
-          },
-          { signal }
-        );
-        const urlDrag = createUrlButtonDragHandlers(iconEl, card.urlValue);
-        iconEl.addEventListener('dragstart', urlDrag.onDragStart, { signal });
-        iconEl.addEventListener('dragend', urlDrag.onDragEnd, { signal });
-        iconEl.addEventListener('touchstart', urlDrag.onTouchStart, {
-          signal,
-          passive: true,
-        });
       }
     } else if (existingIcon) {
       this.urlButtonRerenderController.get(cardEl)?.abort();
       this.urlButtonRerenderController.delete(cardEl);
       existingIcon.remove();
+      // Mirror of the creation path: a header the chip was the sole occupant of
+      // would otherwise keep holding its --size-2-3 gap open forever.
+      if (headerEl && headerEl.childElementCount === 0) headerEl.remove();
     }
 
-    // Re-derived from the DOM rather than from hasValidUrl: a valid URL on a
-    // card with no header renders no icon, and the class must track the icon.
-    cardEl.classList.toggle(
-      'has-url-icon',
-      !!cardEl.querySelector('.card-title-url-icon')
-    );
+    // has-url-icon / has-header are re-derived by syncStructuralClasses(),
+    // which updateCardContent() runs after this call.
   }
 
   /**
@@ -2656,11 +2824,17 @@ export class SharedCardRenderer {
       shouldHideMissingProperties(),
       getHideEmptyMode(),
       propAbort.signal,
-      true
+      true,
+      // isTimestampProperty covers file timestamps only; the flag catches a
+      // frontmatter date property
+      isTimestampProperty(settings.subtitleProperty, settings) ||
+        card.subtitleIsDate === true
     );
 
-    // Restore scroll gradients on subtitle
+    // Restore scroll gradients on subtitle. Same single-line gate as the initial
+    // render — the CSS only scrolls single-line subtitles.
     if (
+      settings.subtitleLines === 1 &&
       document.body.classList.contains('dynamic-views-subtitle-overflow-scroll')
     ) {
       setupElementScrollGradient(targetEl, propAbort.signal);
@@ -2710,6 +2884,7 @@ export class SharedCardRenderer {
     const visibleProps: Array<{
       name: string;
       value: unknown;
+      isDate?: boolean;
       fieldIndex: number;
       originalIndex: number;
     }> = [];
@@ -2739,6 +2914,7 @@ export class SharedCardRenderer {
       items: Array<{
         name: string;
         value: unknown;
+        isDate?: boolean;
         fieldIndex: number;
         originalIndex: number;
       }>;
@@ -2892,7 +3068,9 @@ export class SharedCardRenderer {
                 settings,
                 hideMissing,
                 hideEmptyMode,
-                signal
+                signal,
+                false,
+                isTimestampProperty(item.name, settings) || item.isDate === true
               );
             }
             hasContent.push(hasRenderedContent(fieldEl));
@@ -2931,7 +3109,9 @@ export class SharedCardRenderer {
               settings,
               hideMissing,
               hideEmptyMode,
-              signal
+              signal,
+              false,
+              isTimestampProperty(item.name, settings) || item.isDate === true
             );
           }
 
@@ -2987,7 +3167,10 @@ export class SharedCardRenderer {
     hideMissing: boolean,
     hideEmptyMode: HideEmptyMode,
     signal: AbortSignal,
-    preserveNewlines = false
+    preserveNewlines = false,
+    // Splits a formatted date into segments so separators can be dimmed — set for
+    // both property rows and subtitles
+    renderDateSegments = false
   ): void {
     if (propertyName === '') {
       return;
@@ -3144,7 +3327,11 @@ export class SharedCardRenderer {
         setIcon(iconEl, iconName);
         timestampWrapper.classList.add('has-timestamp-icon');
       }
-      timestampWrapper.appendText(stringValue);
+      if (renderDateSegments) {
+        appendDateSegments(timestampWrapper, stringValue);
+      } else {
+        timestampWrapper.appendText(stringValue);
+      }
 
       // One-shot: measure icon alignment from first real timestamp
       // Deferred to rAF so the browser has laid out the new elements
@@ -3409,7 +3596,12 @@ export class SharedCardRenderer {
       const renderedValue = preserveNewlines
         ? stringValue
         : stringValue.replace(/\n/g, ' ');
-      this.renderTextWithLinks(textWrapper, renderedValue, card.path, signal);
+      if (renderDateSegments) {
+        // A formatted date carries no links, so link parsing is skipped
+        appendDateSegments(textWrapper, renderedValue);
+      } else {
+        this.renderTextWithLinks(textWrapper, renderedValue, card.path, signal);
+      }
     }
 
     // Remove propertyContent wrapper if it ended up empty (e.g., tags with no values)

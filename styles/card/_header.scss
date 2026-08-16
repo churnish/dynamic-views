@@ -4,6 +4,21 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: var(--size-4-2);
+    /* Two features want block-end room here — the title divider's gap and the
+       URL icon halo's containment strip — and each is set by a rule the other
+       cannot out-specify, so the more specific one silently won. Both now write
+       a variable and this rule takes the larger.
+       max(), never a sum: the divider gap (--size-4-2, 8px) already contains the
+       halo's one --size-2-2 (4px) of bleed, so summing would add 4px of header
+       height to every chip card with the divider on, break the parity the
+       give-back rules below exist to hold, and — on Grid poster cards, whose
+       height is aspect-ratio-locked — spend that height out of visible content
+       capacity. max() still guarantees containment if a theme shrinks
+       --size-4-2 below 4px. */
+    padding-block-end: max(
+      var(--dynamic-views-header-divider-gap, 0px),
+      var(--dynamic-views-header-icon-strip, 0px)
+    );
   }
 
   /* Keep clamped title/subtitle text from inflating card-content scroll height
@@ -13,29 +28,48 @@
      in _poster.scss. */
   .card.image-format-poster .card-header {
     overflow: clip;
-    padding-block-start: 5px;
-    padding-inline-end: 4px;
-    margin-block-start: -5px;
-    margin-inline-end: -4px;
+    padding-block-start: var(--size-2-2);
+    padding-inline-end: var(--size-2-2);
+    margin-block-start: calc(-1 * var(--size-2-2));
+    margin-inline-end: calc(-1 * var(--size-2-2));
   }
 
   /* The icon's border box is taller than a single title line, so its hover halo
      bleeds past the header on every side. The strips above contain the bleed at
-     block-start and inline-end; this one contains it at block-end. It must be
-     real height, not a negative block-end margin — that leaves the border box
+     block-start and inline-end; this one contains it at block-end, by feeding
+     the base rule's max() rather than setting padding directly. It must resolve
+     to real height, not a negative block-end margin — that leaves the border box
      overhanging the flow, which the scroll container counts as scrollable
-     overflow and poster's JS clipping then acts on. The two rules below hand the
-     4px straight back, so a card with an icon is no taller than one without. */
+     overflow and poster's JS clipping then acts on. On a title-only card the
+     rule below hands the 4px straight back, so the card is no taller than one
+     without an icon. */
   .card.image-format-poster.has-url-icon .card-header {
-    padding-block-end: 4px;
+    --dynamic-views-header-icon-strip: var(--size-2-2);
   }
 
+  /* Give-back, title-only card: paid out of the card's own bottom padding.
+     Subtracted rather than replaced — the padding is a Style Settings slider
+     (0–24px), so a literal would override the user's value. Below 4px there is
+     nothing left to give back and the card grows by the shortfall. */
   .card.image-format-poster.has-url-icon:not(.has-card-content) {
-    padding-block-end: 4px;
+    padding-block-end: max(
+      0px,
+      calc(var(--dynamic-views-card-padding, 8px) - var(--size-2-2))
+    );
   }
 
+  /* Give-back, content card: the halo keeps the same moat against content below
+     it that the card's padding gives it at the edges, so it reads identically on
+     hover wherever it sits. Without a strip the flex gap already absorbs the
+     bleed, leaving gap − bleed, so the body moves down by the remainder. */
+  .card.has-url-icon.has-card-content .card-body {
+    margin-block-start: calc(2 * var(--size-2-2) - var(--size-2-3));
+  }
+
+  /* Poster's block-end strip already pushes the body a full gap clear of the
+     halo, so here the moat is reached by pulling back rather than pushing down. */
   .card.image-format-poster.has-url-icon.has-card-content .card-body {
-    margin-block-start: -4px;
+    margin-block-start: calc(var(--size-2-2) - var(--size-2-3));
   }
 
   .card-title-block {
@@ -109,12 +143,12 @@
 .dynamic-views {
   .card-title-url-icon {
     flex-shrink: 0;
-    /* Compensate for wrapper padding: (28px wrapper - 20px icon) / 2 = 4px.
-       Also shrinks the icon's margin box to 20px so the padding costs the title
-       block no width — do NOT drop these to avoid overflow. The header strips in
-       poster mode are sized to this same 4px, so the halo ends up inset equally
-       from the card's top, inline-end and bottom edges. */
-    margin: -4px;
+    /* Cancels .text-icon-button's padding: var(--size-2-2) per side, so the
+       icon's margin box stays glyph-sized (20px desktop, 28px mobile) and the
+       padding costs the title block no width — do NOT drop these to avoid
+       overflow. Its border box then bleeds one --size-2-2 past the header on
+       every side, which is what the strips above are sized to contain. */
+    margin: calc(-1 * var(--size-2-2));
   }
 
   .card-title-url-icon svg {
@@ -154,9 +188,15 @@
   }
 }
 
-/* Poster: hover bg adapts to forced text color (no card background for --background-modifier-hover) */
+/* Poster over an image: hover bg adapts to the forced text colour, since there is
+   no card background for --background-modifier-hover to sit on. Gated on
+   has-poster for the same reason the glyph colour is — without an image the card
+   keeps the standard tokens, so currentColor is --text-muted and the mix comes
+   out a dark smudge instead of the light halo the rule is for. An imageless card
+   has a real background, so it takes the same no-halo treatment as every other
+   image format. */
 .dynamic-views
-  .card.image-format-poster.interact
+  .card.image-format-poster.has-poster.interact
   .card-title-url-icon:is(:hover, :active) {
   background-color: color-mix(in srgb, currentColor 20%, transparent);
   border-radius: var(--dynamic-views-radius-s);
@@ -371,6 +411,8 @@ body.dynamic-views-ss-ready:not(.dynamic-views-title-bold)
 }
 
 /* Subtitle alignment */
+/* text-align alone is not enough: _text-selection.scss shrinks the subtitle to
+   its text in open-on-title mode, and carries the matching margin rules. */
 body.dynamic-views-subtitle-align-center .dynamic-views .card-subtitle {
   text-align: center;
 }
@@ -494,8 +536,23 @@ body.dynamic-views-title-divider
   .dynamic-views
   .card.has-card-content
   .card-header {
-  padding-bottom: var(--size-4-2);
+  --dynamic-views-header-divider-gap: var(--size-4-2);
   border-bottom: 1px solid var(--dynamic-views-background-modifier-border);
+}
+
+/* With a divider present the halo's neighbour below is the divider line, not
+   content, and the divider's own gap already clears the bleed — so the content
+   give-back would only shrink the divider gap. Zero it, restoring exact card
+   height parity with a chipless card.
+   Flat, not nested in the .dynamic-views block above: a body-class selector
+   nested there compiles to `.dynamic-views body.…`, which matches nothing.
+   Specificity (0,6,1) beats both give-back rules — (0,5,0) and (0,6,0) — so
+   source order does not matter. */
+body.dynamic-views-title-divider
+  .dynamic-views
+  .card.has-url-icon.has-card-content
+  .card-body {
+  margin-block-start: 0;
 }
 
 /* Subtitle above title */
@@ -510,6 +567,8 @@ body.dynamic-views-subtitle-above
 }
 
 /* Title alignment */
+/* text-align alone is not enough: _text-selection.scss shrinks the title to its
+   text in desktop open-on-title mode, and carries the matching margin rules. */
 body.dynamic-views-title-align-center .dynamic-views .card-title {
   text-align: center;
 }

@@ -77,6 +77,38 @@ export function formatTimestamp(
 }
 
 /**
+ * Split a formatted date into value runs and separator runs
+ * Value runs are letter/number sequences; every other run is a separator.
+ */
+export function splitDateSegments(
+  formatted: string
+): Array<{ text: string; isSeparator: boolean }> {
+  const segments: Array<{ text: string; isSeparator: boolean }> = [];
+  // Native dims by field structure instead, so two cases diverge: a moment literal word (`[at]`)
+  // stays undimmed here, and CJK date units (年 月 日) are letters, so they stay undimmed too
+  const valueRun = /[\p{L}\p{N}]+/gu;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = valueRun.exec(formatted)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push({
+        text: formatted.slice(lastIndex, match.index),
+        isSeparator: true,
+      });
+    }
+    segments.push({ text: match[0], isSeparator: false });
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < formatted.length) {
+    segments.push({ text: formatted.slice(lastIndex), isSeparator: true });
+  }
+
+  return segments;
+}
+
+/**
  * Get timestamp icon name based on property being displayed
  */
 export function getTimestampIcon(

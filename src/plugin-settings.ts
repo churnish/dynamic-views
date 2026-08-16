@@ -6,6 +6,7 @@ import {
 } from 'obsidian';
 import type DynamicViews from '../main';
 import type { PluginSettings } from './types';
+import { applyOpenFileActionClass } from './core/open-file-action';
 import { getOwnerWindow } from './utils/owner-window';
 
 /** Keys the declarative controls bind to, checked against the settings shape */
@@ -41,7 +42,11 @@ const PLUGIN_DIRECTORY_URL = 'https://community.obsidian.md/plugins/';
 const PLUGIN_LINK_ATTR = 'data-dynamic-views-plugin-link';
 
 /** Picks whether a plugin link opens that plugin's settings or its directory entry */
-const PLUGIN_LINK_DESTINATION_ATTR = 'data-dynamic-views-plugin-link-target';
+const PLUGIN_LINK_DESTINATION_ATTR =
+  'data-dynamic-views-plugin-link-destination';
+
+/** Text settings whose stored value is trimmed when the tab closes */
+const TRIMMED_KEYS = ['createdTimeProperty', 'modifiedTimeProperty'] as const;
 
 /**
  * Side effects that must run after a control writes a given key.
@@ -52,14 +57,10 @@ const PLUGIN_LINK_DESTINATION_ATTR = 'data-dynamic-views-plugin-link-target';
 const CASCADES: Partial<Record<SettingKey, (plugin: DynamicViews) => void>> = {
   openFileAction: (plugin) => {
     const { openFileAction } = plugin.persistenceManager.getPluginSettings();
-    const docs = [document, ...plugin.getAllPopoutDocuments()];
-    for (const doc of docs) {
-      doc.body.classList.remove(
-        'dynamic-views-open-on-card',
-        'dynamic-views-open-on-title'
-      );
-      doc.body.classList.add(`dynamic-views-open-on-${openFileAction}`);
-    }
+    applyOpenFileActionClass(
+      [document, ...plugin.getAllPopoutDocuments()],
+      openFileAction
+    );
   },
 };
 
@@ -80,19 +81,12 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
     const trimmed: Partial<PluginSettings> = {};
     let hasChanges = false;
 
-    if (
-      pluginSettings.createdTimeProperty.trim() !==
-      pluginSettings.createdTimeProperty
-    ) {
-      trimmed.createdTimeProperty = pluginSettings.createdTimeProperty.trim();
-      hasChanges = true;
-    }
-    if (
-      pluginSettings.modifiedTimeProperty.trim() !==
-      pluginSettings.modifiedTimeProperty
-    ) {
-      trimmed.modifiedTimeProperty = pluginSettings.modifiedTimeProperty.trim();
-      hasChanges = true;
+    for (const key of TRIMMED_KEYS) {
+      const value = pluginSettings[key];
+      if (value.trim() !== value) {
+        trimmed[key] = value.trim();
+        hasChanges = true;
+      }
     }
 
     if (hasChanges) {
@@ -225,17 +219,19 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
                   intro.appendText('.');
 
                   const tip = frag.createEl('p');
-                  tip.appendText('Tip: Run ');
-                  tip.createEl('strong', { text: 'Show style settings view' });
                   tip.appendText(
-                    ' in the Command palette to open settings in a tab.'
+                    'Tip: Run “Show style settings view” in the Command palette to open settings in a tab.'
                   );
                 })
               );
 
-              // Delegated from here because `desc` fragments offer no render
-              // hook of their own. Bound to this row's document so it follows
-              // the settings window, which is recreated on every open.
+              // Mounted here because a `render` callback is the only hook that
+              // hands back a live element in the settings window: `desc`
+              // fragments offer none, and `display()` is skipped entirely once
+              // getSettingDefinitions() returns rows. The listener's SCOPE is
+              // tab-wide though — it routes the plugin links in Integrations
+              // too, so deleting or reordering THIS row silently drops them to
+              // plain browser links. They still open, just in a browser.
               const doc = setting.settingEl.ownerDocument;
               doc.addEventListener('click', this.handlePluginLinkClick);
               return () =>
@@ -248,11 +244,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       // General settings (no heading, per Obsidian's convention)
       {
         name: 'Open file action',
-        desc: createFragment((frag) => {
-          frag.appendText('How files should open. ');
-          frag.createEl('strong', { text: 'Press on title' });
-          frag.appendText(' enables card text selection.');
-        }),
+        desc: 'How files should open. “Press on title” enables card text selection.',
         control: {
           type: 'dropdown',
           key: 'openFileAction',

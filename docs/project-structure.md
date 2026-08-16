@@ -42,7 +42,6 @@ dynamic-views/
 │   │   ├── notebook-navigator.ts     # Notebook Navigator plugin integration
 │   │   ├── opaque-scan.ts            # Lazy per-note scan of regions where syntax is literal (fenced/indented/inline code, %% and <!-- --> comments) + cardlink block bodies
 │   │   ├── poster.ts                 # Poster format utilities (static clipping, scroll reset)
-│   │   ├── poster-stretch.ts         # Pure poster row stretch algorithm (extracted for testability)
 │   │   ├── property-display.ts       # Property display names, settings normalization
 │   │   ├── property-extraction.ts    # Bases entry value extraction (first/all property values)
 │   │   ├── property-helpers.ts       # Type-checking for tags, timestamps, checkboxes; compact wrapping detection
@@ -61,7 +60,7 @@ dynamic-views/
 │   │   ├── view-validation.ts        # ViewDefaults validation + cleanup
 │   │   ├── viewer-navigation.ts      # Pure index stepper for image viewer arrow navigation
 │   │   ├── virtual-scroll.ts         # Virtual scrolling: VirtualItem, syncVisibleItems
-│   │   └── youtube-preview.ts        # YouTube video ID extraction + thumbnail validation
+│   │   └── youtube-preview.ts        # YouTube video ID extraction (forward + reverse), WebP rung ladder, target-width rung selection, thumbnail validation
 │   │
 │   ├── utils/                        # Pure utility functions
 │   │   ├── file-extension.ts         # File format + extension detection
@@ -118,7 +117,6 @@ dynamic-views/
 │   │   ├── cleanup.test.ts
 │   │   ├── full-screen-factory.test.ts
 │   │   ├── grid-equalize.test.ts
-│   │   ├── grid-poster-stretch.test.ts
 │   │   ├── grid-scroll.test.ts
 │   │   ├── shared-renderer.test.ts
 │   │   ├── sync-responsive-classes.test.ts

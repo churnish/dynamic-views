@@ -184,6 +184,30 @@
   );
 }
 
+/* Shape not known yet: collapse rather than reserve space at the slider
+   fallback. Contain mode only — the crop path above pins the height to the
+   slider ratio regardless of the image. See _cover-elements.scss for the Grid
+   counterpart and the .has-cover scoping rationale.
+
+   The body:not() is load-bearing, not decorative: with fixed height on, the
+   height comes from the slider and is known before anything loads, so there is
+   nothing to collapse. The fixed-height rule below cannot be relied on to win —
+   it carries one more element but one fewer class, so this selector outranks
+   it. */
+body:not(
+    .dynamic-views-fixed-cover-height-masonry,
+    .dynamic-views-fixed-cover-height-both
+  )
+  [data-view-type='dynamic-views-masonry']
+  .dynamic-views.image-fit-contain
+  .card:is(
+    .card-cover-top,
+    .card-cover-bottom
+  ).image-format-cover.has-cover:not(.image-ratio-known)
+  .card-cover {
+  padding-top: 0;
+}
+
 /* Masonry contain mode ON: use slider value (top/bottom bars visible) */
 body:is(
     .dynamic-views-fixed-cover-height-masonry,

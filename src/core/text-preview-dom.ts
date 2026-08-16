@@ -232,31 +232,83 @@ function hideFrom(paragraphs: HTMLElement[], start: number): void {
   }
 }
 
+/** Pre-measured clamp inputs for one text preview. Heights are unclamped — reusable at any budget. */
+export interface ParagraphClampMeasurement {
+  paragraphs: HTMLElement[];
+  lineHeight: number;
+  budget: number;
+  heights: number[];
+}
+
 /**
- * Per-paragraph line clamp for a single text preview element.
- * Idempotent: clears previous state before re-measuring.
+ * Write phase — clears clamp state and returns the paragraphs to measure.
+ * Clearing must precede the height read, otherwise a stale clamp or truncation
+ * indicator distorts the measured paragraph height.
  */
-export function applyPerParagraphClamp(previewEl: HTMLElement): void {
+export function clearParagraphClampState(
+  previewEl: HTMLElement
+): HTMLElement[] {
   const paragraphs = Array.from(
     previewEl.querySelectorAll<HTMLElement>(':scope > p')
   );
-  if (paragraphs.length === 0) return;
-
-  // Clear previous clamp state
   for (const p of paragraphs) {
     clearParagraphStyles(p);
   }
+  return paragraphs;
+}
+
+/** Read phase — line height, inherited budget, and unclamped paragraph heights. */
+export function measureParagraphClamp(
+  previewEl: HTMLElement,
+  paragraphs: HTMLElement[]
+): ParagraphClampMeasurement | null {
+  if (paragraphs.length === 0) return null;
 
   const style = getOwnerWindow(previewEl).getComputedStyle(previewEl);
   const lineHeight = parseFloat(style.lineHeight);
-  if (!lineHeight || lineHeight <= 0) return;
+  if (!lineHeight || lineHeight <= 0) return null;
 
   const budget =
     parseInt(style.getPropertyValue(TEXT_PREVIEW_LINES_VAR)) ||
     DEFAULT_LINE_BUDGET;
 
-  const heights = paragraphs.map((p) => p.offsetHeight);
-  applyClampFromMeasurements(paragraphs, lineHeight, budget, heights);
+  return {
+    paragraphs,
+    lineHeight,
+    budget,
+    heights: paragraphs.map((p) => p.offsetHeight),
+  };
+}
+
+/**
+ * Write phase — clamps from pre-measured heights. `budget` overrides the measured
+ * one so poster can re-clamp to a reduced line count without re-measuring.
+ * Re-clears first: the poster fitted-count pass runs over already-clamped paragraphs.
+ */
+export function applyParagraphClamp(
+  measurement: ParagraphClampMeasurement,
+  budget: number = measurement.budget
+): void {
+  for (const p of measurement.paragraphs) {
+    clearParagraphStyles(p);
+  }
+  applyClampFromMeasurements(
+    measurement.paragraphs,
+    measurement.lineHeight,
+    budget,
+    measurement.heights
+  );
+}
+
+/**
+ * Per-paragraph line clamp for a single text preview element.
+ * Idempotent: clears previous state before re-measuring.
+ */
+export function applyPerParagraphClamp(previewEl: HTMLElement): void {
+  const paragraphs = clearParagraphClampState(previewEl);
+  const measurement = measureParagraphClamp(previewEl, paragraphs);
+  if (!measurement) return;
+  applyParagraphClamp(measurement);
 }
 
 // ---------------------------------------------------------------------------
@@ -299,31 +351,15 @@ function batchApplyClamp(previews: Iterable<HTMLElement>): void {
   }
 
   // Phase 1: Read measurements (1 reflow for entire batch)
-  const measurements: Array<{
-    paragraphs: HTMLElement[];
-    lineHeight: number;
-    budget: number;
-    heights: number[];
-  }> = [];
-
+  const measurements: ParagraphClampMeasurement[] = [];
   for (const { el, paragraphs } of collected) {
-    const style = getOwnerWindow(el).getComputedStyle(el);
-    const lineHeight = parseFloat(style.lineHeight);
-    if (!lineHeight || lineHeight <= 0) continue;
-    const budget =
-      parseInt(style.getPropertyValue(TEXT_PREVIEW_LINES_VAR)) ||
-      DEFAULT_LINE_BUDGET;
-    measurements.push({
-      paragraphs,
-      lineHeight,
-      budget,
-      heights: paragraphs.map((p) => p.offsetHeight),
-    });
+    const measurement = measureParagraphClamp(el, paragraphs);
+    if (measurement) measurements.push(measurement);
   }
 
   // Phase 2: Apply clamps (writes only — no layout reads)
-  for (const m of measurements) {
-    applyClampFromMeasurements(m.paragraphs, m.lineHeight, m.budget, m.heights);
+  for (const measurement of measurements) {
+    applyParagraphClamp(measurement);
   }
 }
 

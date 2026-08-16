@@ -89,13 +89,25 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Collect attestation subjects
+        id: subjects
+        run: |
+          SUBJECTS=$'main.js\nmanifest.json'
+          # Not every plugin ships a stylesheet, and attest-build-provenance hard-fails on a
+          # missing subject path rather than warning — so styles.css is only listed if built.
+          if [ -f styles.css ]; then
+            SUBJECTS=$'main.js\nmanifest.json\nstyles.css'
+          fi
+          {
+            echo 'PATHS<<EOF'
+            echo "$SUBJECTS"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Attest build provenance
         uses: actions/attest-build-provenance@v4
         with:
-          subject-path: |
-            main.js
-            manifest.json
-            styles.css
+          subject-path: ${{ steps.subjects.outputs.PATHS }}
 
       - name: Create release
         uses: softprops/action-gh-release@v2

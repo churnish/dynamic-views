@@ -14,6 +14,9 @@ import {
   preserveTextPreviewNewlines,
   getStyleSettingsLayoutHash,
   getCompactBreakpoint,
+  getDateFormat,
+  getTimeFormat,
+  getDatetimeFormat,
 } from '../../src/utils/style-settings';
 
 describe('style-settings', () => {
@@ -178,29 +181,76 @@ describe('style-settings', () => {
   });
 
   describe('shouldShowRecentTimeOnly', () => {
-    it('should return true by default (time only is default behavior)', () => {
-      expect(shouldShowRecentTimeOnly()).toBe(true);
+    it('should return false by default (full datetime is default behavior)', () => {
+      expect(shouldShowRecentTimeOnly()).toBe(false);
     });
 
-    it('should return false when full timestamp class is present', () => {
-      mockClassList.add('dynamic-views-timestamp-recent-full');
-      expect(shouldShowRecentTimeOnly()).toBe(false);
+    it('should return true when short timestamp class is present', () => {
+      mockClassList.add('dynamic-views-timestamp-recent-short');
+      expect(shouldShowRecentTimeOnly()).toBe(true);
     });
   });
 
   describe('shouldShowOlderDateOnly', () => {
-    it('should return true by default (date only is default behavior)', () => {
-      expect(shouldShowOlderDateOnly()).toBe(true);
+    it('should return false by default (full datetime is default behavior)', () => {
+      expect(shouldShowOlderDateOnly()).toBe(false);
     });
 
-    it('should return false when full timestamp class is present', () => {
-      mockClassList.add('dynamic-views-timestamp-past-full');
-      expect(shouldShowOlderDateOnly()).toBe(false);
+    it('should return true when short timestamp class is present', () => {
+      mockClassList.add('dynamic-views-timestamp-past-short');
+      expect(shouldShowOlderDateOnly()).toBe(true);
+    });
+  });
+
+  // getCSSTextVariable caches by `name|defaultValue`, so the cache must be
+  // cleared again after the mock is replaced inside a test
+  describe('date formats', () => {
+    const withValue = (name: string, value: string) => {
+      mockGetComputedStyle.mockReturnValue({
+        getPropertyValue: (prop: string) => (prop === name ? value : ''),
+      } as CSSStyleDeclaration);
+      clearStyleSettingsCache();
+    };
+
+    it('should return the locale date token when unset', () => {
+      expect(getDateFormat()).toBe('L');
+    });
+
+    it('should return the locale time token when unset', () => {
+      expect(getTimeFormat()).toBe('LT');
+    });
+
+    it('should return the locale date + time tokens when unset', () => {
+      expect(getDatetimeFormat()).toBe('L, LT');
+    });
+
+    it('should return the custom date format from CSS variable', () => {
+      withValue('--dynamic-views-date-format', 'DD.MM.YYYY');
+      expect(getDateFormat()).toBe('DD.MM.YYYY');
+    });
+
+    it('should return the custom time format from CSS variable', () => {
+      withValue('--dynamic-views-time-format', 'hh:mm A');
+      expect(getTimeFormat()).toBe('hh:mm A');
+    });
+
+    it('should return the custom datetime format from CSS variable', () => {
+      withValue('--dynamic-views-datetime-format', 'DD.MM.YYYY hh:mm A');
+      expect(getDatetimeFormat()).toBe('DD.MM.YYYY hh:mm A');
     });
   });
 
   describe('getListSeparator', () => {
-    it('should return default ", " (comma space)', () => {
+    it('should return default " " (single space)', () => {
+      expect(getListSeparator()).toBe(' ');
+    });
+
+    it('should return ", " when overridden with a comma space', () => {
+      mockGetComputedStyle.mockReturnValue({
+        getPropertyValue: (name: string) =>
+          name === '--dynamic-views-list-separator' ? '", "' : '',
+      } as CSSStyleDeclaration);
+
       expect(getListSeparator()).toBe(', ');
     });
 
@@ -238,7 +288,7 @@ describe('style-settings', () => {
       } as CSSStyleDeclaration);
 
       // Whitespace-only is trimmed to empty, so falls back to default
-      expect(getListSeparator()).toBe(', ');
+      expect(getListSeparator()).toBe(' ');
     });
 
     it('should not strip quotes if only one side matches', () => {
@@ -256,7 +306,7 @@ describe('style-settings', () => {
           name === '--dynamic-views-list-separator' ? '""' : '',
       } as CSSStyleDeclaration);
 
-      expect(getListSeparator()).toBe(', '); // Falls back to default
+      expect(getListSeparator()).toBe(' '); // Falls back to default
     });
   });
 
@@ -497,7 +547,7 @@ describe('style-settings', () => {
       ['dynamic-views-tag-style-outline'],
       ['dynamic-views-tag-color-faint'],
       ['dynamic-views-subtitle-align-left'],
-      ['dynamic-views-hide-group-count'],
+      ['dynamic-views-hide-group-result-count'],
     ])('should ignore the non-metric class %s', (cls) => {
       document.body.className = cls;
       expect(getStyleSettingsLayoutHash()).toBe('');

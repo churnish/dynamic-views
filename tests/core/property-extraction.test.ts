@@ -3,7 +3,7 @@ import {
   getFirstBasesPropertyValue,
   getAllBasesImagePropertyValues,
 } from '../../src/core/property-extraction';
-import { App } from 'obsidian';
+import { App, TFile } from 'obsidian';
 
 describe('property-extraction', () => {
   describe('getFirstBasesPropertyValue', () => {
@@ -76,6 +76,34 @@ describe('property-extraction', () => {
 
       getFirstBasesPropertyValue(mockApp, mockEntry, '  prop1  ,  prop2  ');
       expect(mockEntry.getValue).toHaveBeenCalledWith('prop1');
+    });
+
+    it('should return file-typed value carrying the file on .file', () => {
+      const file = new TFile();
+      file.path = 'Notes/Test.md';
+      file.basename = 'Test';
+      const fileValue = { icon: 'file', app: mockApp, file };
+      mockEntry.getValue = vi.fn().mockReturnValue(fileValue);
+
+      const result = getFirstBasesPropertyValue(
+        mockApp,
+        mockEntry,
+        'formula.file'
+      );
+      expect(result).toBe(fileValue);
+    });
+
+    it('should not treat a non-TFile .file value as a file-typed value', () => {
+      mockEntry.getValue = vi
+        .fn()
+        .mockReturnValue({ icon: 'file', file: { path: 'Notes/Test.md' } });
+
+      const result = getFirstBasesPropertyValue(
+        mockApp,
+        mockEntry,
+        'formula.file'
+      );
+      expect(result).toBeNull();
     });
   });
 

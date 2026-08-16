@@ -40,6 +40,14 @@
 
     .card-poster {
       position: absolute;
+      /* .card sets `border: none`, so this abspos child's containing block is
+         the card's padding box — which coincides with its border box. The
+         `− card-padding` term is therefore an outward bleed to the card edge,
+         clipped by .card's overflow: hidden, and is what makes the poster reach
+         the edge rather than sit inside the padding.
+         It reads the card-padding *variable*, not the used padding, so the URL
+         icon give-back (which lowers used padding-block-end on title-only chip
+         cards) never moves this box. */
       inset: calc(var(--poster-inset) - var(--dynamic-views-card-padding, 8px));
       z-index: 0;
       pointer-events: none;
@@ -58,18 +66,20 @@
   }
 
   /* Clip-box strips for the URL icon's hover halo. The icon's negative margins
-     keep its footprint at 20px so the title keeps its width, which leaves its
-     28px border box poking 5px above and 4px past the inline end of the header.
+     keep its footprint glyph-sized (20px desktop, 28px mobile) so the title
+     keeps its width, which leaves its border box poking one --size-2-2 past the
+     header on every side; the strips reserve exactly that, same token as the
+     icon's own margin so the two cannot drift apart.
      Only poster clips that away — card-content is a scroll container here, and
      a scroll container clips at its PADDING box. Growing the padding by exactly
      the overhang and pulling it back with equal negative margins moves the clip
      boundary without moving anything else: every child position, the title
      width, and scrollHeight - clientHeight are all unchanged. */
   .card.image-format-poster .card-content {
-    padding-block-start: 5px;
-    padding-inline-end: 4px;
-    margin-block-start: -5px;
-    margin-inline-end: -4px;
+    padding-block-start: var(--size-2-2);
+    padding-inline-end: var(--size-2-2);
+    margin-block-start: calc(-1 * var(--size-2-2));
+    margin-inline-end: calc(-1 * var(--size-2-2));
   }
 }
 
@@ -276,9 +286,11 @@ body:is(
   .card.image-format-poster.has-poster
   .card-content {
   flex: 0 1 auto;
-  /* +5px compensates the clip-box strip's padding-block-start — box-sizing is
-     border-box, so without it the strip would eat 5px of content capacity */
-  max-height: calc(70% + 5px);
+  /* Compensates the clip-box strip's padding-block-start — box-sizing is
+     border-box, so without it the strip would eat that much content capacity.
+     Same token as the strip, so capacity stays exactly 70% whatever it resolves
+     to. */
+  max-height: calc(70% + var(--size-2-2));
 }
 
 /* ============================================
@@ -523,36 +535,17 @@ body:is(
 }
 
 /* Grid fixed poster height: slider value (default — fires with or without Style Settings).
-   Scoped to .has-poster so imageless cards use natural content height — Grid row sizing takes max(all cards).
-   --poster-aspect-override: JS sets to 'auto' on .poster-stretch cards to disable the ratio,
-   allowing min-height to stretch without width expansion. */
+   Imageless cards are included so every card in a Grid row resolves to the same
+   ratio-derived height. `.card.image-format-poster` already sets overflow:hidden,
+   which zeroes the automatic minimum size so the ratio wins over content height. */
 body:not(
     .dynamic-views-fixed-poster-height-masonry,
     .dynamic-views-fixed-poster-height-none
   )
   .dynamic-views
   .dynamic-views-grid
-  .card.image-format-poster.has-poster {
-  aspect-ratio: var(
-    --poster-aspect-override,
-    1 / var(--dynamic-views-image-aspect-ratio, 1)
-  );
-}
-
-/* Uniform height: imageless cards match poster aspect-ratio height.
-   Overflow hidden clips content that doesn't fit. */
-body.dynamic-views-poster-uniform-height
-  .dynamic-views
-  .dynamic-views-grid
-  .card.image-format-poster:not(.has-poster) {
+  .card.image-format-poster {
   aspect-ratio: 1 / var(--dynamic-views-image-aspect-ratio, 1);
-  overflow: hidden;
-}
-
-/* Mixed-row stretch: JS sets --poster-aspect-override: auto + --poster-row-min-height
-   when imageless cards in the same row are taller than poster cards. */
-.dynamic-views .dynamic-views-grid .card.image-format-poster.poster-stretch {
-  min-height: var(--poster-row-min-height);
 }
 
 /* Grid dynamic poster height: without equalization, each card sizes to its own image, causing uneven row heights */
@@ -562,15 +555,12 @@ body:is(
   )
   .dynamic-views
   .dynamic-views-grid
-  .card.image-format-poster.has-poster {
-  aspect-ratio: var(
-    --poster-aspect-override,
-    1 /
-      var(
-        --row-poster-aspect-ratio,
-        var(--actual-aspect-ratio, var(--dynamic-views-image-aspect-ratio, 1))
-      )
-  );
+  .card.image-format-poster {
+  aspect-ratio: 1 /
+    var(
+      --row-poster-aspect-ratio,
+      var(--actual-aspect-ratio, var(--dynamic-views-image-aspect-ratio, 1))
+    );
 }
 
 /* Grid dynamic poster height + contain: cap at slider to collapse bars without exceeding slider */
@@ -580,18 +570,15 @@ body:is(
   )
   .dynamic-views.image-fit-contain
   .dynamic-views-grid
-  .card.image-format-poster.has-poster {
-  aspect-ratio: var(
-    --poster-aspect-override,
-    1 /
-      min(
-        var(
-          --row-poster-aspect-ratio,
-          var(--actual-aspect-ratio, var(--dynamic-views-image-aspect-ratio, 1))
-        ),
-        var(--dynamic-views-image-aspect-ratio, 1)
-      )
-  );
+  .card.image-format-poster {
+  aspect-ratio: 1 /
+    min(
+      var(
+        --row-poster-aspect-ratio,
+        var(--actual-aspect-ratio, var(--dynamic-views-image-aspect-ratio, 1))
+      ),
+      var(--dynamic-views-image-aspect-ratio, 1)
+    );
 }
 
 /* Masonry contain + fixed poster height: force slider value (bars visible) */

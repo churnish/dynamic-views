@@ -59,6 +59,7 @@ interface VirtualItem {
 interface EqualizeConfig {
   expectedFormat: string;
   matchCard: (el: MockElement) => boolean;
+  hasRatio?: (el: MockElement) => boolean;
   fixedHeightOffClasses: { masonry: string; none: string };
   cssVariable: string;
 }
@@ -113,6 +114,10 @@ function equalizeRowHeights(
     // Read phase
     const ratios: { index: number; el: MockElement; ratio: number }[] = [];
     for (const { index, el } of indexedCards) {
+      if (config.hasRatio && !config.hasRatio(el)) {
+        ratios.push({ index, el, ratio: 0 });
+        continue;
+      }
       const raw = ctx
         .getComputedStyle(el)
         .getPropertyValue('--actual-aspect-ratio');
@@ -145,9 +150,8 @@ describe('equalizeRowHeights', () => {
   /** Standard poster config matching equalizeRowPosterHeights in grid-view.ts */
   const posterConfig: EqualizeConfig = {
     expectedFormat: 'poster',
-    matchCard: (el) =>
-      el.classList.contains('image-format-poster') &&
-      el.classList.contains('has-poster'),
+    matchCard: (el) => el.classList.contains('image-format-poster'),
+    hasRatio: (el) => el.classList.contains('has-poster'),
     fixedHeightOffClasses: {
       masonry: FIXED_POSTER_HEIGHT_MASONRY,
       none: FIXED_POSTER_HEIGHT_NONE,
@@ -291,12 +295,15 @@ describe('equalizeRowHeights', () => {
     expect(cards[5]._cssProps.get(posterConfig.cssVariable)).toBe('2');
   });
 
-  it('mixed content: imageless cards ignored, poster cards equalized', () => {
+  it('mixed content: imageless cards take the row ratio and never set it', () => {
     // 3 columns, 3 cards in one row
-    // Card 0: imageless (no has-poster — does not pass matchCard)
+    // Card 0: imageless — matched, but its stale ratio must not reach the max.
+    //   The value sits above both poster ratios: a failed image keeps a real
+    //   --actual-aspect-ratio, so only the has-poster gate can exclude it.
     // Cards 1-2: poster cards with different aspect ratios
     const imageless = mockElement({
-      computedProps: { '--actual-aspect-ratio': '0.5' },
+      classes: ['image-format-poster'],
+      computedProps: { '--actual-aspect-ratio': '2.0' },
     });
     const poster1 = mockElement({
       classes: ['image-format-poster', 'has-poster'],
@@ -316,11 +323,36 @@ describe('equalizeRowHeights', () => {
 
     equalizeRowHeights(ctx, posterConfig);
 
-    // Imageless card not matched — no CSS variable set
-    expect(imageless._cssProps.has(posterConfig.cssVariable)).toBe(false);
-
-    // Both poster cards get the max ratio (1.4), correctly identified as row 0
+    // All three cards resolve to the row max (1.4) — the imageless card's own
+    // 2.0 is discarded by the has-poster gate.
+    expect(imageless._cssProps.get(posterConfig.cssVariable)).toBe('1.4');
     expect(poster1._cssProps.get(posterConfig.cssVariable)).toBe('1.4');
     expect(poster2._cssProps.get(posterConfig.cssVariable)).toBe('1.4');
+  });
+
+  it('all-imageless row: every card gets 0 (aspect-ratio degenerates to natural height)', () => {
+    const cards = [
+      mockElement({
+        classes: ['image-format-poster'],
+        computedProps: { '--actual-aspect-ratio': '2.0' },
+      }),
+      mockElement({
+        classes: ['image-format-poster'],
+        computedProps: { '--actual-aspect-ratio': '0.5' },
+      }),
+    ];
+
+    const ctx = makeCtx({
+      columns: 3,
+      virtualItemsByGroup: new Map([['default', cards.map((el) => ({ el }))]]),
+    });
+
+    equalizeRowHeights(ctx, posterConfig);
+
+    // Row max is 0 — written, not skipped, so no stale ratio from a previous
+    // row composition survives.
+    for (const card of cards) {
+      expect(card._cssProps.get(posterConfig.cssVariable)).toBe('0');
+    }
   });
 });

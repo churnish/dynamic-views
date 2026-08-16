@@ -81,7 +81,7 @@ pm.setPluginSettings(settings);  // Merges sparse — only non-default values pe
 | Key | Type | Default | Values | Notes |
 |---|---|---|---|---|
 | `imageProperty` | `string` | `''` | — | Property for card image |
-| `fallbackToEmbeds` | `string` | `'always'` | `'always'`, `'if-unavailable'`, `'never'` | |
+| `showFileImages` | `string` | `'always'` | `'always'`, `'if-unavailable'`, `'never'` | |
 | `imageFormat` | `string` | `'thumbnail'` | `'thumbnail'`, `'cover'`, `'poster'`, `'backdrop'` | |
 | `posterDisplayMode` | `string` | `'fade'` | `'fade'`, `'overlay'` | Only when `imageFormat` is `'poster'` |
 | `posterInteractToReveal` | `boolean` | `false` | — | When ON: content hidden, revealed on hover (desktop) / press (mobile) |
@@ -107,8 +107,8 @@ pm.setPluginSettings(settings);  // Merges sparse — only non-default values pe
 | Key | Type | Default (Grid) | Default (Masonry) | Values | Notes |
 |---|---|---|---|---|---|
 | `minimumColumns` | `1 \| 2` | `1` | `2` | `1`, `2` | Bases YAML: `'one'`/`'two'` strings |
-| `cardGapDesktop` | `number` | `8` | `8` | 0–64 px | Gap between cards. Also sets the view edge inset. Slider shown when `!Platform.isPhone` |
-| `cardGapPhone` | `number` | `6` | `6` | 0–64 px | Gap between cards. Also sets the view edge inset. Slider shown when `Platform.isPhone` |
+| `cardGapDesktop` | `number` | `8` | `8` | 0–64 px | Gap between cards. Also sets the view edge inset, floored at 12px. Slider shown when `!Platform.isPhone` |
+| `cardGapPhone` | `number` | `6` | `6` | 0–64 px | Gap between cards. Also sets the view edge inset, floored at 12px. Slider shown when `Platform.isPhone` |
 | `cssclasses` | `string` | `''` | `''` | — | Comma-separated CSS classes |
 
 Both gap keys persist in the `.base` YAML regardless of platform — `.base` files sync across devices, so each form factor keeps its own value. Only the current platform's slider is emitted into the schema.

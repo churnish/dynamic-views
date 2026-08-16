@@ -26,13 +26,14 @@ body:is(
 }
 ```
 
-For settings where the default means "no CSS override needed" (e.g., hover background = transparent), use the simpler `:not()` form since there's no explicit class to match:
+Where the default is one of the explicit options rather than a distinct "off" state, the `:not()` form alone is enough — it restates the default option's declarations for the no-class case:
 
 ```scss
+/* Primary is the default hover background — fires with or without Style Settings */
 body:not([class*='dynamic-views-card-background-hover-'])
   .dynamic-views
   .card.interact {
-  background-color: transparent;
+  --card-bg: var(--dynamic-views-background-primary);
 }
 ```
 
@@ -288,6 +289,7 @@ Font *family* settings are still not covered: they are `variable-text`, so they 
 | Card border color (hover) | muted          | [_core.scss](../../styles/card/_core.scss)                                                     |
 | Card background (hover)   | transparent    | [_hover-and-touch.scss](../../styles/_hover-and-touch.scss)                                             |
 | Card shadow color         | Default        | No CSS fallback needed — Default passes theme shadow vars through unchanged |
+| Card shadow color (hover) | Default        | No CSS fallback needed — Default emits no rule, so the hovered card keeps the base shadow color |
 | File type indicator      | None           | [_header.scss](../../styles/card/_header.scss) — suffix visible by default, only Flair hides it  |
 | Fixed cover height       | Grid (slider)  | [_grid-view.scss](../../styles/_grid-view.scss), [_cover-elements.scss](../../styles/card/_cover-elements.scss) — `:not(-masonry, -none)` exclusion (fires for `-grid`, `-both`, and no class) |
 | Fixed poster height      | Grid (slider)  | [_poster.scss](../../styles/card/_poster.scss) — `:not(-masonry, -none)` exclusion (fires for `-grid`, `-both`, and no class) |

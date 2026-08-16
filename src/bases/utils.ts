@@ -23,6 +23,7 @@ import {
   loadTextPreviewsForEntries,
   loadImagesForEntries,
 } from '../core/content-loader';
+import { getYouTubeTargetWidth } from '../core/youtube-preview';
 import {
   shouldUseNotebookNavigator,
   navigateToTagInNotebookNavigator,
@@ -756,6 +757,10 @@ export function getSortMethod(config: BasesConfigWithSort): string {
 
 /**
  * Load text previews and images for Bases entries
+ *
+ * @param devicePixelRatio - Read in the view via `getOwnerWindow(containerEl)`
+ *   and passed as a number: bare `window` is prohibited here, and a popout on a
+ *   differently-scaled monitor genuinely has a different ratio.
  */
 export async function loadContentForEntries(
   entries: BasesEntry[],
@@ -763,7 +768,8 @@ export async function loadContentForEntries(
   app: App,
   textPreviews: Record<string, string>,
   images: Record<string, string | string[]>,
-  hasImageAvailable: Record<string, boolean>
+  hasImageAvailable: Record<string, boolean>,
+  devicePixelRatio: number
 ): Promise<void> {
   // Load text previews
   if (settings.textPreviewProperty || settings.fallbackToContent) {
@@ -878,13 +884,18 @@ export async function loadContentForEntries(
 
     await loadImagesForEntries(
       imageEntries,
-      settings.fallbackToEmbeds,
+      settings.showFileImages,
       app,
       images,
       hasImageAvailable,
       {
         includeYoutube: settings.showYoutubeThumbnails,
         includeCardLink: settings.showCardLinkCovers,
+        youtubeTargetWidth: getYouTubeTargetWidth(
+          settings.imageFormat,
+          settings.cardSize,
+          devicePixelRatio
+        ),
       }
     );
   }
@@ -958,9 +969,8 @@ export function handleTemplateToggle(
   viewType: 'grid' | 'masonry',
   plugin: DynamicViews,
   initializedRef: { value: boolean },
-  // Union accommodates callers still holding NodeJS.Timeout-typed refs; this
-  // function only ever writes window.setTimeout's number handle.
-  cooldownTimerRef: { value: ReturnType<typeof setTimeout> | number | null }
+  // Timers must be main-window timers, so the handle is always a number
+  cooldownTimerRef: { value: number | null }
 ): void {
   const isTemplate = config.get('isTemplate') === true;
 

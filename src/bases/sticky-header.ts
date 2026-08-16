@@ -6,6 +6,8 @@
  * observes them — when a sentinel exits the scroll pane, its heading is stuck.
  */
 
+import { getOwnerWindow } from '../utils/owner-window';
+
 const STUCK_CLASS = 'stuck';
 
 /** Maps sentinel elements back to their heading — avoids expando properties */
@@ -22,7 +24,7 @@ export function setupStickyHeaderObserver(scrollContainer: HTMLElement): {
   const sentinels = new Map<HTMLElement, HTMLElement>();
 
   // Use owner window's IO constructor for popout window support
-  const win = scrollContainer.ownerDocument.defaultView ?? window;
+  const win = getOwnerWindow(scrollContainer);
   const observer = new win.IntersectionObserver(
     (entries) => {
       for (const entry of entries) {

@@ -1,7 +1,14 @@
 /** Poster image format utilities — smart content clipping for static mode and scroll reset for interactive mode. */
 
-import { applyPerParagraphClamp } from './text-preview-dom';
-import { getOwnerWindow } from '../utils/owner-window';
+import {
+  applyParagraphClamp,
+  clearParagraphClampState,
+  measureParagraphClamp,
+  type ParagraphClampMeasurement,
+} from './text-preview-dom';
+import { getOwnerWindow, type OwnerWindow } from '../utils/owner-window';
+import { CONTENT_HIDDEN_CLASS } from './content-visibility';
+import { URL_ICON_SELECTOR } from './constants';
 
 const CLIP_HIDDEN_CLASS = 'poster-clip-hidden';
 const HAS_PARAGRAPHS_CLASS = 'has-paragraphs';
@@ -15,7 +22,8 @@ const TEXT_TARGET_SELECTOR =
 
 /**
  * Calculates how many full lines fit in the available height and applies
- * a line clamp via CSS variable. Returns true if at least 1 line fits.
+ * a line clamp via CSS variable. Returns the applied line count, or 0 if
+ * not even one line fits.
  *
  * `cap` is the inherited line count from the container — clipping may only ever
  * reduce a line count, never raise it above what the user configured. `NaN` means
@@ -27,12 +35,13 @@ function clampToFit(
   lineHeight: number,
   cssVar: string,
   cap: number
-): boolean {
-  if (!lineHeight || lineHeight <= 0) return false;
+): number {
+  if (!lineHeight || lineHeight <= 0) return 0;
   const fits = Math.floor(availableHeight / lineHeight);
-  if (fits < 1) return false;
-  el.setCssProps({ [cssVar]: String(isNaN(cap) ? fits : Math.min(fits, cap)) });
-  return true;
+  if (fits < 1) return 0;
+  const applied = isNaN(cap) ? fits : Math.min(fits, cap);
+  el.setCssProps({ [cssVar]: String(applied) });
+  return applied;
 }
 
 /** Handles poster tap-to-reveal toggle. Returns true if the event was consumed. */
@@ -45,8 +54,7 @@ export function handlePosterTapReveal(
 
   const target = e.target as HTMLElement;
   const isInteractive = target.closest(INTERACTIVE_SELECTOR);
-  // ownerDocument.defaultView per AGENTS.md safe exception for text selection
-  const win = cardEl.ownerDocument.defaultView ?? window;
+  const win = getOwnerWindow(cardEl);
   const hasTextSelection = (win.getSelection()?.toString().length ?? 0) > 0;
   const isTextTarget =
     openFileAction === 'title' && target.closest(TEXT_TARGET_SELECTOR);
@@ -84,22 +92,53 @@ interface PosterClipPrepared {
   clippable: HTMLElement[];
   textPreviewEl: HTMLElement | null;
   textPreviewWrapper: HTMLElement | null;
+  /** Empty unless keep-newlines split the preview into <p> children. */
+  paragraphs: HTMLElement[];
 }
 
-interface PosterClipMeasured {
+/** Inherited line-count caps from the view container — clipping may only reduce, never raise. */
+interface PosterLineCaps {
+  titleLinesCap: number;
+  subtitleLinesCap: number;
+  textPreviewLinesCap: number;
+}
+
+interface PosterClipMeasured extends PosterLineCaps {
   clipBottom: number;
   rects: DOMRect[];
   titleRect: DOMRect | undefined;
   textPreviewLineHeight: number;
   subtitleLineHeight: number;
   titleLineHeight: number;
-  titleLinesCap: number;
-  subtitleLinesCap: number;
-  textPreviewLinesCap: number;
+}
+
+/**
+ * Reads the container's line-count caps. Hoisted out of the per-card measure so a
+ * batch pays one container style read instead of K. See poster.md invariant 12.
+ */
+function readPosterLineCaps(
+  containerEl: Element | null,
+  win: OwnerWindow
+): PosterLineCaps {
+  const containerStyle = containerEl ? win.getComputedStyle(containerEl) : null;
+  const readCap = (v: string) =>
+    parseInt(containerStyle?.getPropertyValue(v) ?? '', 10);
+  return {
+    titleLinesCap: readCap(TITLE_LINES_VAR),
+    subtitleLinesCap: readCap(SUBTITLE_LINES_VAR),
+    textPreviewLinesCap: readCap(TEXT_PREVIEW_LINES_VAR),
+  };
 }
 
 /** Clears previous clip state and collects clippable elements. Returns null if clipping is inapplicable. */
 function clearPosterClipState(cardEl: HTMLElement): PosterClipPrepared | null {
+  // Content-hidden cards measure at zero height, so clipping them is meaningless
+  // work — the same guard the card ResizeObserver applies. Consequence: a hidden
+  // card now keeps whatever clip state it had rather than having it cleared. Both
+  // states are wrong (nothing re-clips on reveal — the IntersectionObserver only
+  // toggles the class), but stale clipping is the cheaper of the two.
+  if (cardEl.classList.contains(CONTENT_HIDDEN_CLASS)) return null;
+
   for (const el of cardEl.querySelectorAll<HTMLElement>(
     `.${CLIP_HIDDEN_CLASS}`
   )) {
@@ -122,7 +161,7 @@ function clearPosterClipState(cardEl: HTMLElement): PosterClipPrepared | null {
       subtitleEl.style.removeProperty(SUBTITLE_LINES_VAR);
       clippable.push(subtitleEl);
     }
-    const urlIcon = header.querySelector<HTMLElement>('.card-title-url-icon');
+    const urlIcon = header.querySelector<HTMLElement>(URL_ICON_SELECTOR);
     if (urlIcon) clippable.push(urlIcon);
   }
 
@@ -150,10 +189,13 @@ function clearPosterClipState(cardEl: HTMLElement): PosterClipPrepared | null {
   const textPreviewEl =
     textPreviewWrapper?.querySelector<HTMLElement>('.card-text-preview') ??
     null;
+  let paragraphs: HTMLElement[] = [];
   if (textPreviewEl) {
     textPreviewEl.style.removeProperty(TEXT_PREVIEW_LINES_VAR);
     if (textPreviewEl.classList.contains(HAS_PARAGRAPHS_CLASS)) {
-      applyPerParagraphClamp(textPreviewEl);
+      // Clear only — the paragraph re-clamp is deferred to its own read/write
+      // pair so a batch does not interleave reads into this write phase.
+      paragraphs = clearParagraphClampState(textPreviewEl);
     }
   }
 
@@ -164,13 +206,24 @@ function clearPosterClipState(cardEl: HTMLElement): PosterClipPrepared | null {
     clippable,
     textPreviewEl,
     textPreviewWrapper,
+    paragraphs,
   };
+}
+
+/** Read phase — paragraph clamp inputs for a prepared card. Null when the preview has no paragraphs. */
+function measurePreparedParagraphClamp(
+  prepared: PosterClipPrepared
+): ParagraphClampMeasurement | null {
+  const { textPreviewEl, paragraphs } = prepared;
+  if (!textPreviewEl || paragraphs.length === 0) return null;
+  return measureParagraphClamp(textPreviewEl, paragraphs);
 }
 
 /** Reads all geometry needed for clip decisions. Returns null if no overflow. */
 function measurePosterClipGeometry(
   cardEl: HTMLElement,
-  prepared: PosterClipPrepared
+  prepared: PosterClipPrepared,
+  caps: PosterLineCaps
 ): PosterClipMeasured | null {
   const { contentEl, titleEl, subtitleEl, clippable, textPreviewEl } = prepared;
 
@@ -193,13 +246,6 @@ function measurePosterClipGeometry(
     ? parseFloat(win.getComputedStyle(titleEl).lineHeight)
     : 0;
 
-  // Inherited line-count caps — read once here (read phase) so the write phase
-  // stays free of style reads. See poster.md invariant 6.
-  const containerEl = cardEl.closest('.dynamic-views');
-  const containerStyle = containerEl ? win.getComputedStyle(containerEl) : null;
-  const readCap = (v: string) =>
-    parseInt(containerStyle?.getPropertyValue(v) ?? '', 10);
-
   return {
     clipBottom,
     rects,
@@ -207,16 +253,15 @@ function measurePosterClipGeometry(
     textPreviewLineHeight,
     subtitleLineHeight,
     titleLineHeight,
-    titleLinesCap: readCap(TITLE_LINES_VAR),
-    subtitleLinesCap: readCap(SUBTITLE_LINES_VAR),
-    textPreviewLinesCap: readCap(TEXT_PREVIEW_LINES_VAR),
+    ...caps,
   };
 }
 
 /** Applies hide/clamp decisions based on pre-measured geometry. */
 function applyPosterClipDecisions(
   prepared: PosterClipPrepared,
-  measured: PosterClipMeasured
+  measured: PosterClipMeasured,
+  paragraphClamp: ParagraphClampMeasurement | null
 ): void {
   const { titleEl, subtitleEl, clippable, textPreviewEl, textPreviewWrapper } =
     prepared;
@@ -241,20 +286,19 @@ function applyPosterClipDecisions(
     if (rect.top < clipBottom) {
       const availableHeight = clipBottom - rect.top;
 
-      if (el === textPreviewWrapper) {
-        if (
-          textPreviewEl &&
-          clampToFit(
-            textPreviewEl,
-            availableHeight,
-            textPreviewLineHeight,
-            TEXT_PREVIEW_LINES_VAR,
-            textPreviewLinesCap
-          )
-        ) {
-          if (textPreviewEl.classList.contains(HAS_PARAGRAPHS_CLASS)) {
-            applyPerParagraphClamp(textPreviewEl);
-          }
+      if (el === textPreviewWrapper && textPreviewEl) {
+        const fittedLines = clampToFit(
+          textPreviewEl,
+          availableHeight,
+          textPreviewLineHeight,
+          TEXT_PREVIEW_LINES_VAR,
+          textPreviewLinesCap
+        );
+        if (fittedLines > 0) {
+          // Re-clamp from the paragraph heights measured before any clamp was
+          // applied — they are budget-independent, so the reduced fitted count
+          // needs no second measure pass inside this write phase.
+          if (paragraphClamp) applyParagraphClamp(paragraphClamp, fittedLines);
           continue;
         }
       }
@@ -267,7 +311,7 @@ function applyPosterClipDecisions(
           subtitleLineHeight,
           SUBTITLE_LINES_VAR,
           subtitleLinesCap
-        )
+        ) > 0
       ) {
         continue;
       }
@@ -297,50 +341,119 @@ function applyPosterClipDecisions(
 export function clipPosterStaticOverflow(cardEl: HTMLElement): void {
   const prepared = clearPosterClipState(cardEl);
   if (!prepared) return;
-  const measured = measurePosterClipGeometry(cardEl, prepared);
+  const paragraphClamp = measurePreparedParagraphClamp(prepared);
+  // Paragraphs must carry their container-budget clamp before the poster
+  // geometry read — measuring unclamped text inflates scrollHeight and shifts
+  // every rect below the preview, changing which elements get hidden.
+  if (paragraphClamp) applyParagraphClamp(paragraphClamp);
+  const caps = readPosterLineCaps(
+    cardEl.closest('.dynamic-views'),
+    getOwnerWindow(cardEl)
+  );
+  const measured = measurePosterClipGeometry(cardEl, prepared, caps);
   if (!measured) return;
-  applyPosterClipDecisions(prepared, measured);
+  applyPosterClipDecisions(prepared, measured, paragraphClamp);
 }
 
-/** Batched version — separates clear/measure/apply phases across all cards to reduce layout thrashing. */
+/**
+ * Batched version — five phases across all cards, two forced reflows total:
+ * clear → read paragraph metrics → clamp paragraphs → read poster geometry → clip.
+ */
 export function clipPosterStaticOverflowBatch(cards: HTMLElement[]): void {
+  // Phase 1 (write): clear poster overrides and paragraph clamp state
   const prepared = cards.map((c) => clearPosterClipState(c));
-  const measured = prepared.map((p, i) =>
-    p ? measurePosterClipGeometry(cards[i], p) : null
+
+  // Phase 2 (read): paragraph line heights, budgets and unclamped heights
+  const paragraphClamps = prepared.map((p) =>
+    p ? measurePreparedParagraphClamp(p) : null
   );
+
+  // Phase 3 (write): clamp paragraphs to the container budget
+  for (const clamp of paragraphClamps) {
+    if (clamp) applyParagraphClamp(clamp);
+  }
+
+  // Caps are per-container, and a compact-stacked batch is collected per document
+  // — it can span two views with different line settings, so memoize instead of
+  // reading once off the first card.
+  const capsByContainer = new Map<Element | null, PosterLineCaps>();
+  const capsFor = (cardEl: HTMLElement): PosterLineCaps => {
+    const containerEl = cardEl.closest('.dynamic-views');
+    let caps = capsByContainer.get(containerEl);
+    if (!caps) {
+      caps = readPosterLineCaps(containerEl, getOwnerWindow(cardEl));
+      capsByContainer.set(containerEl, caps);
+    }
+    return caps;
+  };
+
+  // Phase 4 (read): poster geometry and container caps
+  const measured = prepared.map((p, i) =>
+    p ? measurePosterClipGeometry(cards[i], p, capsFor(cards[i])) : null
+  );
+
+  // Phase 5 (write): clip decisions
   for (let i = 0; i < cards.length; i++) {
     if (prepared[i] && measured[i])
-      applyPosterClipDecisions(prepared[i]!, measured[i]!);
+      applyPosterClipDecisions(prepared[i]!, measured[i]!, paragraphClamps[i]);
   }
 }
 
-/** Removes all poster clip state from a card, restoring original visibility. */
-export function resetPosterClipping(cardEl: HTMLElement): void {
-  for (const el of cardEl.querySelectorAll<HTMLElement>(
-    `.${CLIP_HIDDEN_CLASS}`
-  )) {
-    el.classList.remove(CLIP_HIDDEN_CLASS);
-  }
+/**
+ * Removes all poster clip state, restoring original visibility. Takes an array
+ * because its only call site loops over every poster card in a container — the
+ * paragraph re-clamp reads layout, so a per-card variant would cost K reflows.
+ */
+export function resetPosterClipping(cards: HTMLElement[]): void {
+  // Phase 1 (write): drop every clip override and paragraph clamp
+  const paragraphTargets: Array<{
+    el: HTMLElement;
+    paragraphs: HTMLElement[];
+  }> = [];
 
-  // Reset text preview line clamp override
-  const textPreviewEl = cardEl.querySelector<HTMLElement>('.card-text-preview');
-  if (textPreviewEl) {
-    textPreviewEl.style.removeProperty(TEXT_PREVIEW_LINES_VAR);
-    if (textPreviewEl.classList.contains(HAS_PARAGRAPHS_CLASS)) {
-      applyPerParagraphClamp(textPreviewEl);
+  for (const cardEl of cards) {
+    for (const el of cardEl.querySelectorAll<HTMLElement>(
+      `.${CLIP_HIDDEN_CLASS}`
+    )) {
+      el.classList.remove(CLIP_HIDDEN_CLASS);
+    }
+
+    // Reset text preview line clamp override
+    const textPreviewEl =
+      cardEl.querySelector<HTMLElement>('.card-text-preview');
+    if (textPreviewEl) {
+      textPreviewEl.style.removeProperty(TEXT_PREVIEW_LINES_VAR);
+      if (textPreviewEl.classList.contains(HAS_PARAGRAPHS_CLASS)) {
+        paragraphTargets.push({
+          el: textPreviewEl,
+          paragraphs: clearParagraphClampState(textPreviewEl),
+        });
+      }
+    }
+
+    // Reset title line clamp override
+    const titleEl = cardEl.querySelector<HTMLElement>('.card-title');
+    if (titleEl) {
+      titleEl.style.removeProperty(TITLE_LINES_VAR);
+    }
+
+    // Reset subtitle line clamp override
+    const subtitleEl = cardEl.querySelector<HTMLElement>('.card-subtitle');
+    if (subtitleEl) {
+      subtitleEl.style.removeProperty(SUBTITLE_LINES_VAR);
     }
   }
 
-  // Reset title line clamp override
-  const titleEl = cardEl.querySelector<HTMLElement>('.card-title');
-  if (titleEl) {
-    titleEl.style.removeProperty(TITLE_LINES_VAR);
+  // Phase 2 (read): paragraph metrics at the restored container budget
+  const clamps: ParagraphClampMeasurement[] = [];
+  for (const { el, paragraphs } of paragraphTargets) {
+    const clamp = measureParagraphClamp(el, paragraphs);
+    if (clamp) clamps.push(clamp);
   }
 
-  // Reset subtitle line clamp override
-  const subtitleEl = cardEl.querySelector<HTMLElement>('.card-subtitle');
-  if (subtitleEl) {
-    subtitleEl.style.removeProperty(SUBTITLE_LINES_VAR);
+  // Phase 3 (write): re-clamp paragraphs
+  for (const clamp of clamps) {
+    applyParagraphClamp(clamp);
   }
 }
 

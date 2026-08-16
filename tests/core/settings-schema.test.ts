@@ -1,7 +1,9 @@
 import { vi } from 'vitest';
+import { Platform } from 'obsidian';
 import {
   readBasesSettings,
   extractBasesTemplate,
+  getBasesViewOptions,
 } from '../../src/core/settings-schema';
 
 // Mock constants (same pattern as cleanup.test.ts)
@@ -18,7 +20,7 @@ vi.mock('../../src/constants', () => ({
     fallbackToContent: true,
     textPreviewLines: 5,
     imageProperty: '',
-    fallbackToEmbeds: 'always',
+    showFileImages: 'always',
     imageFormat: 'thumbnail',
     posterDisplayMode: 'fade',
     posterInteractToReveal: false,
@@ -51,6 +53,18 @@ function createMockConfig(values: Record<string, unknown>, order: string[]) {
   };
 }
 
+/** Walks the schema groups to find a leaf item by key. */
+function findItem(options: any[], key: string): any {
+  for (const option of options) {
+    if (option.key === key) return option;
+    if (option.items) {
+      const found = findItem(option.items, key);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
 const MOCK_VIEW_DEFAULTS: any = {
   cardSize: 300,
   titleProperty: 'file.name',
@@ -63,7 +77,7 @@ const MOCK_VIEW_DEFAULTS: any = {
   fallbackToContent: true,
   textPreviewLines: 5,
   imageProperty: '',
-  fallbackToEmbeds: 'always',
+  showFileImages: 'always',
   imageFormat: 'thumbnail',
   posterDisplayMode: 'fade',
   posterInteractToReveal: false,
@@ -259,6 +273,151 @@ describe('readBasesSettings — subtitleLines', () => {
   });
 });
 
+describe('readBasesSettings — numeric range clamping', () => {
+  it('clamps a subtitleLines above the slider maximum', () => {
+    const config = createMockConfig({ subtitleLines: 40 }, []);
+    expect(readBasesSettings(config, MOCK_PLUGIN_SETTINGS).subtitleLines).toBe(
+      5
+    );
+  });
+
+  it('clamps a subtitleLines below the slider minimum', () => {
+    const config = createMockConfig({ subtitleLines: 0 }, []);
+    expect(readBasesSettings(config, MOCK_PLUGIN_SETTINGS).subtitleLines).toBe(
+      1
+    );
+  });
+
+  it('leaves an in-range subtitleLines untouched', () => {
+    const config = createMockConfig({ subtitleLines: 3 }, []);
+    expect(readBasesSettings(config, MOCK_PLUGIN_SETTINGS).subtitleLines).toBe(
+      3
+    );
+  });
+
+  it('rounds fractional line counts', () => {
+    const config = createMockConfig({ subtitleLines: 2.5 }, []);
+    expect(readBasesSettings(config, MOCK_PLUGIN_SETTINGS).subtitleLines).toBe(
+      3
+    );
+  });
+
+  it('clamps cardSize and thumbnailSize to their slider bounds', () => {
+    const config = createMockConfig({ cardSize: 5000, thumbnailSize: 2 }, []);
+    const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
+    expect(result.cardSize).toBe(800);
+    expect(result.thumbnailSize).toBe(64);
+  });
+
+  it('clamps imageRatio without rounding it', () => {
+    expect(
+      readBasesSettings(
+        createMockConfig({ imageRatio: 1.35 }, []),
+        MOCK_PLUGIN_SETTINGS
+      ).imageRatio
+    ).toBe(1.35);
+    expect(
+      readBasesSettings(
+        createMockConfig({ imageRatio: 9 }, []),
+        MOCK_PLUGIN_SETTINGS
+      ).imageRatio
+    ).toBe(2.5);
+  });
+
+  it('clamps card gap to the slider bounds', () => {
+    const config = createMockConfig(
+      { cardGapDesktop: 500, cardGapPhone: -10 },
+      []
+    );
+    const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
+    expect(result.cardGapDesktop).toBe(64);
+    expect(result.cardGapPhone).toBe(0);
+  });
+});
+
+describe('getBasesViewOptions — boolean predicate parity', () => {
+  it('hides Subtitle lines when displaySecondAsSubtitle is a non-boolean', () => {
+    const config = createMockConfig(
+      {
+        id: 'x-grid',
+        displayFirstAsTitle: true,
+        displaySecondAsSubtitle: 'true',
+      },
+      []
+    ) as any;
+    const item = findItem(getBasesViewOptions('grid', config), 'subtitleLines');
+    expect(item.shouldHide()).toBe(true);
+  });
+
+  it('shows Subtitle lines when both toggles are real booleans', () => {
+    const config = createMockConfig(
+      {
+        id: 'x-grid',
+        displayFirstAsTitle: true,
+        displaySecondAsSubtitle: true,
+      },
+      []
+    ) as any;
+    const item = findItem(getBasesViewOptions('grid', config), 'subtitleLines');
+    expect(item.shouldHide()).toBe(false);
+  });
+
+  it('hides Lines when displayFirstAsTitle is a non-boolean', () => {
+    const config = createMockConfig(
+      { id: 'x-grid', displayFirstAsTitle: 'false' },
+      []
+    ) as any;
+    const item = findItem(getBasesViewOptions('grid', config), 'titleLines');
+    // BASES_DEFAULTS.displayFirstAsTitle is true, so the fallback keeps the row visible
+    expect(item.shouldHide()).toBe(false);
+  });
+});
+
+describe('getBasesViewOptions — subtitleLines gate', () => {
+  // displaySecondAsSubtitle can stay stored as true while displayFirstAsTitle is
+  // off — its own row is hidden then — so both toggles have to be checked.
+  const cases: Array<[boolean, boolean, boolean]> = [
+    [false, false, true],
+    [false, true, true],
+    [true, false, true],
+    [true, true, false],
+  ];
+
+  for (const [displayFirstAsTitle, displaySecondAsSubtitle, hidden] of cases) {
+    const verb = hidden ? 'hides' : 'shows';
+    it(`${verb} Subtitle lines for title=${displayFirstAsTitle}, subtitle=${displaySecondAsSubtitle}`, () => {
+      const config = createMockConfig(
+        { id: 'x-grid', displayFirstAsTitle, displaySecondAsSubtitle },
+        []
+      ) as any;
+      const item = findItem(
+        getBasesViewOptions('grid', config),
+        'subtitleLines'
+      );
+      expect(item.shouldHide()).toBe(hidden);
+    });
+  }
+});
+
+describe('getBasesViewOptions — card gap platform branch', () => {
+  afterEach(() => {
+    Platform.isPhone = false;
+  });
+
+  it('emits only the desktop gap key off phone', () => {
+    const options = getBasesViewOptions('grid');
+    expect(findItem(options, 'cardGapDesktop')).toBeDefined();
+    expect(findItem(options, 'cardGapPhone')).toBeUndefined();
+  });
+
+  it('emits only the phone gap key on phone', () => {
+    Platform.isPhone = true;
+    const options = getBasesViewOptions('grid');
+    expect(findItem(options, 'cardGapPhone')).toBeDefined();
+    expect(findItem(options, 'cardGapDesktop')).toBeUndefined();
+  });
+});
+
 describe('readBasesSettings — templateOverrides', () => {
   it('should use templateOverrides when config has no value', () => {
     const config = createMockConfig({}, []);
@@ -408,9 +567,9 @@ describe('readBasesSettings — getValidEnum branches', () => {
   });
 
   it('should return default for enum field without previousValue path', () => {
-    // fallbackToEmbeds does NOT pass previousValue — always falls back to default
-    const config = createMockConfig({ fallbackToEmbeds: 'nonsense' }, []);
+    // showFileImages does NOT pass previousValue — always falls back to default
+    const config = createMockConfig({ showFileImages: 'nonsense' }, []);
     const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
-    expect(result.fallbackToEmbeds).toBe('always');
+    expect(result.showFileImages).toBe('always');
   });
 });

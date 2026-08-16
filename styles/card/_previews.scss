@@ -55,6 +55,13 @@
   }
 
   .card-text-preview {
+    font-weight: var(
+      --dynamic-views-text-preview-weight,
+      var(--dynamic-views-font-weight)
+    );
+    font-style: var(--dynamic-views-text-preview-style, normal);
+    font-variant: var(--dynamic-views-text-preview-variant, normal);
+    text-transform: var(--dynamic-views-text-preview-case, none);
     color: var(
       --dynamic-views-text-preview-color,
       var(--dynamic-views-text-muted)
@@ -75,36 +82,6 @@
     -webkit-user-select: text;
     user-select: text;
   }
-}
-
-body.dynamic-views-text-preview-bold .dynamic-views .card-text-preview {
-  font-weight: calc(
-    var(--dynamic-views-font-weight) + var(--dynamic-views-bold-modifier)
-  );
-}
-
-body.dynamic-views-text-preview-italic .dynamic-views .card-text-preview {
-  font-style: italic;
-}
-
-body.dynamic-views-text-preview-small-caps .dynamic-views .card-text-preview {
-  font-variant: small-caps;
-}
-
-body.dynamic-views-text-preview-case-lowercase
-  .dynamic-views
-  .card-text-preview {
-  text-transform: lowercase;
-}
-
-body.dynamic-views-text-preview-case-uppercase
-  .dynamic-views
-  .card-text-preview {
-  text-transform: uppercase;
-}
-
-body.dynamic-views-text-preview-case-title .dynamic-views .card-text-preview {
-  text-transform: capitalize;
 }
 
 body.dynamic-views-text-preview-align-center .dynamic-views .card-text-preview {

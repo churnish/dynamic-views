@@ -13,10 +13,18 @@ import { canHover, setupHoverIntent } from './hover-and-touch';
 import { brokenImageUrls, markImageBroken } from './image-loader';
 import { getOwnerWindow } from '../utils/owner-window';
 
-// Blob URL cache for external images to prevent re-downloads
-// Obsidian's Electron sends Cache-Control: no-cache on cross-origin requests,
-// making browser HTTP caching ineffective. This cache uses requestUrl (Obsidian's
-// API, bypasses CORS) to fetch once and serve as same-origin blob: URLs.
+// Blob URL cache for external images, fetched once via requestUrl and served as
+// same-origin blob: URLs.
+//
+// This is NOT about avoiding re-downloads. It previously claimed Electron sends
+// Cache-Control: no-cache on cross-origin requests, making HTTP caching
+// ineffective — measured false: a repeat <img> load of the same cross-origin URL
+// completes in ~0ms and produces no network request at all. A request header
+// would be universal, so this is not host-specific either.
+//
+// What the cache actually buys is a decoded, same-origin source ready before it
+// is needed, so a scrub or slideshow step swaps frames without a fetch-and-decode
+// mid-gesture. Judge any change to it on that, not on download counts.
 const externalBlobCache = new Map<string, string>();
 const BLOB_CACHE_LIMIT = 150;
 // Deduplicate concurrent fetch requests for the same URL

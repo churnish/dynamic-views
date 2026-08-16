@@ -70,6 +70,41 @@ body:not(.is-mobile).dynamic-views-open-on-title .dynamic-views .card-title {
   max-width: 100%;
 }
 
+/* A shrunk box is exactly as wide as its text, so the Title/Subtitle alignment
+   settings (_header.scss) have no free space left to distribute and silently do
+   nothing — visibly so on text short enough to fit one line, since anything that
+   wraps hits max-width: 100% and fills the box again. Moving the box with auto
+   inline margins reads identically and keeps the dead zone beside the text.
+   Each rule repeats the gate of the shrink rule it answers: where the box is not
+   shrunk it is a stretched flex item, and an auto cross-axis margin would
+   suppress that stretch — on mobile collapsing the very tap target the
+   desktop-only gate above exists to preserve. */
+body.dynamic-views-open-on-title.dynamic-views-subtitle-align-center
+  .dynamic-views
+  .card-subtitle {
+  margin-inline: auto;
+}
+
+body.dynamic-views-open-on-title.dynamic-views-subtitle-align-right
+  .dynamic-views
+  .card-subtitle {
+  margin-inline-start: auto;
+}
+
+body:not(
+    .is-mobile
+  ).dynamic-views-open-on-title.dynamic-views-title-align-center
+  .dynamic-views
+  .card-title {
+  margin-inline: auto;
+}
+
+body:not(.is-mobile).dynamic-views-open-on-title.dynamic-views-title-align-right
+  .dynamic-views
+  .card-title {
+  margin-inline-start: auto;
+}
+
 /* Property values: selectable when title acts as link.
    Already flex children — don't span full width, no fit-content needed. */
 body.dynamic-views-open-on-title .dynamic-views .property-content {

@@ -44,7 +44,7 @@ export const VIEW_DEFAULTS: ViewDefaults = {
   textPreviewLines: 5,
   // Image
   imageProperty: '',
-  fallbackToEmbeds: 'always',
+  showFileImages: 'always',
   imageFormat: 'thumbnail',
   posterDisplayMode: 'fade',
   posterInteractToReveal: false,

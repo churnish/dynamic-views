@@ -4,19 +4,15 @@
  * Owns the clone's lifecycle and its two mount modes — fullscreen appends to
  * `body`, constrained appends to the owning `.workspace-leaf` so the overlay
  * takes part in Obsidian's tab-drop preview — plus two gesture backends with
- * deliberately opposite transform orders, arrow navigation, clipboard export,
- * drag-out, and the keymap `Scope` that carries every viewer key.
+ * deliberately opposite transform orders, arrow navigation, drag-out, and the
+ * keymap `Scope` that carries every viewer key.
  *
  * See docs/arch/image-viewer.md.
  */
 
-import { Notice, Platform, Scope, TFile, setIcon, type App } from 'obsidian';
+import { Platform, Scope, TFile, setIcon, type App } from 'obsidian';
 
-import {
-  CLIPBOARD_FOCUS_SETTLE_MS,
-  GESTURE_TIMEOUT_MS,
-  VIEWER_DISMISS_SUPPRESS_MS,
-} from './constants';
+import { GESTURE_TIMEOUT_MS, VIEWER_DISMISS_SUPPRESS_MS } from './constants';
 import {
   getImageDisplayName,
   getVaultPathFromResourceUrl,
@@ -26,6 +22,10 @@ import { brokenImageUrls, markImageBroken } from './image-loader';
 import { getCachedBlobUrl } from './slideshow';
 import { deferContainerHoverDrop } from './hover-and-touch';
 import { getNextImageIndex } from './viewer-navigation';
+import {
+  getVideoIdFromThumbnailUrl,
+  getYouTubeThumbnailUrl,
+} from './youtube-preview';
 import { getOwnerWindow } from '../utils/owner-window';
 
 /** Wheel event listener options (stored for proper cleanup) */
@@ -84,11 +84,16 @@ const viewerImageSets = new WeakMap<HTMLElement, string[]>();
 
 /**
  * Registers the navigable image set for a card embed.
- * Stores a snapshot: the renderer's arrays are spliced in place by broken-URL
- * recovery, which would otherwise shift indices while the viewer is open.
+ *
+ * Stores the renderer's live array, not a copy. The snapshot that keeps indices
+ * stable is taken in `openImageViewer` instead, which is both cheaper — cards
+ * whose viewer is never opened no longer pay for a copy — and better ordered:
+ * URLs at indices 1+ are validated only on hover or first touch, and the
+ * broken ones are spliced out of this very array, so a copy taken here is
+ * always pre-validation.
  */
 export function setViewerImageSet(embedEl: HTMLElement, urls: string[]): void {
-  viewerImageSets.set(embedEl, [...urls]);
+  viewerImageSets.set(embedEl, urls);
 }
 
 /**
@@ -386,18 +391,24 @@ interface ViewerGestureControls {
 /** Constrained viewer: returns true when the key event should be ignored (viewer's leaf is not active). */
 function isConstrainedViewerInactive(el: CloneElement, doc: Document): boolean {
   if (!el.classList.contains('dynamic-views-viewer-constrained')) return false;
-  // A hidden viewer never owns keys. Safe on this branch only: the clone is
-  // `position: absolute` here, so `offsetParent` is its leaf, whereas the
-  // fullscreen clone is `position: fixed` and would always report null.
-  if (el.offsetParent === null) return true;
   const orig = el.__originalEmbed;
   const activeLeaf = doc.activeElement?.closest('.workspace-leaf');
-  return (
+  if (
     doc.activeElement !== el &&
     !orig?.closest('.workspace-leaf.mod-active') &&
     !!activeLeaf &&
     activeLeaf !== orig?.closest('.workspace-leaf')
-  );
+  ) {
+    return true;
+  }
+  // A hidden viewer never owns keys. Read last, not first: this runs on every
+  // keydown while a viewer is open, and `offsetParent` forces style and layout
+  // up to date, whereas the focus tests above answer the same question from
+  // clean state. The two conditions OR into one result, so the order is free.
+  // Safe on this branch only: the clone is `position: absolute` here, so
+  // `offsetParent` is its leaf, whereas the fullscreen clone is
+  // `position: fixed` and would always report null.
+  return el.offsetParent === null;
 }
 
 /**
@@ -436,6 +447,34 @@ function setupImageViewerGestures(
   let mobileResetTransform: (() => void) | null = null;
   const gestureDoc = container.ownerDocument;
   const gestureWin = gestureDoc.defaultView ?? window;
+
+  /**
+   * Closed-fist cursor while a pointer drag pans the image.
+   *
+   * Native drives Obsidian's app-wide `is-grabbing` body class from its own pan
+   * handler (app.js:95706), and its rule is
+   * `body.is-grabbing *:not(.workspace-leaf-resize-handle)` (app.css:3244) — a
+   * universal descendant selector, so every toggle invalidates style for the
+   * entire document: measured 5.5ms on add and 5.3ms on remove at 60 cards
+   * (~7,000 elements), i.e. a dropped frame at each end of every drag. It also
+   * wakes the body-class MutationObserver in `style-settings.ts`, which then
+   * bails.
+   *
+   * Only constrained mode needs that reach — a captured pointer can leave the
+   * leaf mid-drag, and nothing but the app-wide rule follows it there. A
+   * fullscreen clone already covers the viewport, so scoping the same cursor to
+   * the clone is visually identical while the selector can only match the
+   * clone's handful of descendants.
+   *
+   * Line numbers read against Obsidian 1.13.6; re-resolve by symbol.
+   */
+  const usesAppWideGrabCursor = container.classList.contains(
+    'dynamic-views-viewer-constrained'
+  );
+  const setGrabbingCursor = (grabbing: boolean): void => {
+    const target = usesAppWideGrabCursor ? gestureDoc.body : container;
+    target.classList.toggle('is-grabbing', grabbing);
+  };
 
   /**
    * Desktop gesture backend — wheel zoom/pan plus pointer-drag panning, written
@@ -577,10 +616,7 @@ function setupImageViewerGestures(
       lastX = e.clientX;
       lastY = e.clientY;
       imgEl.setPointerCapture(e.pointerId);
-      // Obsidian's own `is-grabbing` body class carries `cursor: grabbing
-      // !important` app-wide; the native lightbox drives it the same way, so
-      // the plugin needs no CSS of its own
-      gestureDoc.body.classList.add('is-grabbing');
+      setGrabbingCursor(true);
     };
 
     // The listeners are permanently attached, so without the id gate merely
@@ -600,7 +636,7 @@ function setupImageViewerGestures(
         imgEl.releasePointerCapture(e.pointerId);
       }
       activePointerId = null;
-      gestureDoc.body.classList.remove('is-grabbing');
+      setGrabbingCursor(false);
     };
 
     const pointerOptions = { signal: pointerController.signal };
@@ -863,9 +899,11 @@ function setupImageViewerGestures(
       if (errorHandler) {
         imgEl.removeEventListener('error', errorHandler);
       }
-      // Never leave the app-wide grabbing cursor behind if the viewer is torn
-      // down mid-drag — pointerup would not fire
-      gestureDoc.body.classList.remove('is-grabbing');
+      // Never leave the grabbing cursor behind if the viewer is torn down
+      // mid-drag — pointerup would not fire. A viewer only ever writes its own
+      // branch, so clearing that one is complete; it matters only for the
+      // constrained branch, whose class outlives the clone.
+      setGrabbingCursor(false);
       if (mobileTouchHandler) {
         container.removeEventListener(
           'touchstart',
@@ -962,7 +1000,11 @@ function openImageViewer(
   // Locate the opened image within the card's navigable set. Cards render raw
   // src values, but a slideshow/scrub step may already have swapped in a blob:
   // URL, and imgEl.src returns the percent-encoded form — match all four.
-  const imageSet = viewerImageSets.get(embedEl);
+  // Snapshot here rather than at registration: the renderer splices broken URLs
+  // out of its array as validation discovers them, so taking the copy at open
+  // both freezes indices for this viewer's lifetime and reflects every removal
+  // made up to this point.
+  const imageSet = viewerImageSets.get(embedEl)?.slice();
   const rawSrc = imgEl.getAttribute('src') ?? '';
   const foundIndex = imageSet
     ? imageSet.findIndex(
@@ -993,6 +1035,39 @@ function openImageViewer(
   if (isExternalUrl(imgEl.src)) {
     imgEl.src = getCachedBlobUrl(imgEl.src);
   }
+
+  /**
+   * Swap a card's YouTube thumbnail for its full-resolution rung.
+   *
+   * Cards deliberately fetch the smallest rung that covers their own display
+   * size, so opening one would otherwise fill the screen with a 480px image.
+   * The viewer has no video ID to work from — the card only ever holds the
+   * thumbnail URL — hence the reverse parse. Omitting a target width asks for
+   * the maxres-first ladder.
+   *
+   * Necessarily late: the open path is synchronous and the probe is a network
+   * round trip, so by the time it answers the viewer may have been closed, torn
+   * down in bulk, or navigated away from this image. Each of those is a
+   * separate guard, and none of them subsumes the others.
+   */
+  const upgradeYouTubeResolution = (rawUrl: string): void => {
+    const videoId = getVideoIdFromThumbnailUrl(rawUrl);
+    if (!videoId) return;
+    const indexAtStart = currentIndex;
+    void getYouTubeThumbnailUrl(videoId).then((fullUrl) => {
+      if (!fullUrl || fullUrl === rawUrl) return;
+      if (!imgEl.isConnected) return; // Closed, or removed by cleanupAllViewers
+      if (currentIndex !== indexAtStart) return; // Arrow-navigated away
+      if (currentRawUrl !== rawUrl) return; // Superseded by a later swap
+      imgEl.src = getCachedBlobUrl(fullUrl);
+      // Drag-out should hand over the image actually on screen. The titlebar
+      // deliberately keeps the name it opened with: it is a label, not an
+      // address, and rewriting it mid-view to a different rung is visible noise.
+      currentRawUrl = fullUrl;
+    });
+  };
+
+  upgradeYouTubeResolution(currentRawUrl);
 
   // Overlay chrome — mirrors the native lightbox titlebar and close button
   const titlebarEl = cloneEl.createDiv('dynamic-views-viewer-titlebar');
@@ -1226,6 +1301,10 @@ function openImageViewer(
         imgEl.src = getCachedBlobUrl(url);
         // title/alt belong to the initially embedded image — never reapply them
         titlebarTextEl.setText(getImageDisplayName(url));
+        // Every index change, not just the open: this re-reads the card's raw
+        // URLs, so upgrading only on open would let a single step away and back
+        // drop the image to the card's rung permanently
+        upgradeYouTubeResolution(url);
       };
 
       stepImage = (direction: 1 | -1) => {
@@ -1236,61 +1315,6 @@ function openImageViewer(
         showIndex(next, direction);
       };
     }
-
-    // Desktop only: ⌘+C to copy image
-    const copyViewerImage = (): void => {
-      void (async () => {
-        try {
-          if (!viewerDoc.hasFocus()) {
-            viewerWin.focus();
-            await new Promise((r) => setTimeout(r, CLIPBOARD_FOCUS_SETTLE_MS));
-          }
-
-          // For external images, reload with crossOrigin to avoid tainted canvas
-          const isExternal = /^https?:\/\//i.test(imgEl.src);
-          let sourceImg: HTMLImageElement = imgEl;
-
-          if (isExternal) {
-            sourceImg = await new Promise<HTMLImageElement>(
-              (resolve, reject) => {
-                const img = new Image();
-                img.crossOrigin = 'anonymous';
-                img.onload = () => resolve(img);
-                img.onerror = () => reject(new Error('Failed to load image'));
-                img.src = imgEl.src;
-              }
-            );
-          }
-
-          if (!sourceImg.naturalWidth || !sourceImg.naturalHeight) {
-            throw new Error('Image not loaded');
-          }
-
-          // Clipboard API only supports PNG - convert via canvas
-          const canvas = viewerDoc.createElement('canvas');
-          canvas.width = sourceImg.naturalWidth;
-          canvas.height = sourceImg.naturalHeight;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) throw new Error('Failed to get canvas context');
-          ctx.drawImage(sourceImg, 0, 0);
-
-          const blob = await new Promise<Blob>((resolve, reject) => {
-            canvas.toBlob((b) => {
-              if (b) resolve(b);
-              else reject(new Error('Failed to create blob'));
-            }, 'image/png');
-          });
-
-          await navigator.clipboard.write([
-            new ClipboardItem({ 'image/png': blob }),
-          ]);
-          new Notice('Copied to your clipboard');
-        } catch (error) {
-          console.error('Failed to copy image:', error);
-          new Notice('Failed to copy image');
-        }
-      })();
-    };
 
     // Keyboard runs through Obsidian's keymap stack rather than a document
     // listener, because a document listener cannot win against a modal.
@@ -1344,10 +1368,6 @@ function openImageViewer(
       // Space would otherwise scroll the pane or re-activate the card underneath
       if (e.key === 'Escape' || e.code === 'Space') {
         closeImageViewer(cloneEl, viewerCleanupFns, viewerClones);
-        return false;
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === 'c') {
-        copyViewerImage();
         return false;
       }
       return undefined;

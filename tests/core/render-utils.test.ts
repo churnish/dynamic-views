@@ -6,6 +6,7 @@ import {
   isTimestampProperty,
   isBasesDateValue,
   extractTimestamp,
+  splitDateSegments,
 } from '../../src/core/render-utils';
 import type { ResolvedSettings } from '../../src/types';
 
@@ -342,6 +343,52 @@ describe('render-utils', () => {
       expect(extractTimestamp(undefined)).toBeNull();
       expect(extractTimestamp('2024-01-01')).toBeNull();
       expect(extractTimestamp({ date: new Date() })).toBeNull();
+    });
+  });
+
+  describe('splitDateSegments', () => {
+    it('should split an ISO-style datetime into values and separators', () => {
+      expect(splitDateSegments('2026-08-09, 00:09')).toEqual([
+        { text: '2026', isSeparator: false },
+        { text: '-', isSeparator: true },
+        { text: '08', isSeparator: false },
+        { text: '-', isSeparator: true },
+        { text: '09', isSeparator: false },
+        { text: ', ', isSeparator: true },
+        { text: '00', isSeparator: false },
+        { text: ':', isSeparator: true },
+        { text: '09', isSeparator: false },
+      ]);
+    });
+
+    it('should treat a meridiem indicator as a value and the space before it as a separator', () => {
+      expect(splitDateSegments('08/09/2026, 12:09 AM')).toEqual([
+        { text: '08', isSeparator: false },
+        { text: '/', isSeparator: true },
+        { text: '09', isSeparator: false },
+        { text: '/', isSeparator: true },
+        { text: '2026', isSeparator: false },
+        { text: ', ', isSeparator: true },
+        { text: '12', isSeparator: false },
+        { text: ':', isSeparator: true },
+        { text: '09', isSeparator: false },
+        { text: ' ', isSeparator: true },
+        { text: 'AM', isSeparator: false },
+      ]);
+    });
+
+    it('should treat a month name as a value', () => {
+      expect(splitDateSegments('Aug 9, 2026')).toEqual([
+        { text: 'Aug', isSeparator: false },
+        { text: ' ', isSeparator: true },
+        { text: '9', isSeparator: false },
+        { text: ', ', isSeparator: true },
+        { text: '2026', isSeparator: false },
+      ]);
+    });
+
+    it('should return no segments for an empty string', () => {
+      expect(splitDateSegments('')).toEqual([]);
     });
   });
 });

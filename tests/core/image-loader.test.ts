@@ -1,6 +1,7 @@
 import {
   invalidateCacheForFile,
   handleImageLoad,
+  handleAllImagesFailed,
 } from '../../src/core/image-loader';
 
 // Mock slideshow module to prevent fetch calls during tests
@@ -69,6 +70,45 @@ describe('image-loader', () => {
       expect(() =>
         invalidateCacheForFile('folder/image_name.png')
       ).not.toThrow();
+    });
+  });
+
+  describe('handleAllImagesFailed', () => {
+    it('removes .card-poster so no fade paints over an empty box', () => {
+      const cardEl = document.createElement('div');
+      cardEl.className = 'card image-format-poster has-poster';
+      const posterEl = document.createElement('div');
+      posterEl.className = 'card-poster';
+      posterEl.appendChild(document.createElement('img'));
+      const gradient = document.createElement('div');
+      gradient.className = 'poster-gradient';
+      posterEl.appendChild(gradient);
+      cardEl.appendChild(posterEl);
+      document.body.appendChild(cardEl);
+
+      handleAllImagesFailed(cardEl);
+
+      expect(cardEl.querySelector('.card-poster')).toBeNull();
+      expect(cardEl.querySelector('.poster-gradient')).toBeNull();
+      expect(cardEl.classList.contains('has-poster')).toBe(false);
+      expect(cardEl.classList.contains('no-valid-images')).toBe(true);
+      cardEl.remove();
+    });
+
+    it('removes .card-backdrop for the same reason', () => {
+      const cardEl = document.createElement('div');
+      cardEl.className = 'card image-format-backdrop has-backdrop';
+      const backdropEl = document.createElement('div');
+      backdropEl.className = 'card-backdrop';
+      backdropEl.appendChild(document.createElement('img'));
+      cardEl.appendChild(backdropEl);
+      document.body.appendChild(cardEl);
+
+      handleAllImagesFailed(cardEl);
+
+      expect(cardEl.querySelector('.card-backdrop')).toBeNull();
+      expect(cardEl.classList.contains('has-backdrop')).toBe(false);
+      cardEl.remove();
     });
   });
 

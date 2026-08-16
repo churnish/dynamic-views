@@ -11,7 +11,11 @@ import type {
 } from 'obsidian';
 import type { PluginSettings, ViewDefaults, ResolvedSettings } from '../types';
 import { VIEW_DEFAULTS, BASES_DEFAULTS } from '../constants';
-import { VALID_VIEW_VALUES } from './view-validation';
+import {
+  VALID_VIEW_VALUES,
+  VIEW_DEFAULTS_RANGES,
+  FRACTIONAL_VIEW_DEFAULTS,
+} from './view-validation';
 import { stripNotePrefix } from './property-display';
 
 /** Masonry defaults to 2 minimum columns; all other view types default to 1. */
@@ -23,6 +27,20 @@ export function getMinimumColumnsDefault(viewType?: string): 1 | 2 {
 interface BasesConfig {
   get(key: string): unknown;
   getOrder(): string[];
+}
+
+/**
+ * Read a boolean config value, falling back on anything non-boolean.
+ * Shared by readBasesSettings and the schema's shouldHide closures so a
+ * hand-edited YAML string like "true" hides the same rows it disables.
+ */
+function getConfigBool(
+  config: Pick<BasesConfig, 'get'> | undefined,
+  key: string,
+  fallback: boolean
+): boolean {
+  const value = config?.get(key);
+  return typeof value === 'boolean' ? value : fallback;
 }
 
 /**
@@ -166,15 +184,18 @@ export function getBasesViewOptions(
         },
         {
           type: 'slider',
-          displayName: 'Lines',
+          displayName: 'Title lines',
           key: 'titleLines',
           min: 1,
           max: 5,
           step: 1,
           default: d.titleLines,
           shouldHide: () =>
-            (config?.get('displayFirstAsTitle') ?? d.displayFirstAsTitle) ===
-            false,
+            !getConfigBool(
+              config,
+              'displayFirstAsTitle',
+              d.displayFirstAsTitle
+            ),
         },
         {
           type: 'toggle',
@@ -182,8 +203,11 @@ export function getBasesViewOptions(
           key: 'displaySecondAsSubtitle',
           default: d.displaySecondAsSubtitle,
           shouldHide: () =>
-            (config?.get('displayFirstAsTitle') ?? d.displayFirstAsTitle) ===
-            false,
+            !getConfigBool(
+              config,
+              'displayFirstAsTitle',
+              d.displayFirstAsTitle
+            ),
         },
         {
           // Both toggles gate this: subtitleProperty is position-derived and only
@@ -197,10 +221,16 @@ export function getBasesViewOptions(
           step: 1,
           default: d.subtitleLines,
           shouldHide: () =>
-            (config?.get('displayFirstAsTitle') ?? d.displayFirstAsTitle) ===
-              false ||
-            (config?.get('displaySecondAsSubtitle') ??
-              d.displaySecondAsSubtitle) === false,
+            !getConfigBool(
+              config,
+              'displayFirstAsTitle',
+              d.displayFirstAsTitle
+            ) ||
+            !getConfigBool(
+              config,
+              'displaySecondAsSubtitle',
+              d.displaySecondAsSubtitle
+            ),
         },
       ],
     },
@@ -261,13 +291,13 @@ export function getBasesViewOptions(
         {
           type: 'dropdown',
           displayName: 'Show file images',
-          key: 'fallbackToEmbeds',
+          key: 'showFileImages',
           options: {
             always: 'Always',
             'if-unavailable': 'If property unavailable',
             never: 'Never',
           },
-          default: d.fallbackToEmbeds,
+          default: d.showFileImages,
         },
         {
           type: 'dropdown',
@@ -282,7 +312,7 @@ export function getBasesViewOptions(
           default: d.imageFormat,
           shouldHide: () =>
             !(config?.get('imageProperty') || d.imageProperty) &&
-            (config?.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) === 'never',
+            (config?.get('showFileImages') ?? d.showFileImages) === 'never',
         },
         {
           type: 'dropdown',
@@ -296,8 +326,7 @@ export function getBasesViewOptions(
           shouldHide: () =>
             (config?.get('imageFormat') ?? d.imageFormat) !== 'poster' ||
             (!(config?.get('imageProperty') || d.imageProperty) &&
-              (config?.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) ===
-                'never'),
+              (config?.get('showFileImages') ?? d.showFileImages) === 'never'),
         },
         {
           type: 'toggle',
@@ -307,8 +336,7 @@ export function getBasesViewOptions(
           shouldHide: () =>
             (config?.get('imageFormat') ?? d.imageFormat) !== 'poster' ||
             (!(config?.get('imageProperty') || d.imageProperty) &&
-              (config?.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) ===
-                'never'),
+              (config?.get('showFileImages') ?? d.showFileImages) === 'never'),
         },
         {
           type: 'slider',
@@ -321,8 +349,7 @@ export function getBasesViewOptions(
           shouldHide: () =>
             (config?.get('imageFormat') ?? d.imageFormat) !== 'thumbnail' ||
             (!(config?.get('imageProperty') || d.imageProperty) &&
-              (config?.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) ===
-                'never'),
+              (config?.get('showFileImages') ?? d.showFileImages) === 'never'),
         },
         {
           type: 'dropdown',
@@ -339,8 +366,7 @@ export function getBasesViewOptions(
             (config?.get('imageFormat') ?? d.imageFormat) === 'poster' ||
             (config?.get('imageFormat') ?? d.imageFormat) === 'backdrop' ||
             (!(config?.get('imageProperty') || d.imageProperty) &&
-              (config?.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) ===
-                'never'),
+              (config?.get('showFileImages') ?? d.showFileImages) === 'never'),
         },
         {
           type: 'dropdown',
@@ -354,8 +380,7 @@ export function getBasesViewOptions(
           shouldHide: () =>
             (config?.get('imageFormat') ?? d.imageFormat) === 'backdrop' ||
             (!(config?.get('imageProperty') || d.imageProperty) &&
-              (config?.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) ===
-                'never'),
+              (config?.get('showFileImages') ?? d.showFileImages) === 'never'),
         },
         {
           type: 'slider',
@@ -368,8 +393,7 @@ export function getBasesViewOptions(
           shouldHide: () =>
             (config?.get('imageFormat') ?? d.imageFormat) === 'backdrop' ||
             (!(config?.get('imageProperty') || d.imageProperty) &&
-              (config?.get('fallbackToEmbeds') ?? d.fallbackToEmbeds) ===
-                'never'),
+              (config?.get('showFileImages') ?? d.showFileImages) === 'never'),
         },
       ],
     },
@@ -497,15 +521,17 @@ function createConfigGetters(config: BasesConfig) {
       }
       return fallback;
     },
-    getBool: (key: string, fallback: boolean): boolean => {
-      const value = config.get(key);
-      return typeof value === 'boolean' ? value : fallback;
-    },
+    getBool: (key: string, fallback: boolean): boolean =>
+      getConfigBool(config, key, fallback),
+    // Clamped to the schema's slider bounds: a hand-edited .base file can carry
+    // any number, and out-of-range values reach CSS variables and layout math.
     getNumber: (key: string, fallback: number): number => {
       const value = config.get(key);
-      return typeof value === 'number' && Number.isFinite(value)
-        ? value
-        : fallback;
+      if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
+      const range = VIEW_DEFAULTS_RANGES[key];
+      if (!range) return value;
+      const clamped = Math.min(Math.max(value, range[0]), range[1]);
+      return FRACTIONAL_VIEW_DEFAULTS.has(key) ? clamped : Math.round(clamped);
     },
   };
 }
@@ -608,10 +634,10 @@ export function readBasesSettings(
     fallbackToContent: getBool('fallbackToContent', defaults.fallbackToContent),
     textPreviewLines: getNumber('textPreviewLines', defaults.textPreviewLines),
     imageProperty,
-    fallbackToEmbeds: getValidEnum(
+    showFileImages: getValidEnum(
       config,
-      'fallbackToEmbeds',
-      defaults.fallbackToEmbeds
+      'showFileImages',
+      defaults.showFileImages
     ),
     imageFormat: getValidEnum(
       config,
@@ -720,10 +746,10 @@ export function extractBasesTemplate(
       mergedDefaults.textPreviewLines
     ),
     imageProperty: getString('imageProperty', mergedDefaults.imageProperty),
-    fallbackToEmbeds: getValidEnum(
+    showFileImages: getValidEnum(
       config,
-      'fallbackToEmbeds',
-      mergedDefaults.fallbackToEmbeds
+      'showFileImages',
+      mergedDefaults.showFileImages
     ),
     imageFormat: getValidEnum(
       config,

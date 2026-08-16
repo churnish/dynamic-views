@@ -1,8 +1,8 @@
 ---
 title: Plugin view navigation
-description: Definitive reference for navigating Dynamic Views plugin views and elements across platforms — view identification, DOM hierarchy, correct selectors, full-screen elements, and platform-specific probing patterns.
+description: Definitive reference for navigating Dynamic Views plugin views and elements across platforms — view identification, DOM hierarchy, correct selectors, full-screen elements, platform-specific probing patterns, and which interactions synthetic events cannot drive.
 author: 🤖 Generated with Claude Code
-updated: 2026-08-09
+updated: 2026-08-10
 ---
 # Plugin view navigation
 
@@ -269,3 +269,21 @@ Manual console access only — no programmatic CDP connection. Queries run in Sa
 3. **Cards may be empty right after app restart** — Bases queries use Obsidian's `metadataCache`, which updates continuously but needs an initial indexing pass on startup. If a CDP query runs before `app.metadataCache.resolved === true`, results may be incomplete.
 4. **Android vault path is not fixed** — the path varies by device and sync method. Always discover via `app.vault.adapter.basePath`, never hardcode.
 5. **Ungrouped masonry is flat, grouped masonry has group wrappers** — ungrouped Masonry cards are direct children of `.dynamic-views-masonry.masonry-container`. When grouped, Masonry gets the same `.dynamic-views-group-section` → `.dynamic-views-group` structure as Grid, and `.masonry-container` moves from `.dynamic-views-masonry` to each `.dynamic-views-group`.
+6. **A leaf that is not the active tab measures `0×0`** — every `getBoundingClientRect()` inside it returns zeros, which reads as "the element is not rendered". Call `setActiveLeaf` and `revealLeaf` before any geometry probe.
+
+## Synthetic event limits
+
+Several interactions cannot be driven from `eval`, and each fails by doing nothing rather than by erroring — which reads as a broken feature.
+
+| Interaction | Works synthetically? | Notes |
+|---|---|---|
+| Keyboard shortcuts | Yes, **dispatched on `window`** | Obsidian's keymap listener is capture-phase on `window`. A `KeyboardEvent` dispatched on `document` never reaches it and the shortcut appears dead. |
+| Card click, image-embed click | Yes | `el.click()` is enough to open the viewer. |
+| Hover-to-start keyboard nav | No | `mouseover`/`mouseenter` do not arm it; focus stays off the cards. |
+| Thumbnail scrubbing | Partly | `mousemove` triggers the cached-blob swap but never advances the frame — scrubbing is touch-driven. |
+| Long-press image drag | No | A WebKit affordance with no synthetic equivalent, and absent under desktop mobile emulation. Device only. |
+| Pointer capture / drag panning | No | Synthetic `PointerEvent`s create no active pointer, so `setPointerCapture` throws. Use a trusted-input driver. |
+
+Two rules follow. **Put each key in its own tick** — two synthetic key events dispatched in the same tick do not both take effect, so a modal-then-viewer Escape sequence must be split across calls. And **run a control before believing a negative result**: reproduce the same probe against a known-good state, since a null result is equally consistent with a broken probe and a broken feature.
+
+**Never close a viewer with `el.remove()`.** The clone's lifetime owns several module-scope registries keyed to it, all cleared only by the real close path. Detaching the element strands them, after which the trigger treats the viewer as still open and the next click silently does nothing — indistinguishable from a regression. Dispatch Escape or click the close button.

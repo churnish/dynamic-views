@@ -110,7 +110,6 @@ Functions in `style-settings.ts` read `--dynamic-views-*` variables from `docume
 
 - `getCardSpacing()` — reads `--dynamic-views-card-spacing-desktop` or `--dynamic-views-card-spacing-phone`. The container element is authoritative: `applyViewContainerStyles()` writes the per-view gap setting there as an inline style, so the container read comes first and wins everywhere — including embeds, where the CSS `gap` rules also apply. Only when the container carries no value does it fall back to `--size-4-2` (inside `.internal-embed`) or to the `body`-level value.
 - `getCompactBreakpoint()` — reads `--dynamic-views-compact-breakpoint`.
-- `getZoomSensitivityDesktop()` — reads `--dynamic-views-zoom-sensitivity`.
 - `getSlideshowMaxImages()` — reads `--dynamic-views-slideshow-max-images`.
 - `getDatetimeFormat()`, `getDateFormat()`, `getTimeFormat()` — read `variable-text` format strings.
 - `getListSeparator()`, `getEmptyValueMarker()` — read `variable-text` string tokens.
@@ -123,7 +122,6 @@ A few variables are set on individual elements rather than the container:
 
 - `--hover-scale-x`, `--hover-scale-y` — set per-card in `grid-view.ts` and `masonry-view.ts` for hover enlarge transforms.
 - `--field1-width`, `--field2-width` — set per property-set in `property-measure.ts` for paired property column widths.
-- `--overlay-opacity` — set on the image viewer clone in `image-viewer.ts`.
 
 These are exempt from the wrapping convention because they are scoped to individual DOM elements, not inherited from `body`.
 

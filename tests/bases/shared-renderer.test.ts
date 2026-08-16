@@ -29,6 +29,7 @@ vi.mock('../../src/core/scroll-gradient', () => ({
 vi.mock('../../src/core/render-utils', () => ({
   getTimestampIcon: vi.fn(),
   isTimestampProperty: vi.fn(),
+  splitDateSegments: vi.fn(() => []),
 }));
 vi.mock('../../src/utils/style-settings', () => ({
   showTagHashPrefix: vi.fn(),
@@ -81,12 +82,9 @@ vi.mock('../../src/core/keyboard-nav', () => ({
   isArrowKey: vi.fn(),
   isImageViewerBlockingNav: vi.fn(),
 }));
-vi.mock('../../src/core/constants', () => ({
-  CHECKBOX_MARKER_PREFIX: 'checkbox:',
-  THUMBNAIL_STACK_MULTIPLIER: 1,
-  VISIBLE_BODY_SELECTOR:
-    '.card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)',
-}));
+// src/core/constants is deliberately NOT mocked — a hardcoded copy of
+// VISIBLE_BODY_SELECTOR would let the structural-class tests pass against a
+// selector the production module no longer uses.
 vi.mock('../../src/core/notebook-navigator', () => ({
   shouldUseNotebookNavigator: vi.fn(),
   navigateToTagInNotebookNavigator: vi.fn(),
@@ -122,14 +120,15 @@ import {
   applyCssOnlySettings,
   applyViewContainerStyles,
   clearViewContainerStyles,
+  syncStructuralClasses,
 } from '../../src/bases/shared-renderer';
-import { VISIBLE_BODY_SELECTOR } from '../../src/core/constants';
 import { getOwnerWindow } from '../../src/utils/owner-window';
 import { clearStyleSettingsCache } from '../../src/utils/style-settings';
+import { clipPosterStaticOverflowBatch } from '../../src/core/poster';
 import { VIEW_DEFAULTS } from '../../src/constants';
 import type { ResolvedSettings } from '../../src/types';
 import { Platform } from 'obsidian';
-import type { BasesViewConfig } from 'obsidian';
+import type { BasesEntry, BasesViewConfig } from 'obsidian';
 
 describe('SharedCardRenderer.hasImageChanged', () => {
   /** Minimal CardData factory — only imageUrl matters */
@@ -209,6 +208,7 @@ describe('Structural content classes', () => {
   function buildCardDOM(
     options: {
       hasHeader?: boolean;
+      hasUrlIcon?: boolean;
       hasPropertiesTop?: boolean;
       hasPropertiesBottom?: boolean;
       hasPreviews?: boolean;
@@ -217,9 +217,15 @@ describe('Structural content classes', () => {
     const card = document.createElement('div');
     card.classList.add('card');
 
-    if (options.hasHeader) {
+    // A URL chip only ever lives inside a header
+    if (options.hasHeader || options.hasUrlIcon) {
       const header = document.createElement('div');
       header.classList.add('card-header');
+      if (options.hasUrlIcon) {
+        const icon = document.createElement('a');
+        icon.classList.add('card-title-url-icon');
+        header.appendChild(icon);
+      }
       card.appendChild(header);
     }
 
@@ -248,20 +254,20 @@ describe('Structural content classes', () => {
     return card;
   }
 
+  /** Every card built above has a body — the production caller always looks it up. */
+  const bodyOf = (card: HTMLElement): HTMLElement =>
+    card.querySelector<HTMLElement>('.card-body')!;
+
   describe('has-header', () => {
     it('added when card-header exists', () => {
       const card = buildCardDOM({ hasHeader: true });
-      if (card.querySelector('.card-header')) {
-        card.classList.add('has-header');
-      }
+      syncStructuralClasses(card, bodyOf(card));
       expect(card.classList.contains('has-header')).toBe(true);
     });
 
     it('not added when card-header absent', () => {
       const card = buildCardDOM({ hasHeader: false });
-      if (card.querySelector('.card-header')) {
-        card.classList.add('has-header');
-      }
+      syncStructuralClasses(card, bodyOf(card));
       expect(card.classList.contains('has-header')).toBe(false);
     });
   });
@@ -269,46 +275,36 @@ describe('Structural content classes', () => {
   describe('has-card-content', () => {
     it('added when properties-top exists', () => {
       const card = buildCardDOM({ hasPropertiesTop: true });
-      if (card.querySelector(VISIBLE_BODY_SELECTOR)) {
-        card.classList.add('has-card-content');
-      }
+      syncStructuralClasses(card, bodyOf(card));
       expect(card.classList.contains('has-card-content')).toBe(true);
     });
 
     it('added when properties-bottom exists', () => {
       const card = buildCardDOM({ hasPropertiesBottom: true });
-      if (card.querySelector(VISIBLE_BODY_SELECTOR)) {
-        card.classList.add('has-card-content');
-      }
+      syncStructuralClasses(card, bodyOf(card));
       expect(card.classList.contains('has-card-content')).toBe(true);
     });
 
     it('added when previews exist', () => {
       const card = buildCardDOM({ hasPreviews: true });
-      if (card.querySelector(VISIBLE_BODY_SELECTOR)) {
-        card.classList.add('has-card-content');
-      }
+      syncStructuralClasses(card, bodyOf(card));
       expect(card.classList.contains('has-card-content')).toBe(true);
     });
 
     it('not added when body is empty', () => {
       const card = buildCardDOM();
-      if (card.querySelector(VISIBLE_BODY_SELECTOR)) {
-        card.classList.add('has-card-content');
-      }
+      syncStructuralClasses(card, bodyOf(card));
       expect(card.classList.contains('has-card-content')).toBe(false);
     });
 
     it('not added when only thumbnail-placeholder-only previews exist', () => {
       const card = buildCardDOM();
-      const body = card.querySelector<HTMLElement>('.card-body')!;
+      const body = bodyOf(card);
       const previews = document.createElement('div');
       previews.classList.add('card-previews', 'thumbnail-placeholder-only');
       body.appendChild(previews);
 
-      if (card.querySelector(VISIBLE_BODY_SELECTOR)) {
-        card.classList.add('has-card-content');
-      }
+      syncStructuralClasses(card, body);
       expect(card.classList.contains('has-card-content')).toBe(false);
     });
   });
@@ -316,53 +312,109 @@ describe('Structural content classes', () => {
   describe('has-body-content', () => {
     it('added on card-body when it has visible children', () => {
       const card = buildCardDOM({ hasPropertiesBottom: true });
-      const body = card.querySelector<HTMLElement>('.card-body')!;
-      if (body.querySelector(VISIBLE_BODY_SELECTOR)) {
-        body.classList.add('has-body-content');
-      }
+      const body = bodyOf(card);
+      syncStructuralClasses(card, body);
       expect(body.classList.contains('has-body-content')).toBe(true);
     });
 
     it('not added on card-body when empty', () => {
       const card = buildCardDOM();
-      const body = card.querySelector<HTMLElement>('.card-body')!;
-      if (body.querySelector(VISIBLE_BODY_SELECTOR)) {
-        body.classList.add('has-body-content');
-      }
+      const body = bodyOf(card);
+      syncStructuralClasses(card, body);
       expect(body.classList.contains('has-body-content')).toBe(false);
     });
   });
 
   describe('has-body-content poster format', () => {
-    /** Header is now always in card-content, never in card-body — format is irrelevant */
-    function applyHasBodyContent(bodyEl: HTMLElement): void {
-      if (bodyEl.querySelector(VISIBLE_BODY_SELECTOR)) {
-        bodyEl.classList.add('has-body-content');
-      }
-    }
+    // Header is always in card-content, never in card-body — format is irrelevant
 
     it('poster card with empty body does not get has-body-content (header is in card-content)', () => {
       const card = buildCardDOM({ hasHeader: false });
-      const body = card.querySelector<HTMLElement>('.card-body')!;
+      const body = bodyOf(card);
 
-      applyHasBodyContent(body);
+      syncStructuralClasses(card, body);
       expect(body.classList.contains('has-body-content')).toBe(false);
     });
 
     it('poster card with no visible content does not get has-body-content', () => {
       const card = buildCardDOM();
-      const body = card.querySelector<HTMLElement>('.card-body')!;
+      const body = bodyOf(card);
 
-      applyHasBodyContent(body);
+      syncStructuralClasses(card, body);
       expect(body.classList.contains('has-body-content')).toBe(false);
     });
 
     it('poster card with properties gets has-body-content', () => {
       const card = buildCardDOM({ hasPropertiesTop: true });
-      const body = card.querySelector<HTMLElement>('.card-body')!;
+      const body = bodyOf(card);
 
-      applyHasBodyContent(body);
+      syncStructuralClasses(card, body);
       expect(body.classList.contains('has-body-content')).toBe(true);
+    });
+  });
+
+  describe('has-properties-bottom', () => {
+    it('added when properties-bottom exists', () => {
+      const card = buildCardDOM({ hasPropertiesBottom: true });
+      syncStructuralClasses(card, bodyOf(card));
+      expect(card.classList.contains('has-properties-bottom')).toBe(true);
+    });
+
+    it('not added when only properties-top exists', () => {
+      const card = buildCardDOM({ hasPropertiesTop: true });
+      syncStructuralClasses(card, bodyOf(card));
+      expect(card.classList.contains('has-properties-bottom')).toBe(false);
+    });
+  });
+
+  describe('has-url-icon', () => {
+    it('added when the header holds a URL chip', () => {
+      const card = buildCardDOM({ hasUrlIcon: true });
+      syncStructuralClasses(card, bodyOf(card));
+      expect(card.classList.contains('has-url-icon')).toBe(true);
+    });
+
+    it('not added for a header without a chip', () => {
+      const card = buildCardDOM({ hasHeader: true });
+      syncStructuralClasses(card, bodyOf(card));
+      expect(card.classList.contains('has-url-icon')).toBe(false);
+    });
+  });
+
+  describe('idempotency', () => {
+    it('a second run changes nothing', () => {
+      const card = buildCardDOM({
+        hasUrlIcon: true,
+        hasPropertiesBottom: true,
+      });
+      const body = bodyOf(card);
+
+      syncStructuralClasses(card, body);
+      const afterFirstRun = card.className;
+      syncStructuralClasses(card, body);
+
+      expect(card.className).toBe(afterFirstRun);
+      expect(body.classList.contains('has-body-content')).toBe(true);
+    });
+
+    it('classes come off when the content goes', () => {
+      const card = buildCardDOM({
+        hasUrlIcon: true,
+        hasPropertiesBottom: true,
+      });
+      const body = bodyOf(card);
+      syncStructuralClasses(card, body);
+
+      body.querySelector('.card-properties-bottom')!.remove();
+      card.querySelector('.card-title-url-icon')!.remove();
+      card.querySelector('.card-header')!.remove();
+      syncStructuralClasses(card, body);
+
+      expect(body.classList.contains('has-body-content')).toBe(false);
+      expect(card.classList.contains('has-card-content')).toBe(false);
+      expect(card.classList.contains('has-properties-bottom')).toBe(false);
+      expect(card.classList.contains('has-header')).toBe(false);
+      expect(card.classList.contains('has-url-icon')).toBe(false);
     });
   });
 
@@ -391,6 +443,145 @@ describe('Structural content classes', () => {
       applyNamesAbove(propsTop, 'hide');
       expect(propsTop.classList.contains('names-above')).toBe(false);
     });
+  });
+});
+
+describe('updateCardContent — URL chip', () => {
+  const settings = () => ({ ...VIEW_DEFAULTS }) as ResolvedSettings;
+
+  /** Never dereferenced: title, subtitle and property paths all bail before touching it. */
+  const entry = {} as unknown as BasesEntry;
+
+  const cardData = (urlValue?: string) =>
+    ({
+      properties: [],
+      hasValidUrl: !!urlValue,
+      urlValue,
+    }) as unknown as CardData;
+
+  /** Three injected fields and an empty constructor body — none is reached from this path. */
+  const makeRenderer = () =>
+    new SharedCardRenderer({} as never, {} as never, { current: null });
+
+  /** Card shaped like the render path leaves it: .card-content wraps header + body. */
+  function buildCard(
+    options: { header?: boolean; urlValue?: string; title?: boolean } = {}
+  ): HTMLElement {
+    const cardEl = document.createElement('div');
+    cardEl.className = 'card';
+    const contentEl = document.createElement('div');
+    contentEl.className = 'card-content';
+    cardEl.appendChild(contentEl);
+
+    if (options.header || options.urlValue || options.title) {
+      const headerEl = document.createElement('div');
+      headerEl.className = 'card-header';
+      contentEl.appendChild(headerEl);
+
+      if (options.title) {
+        const titleBlock = document.createElement('div');
+        titleBlock.className = 'card-title-block';
+        headerEl.appendChild(titleBlock);
+      }
+      if (options.urlValue) {
+        const iconEl = document.createElement('a');
+        iconEl.className = 'card-title-url-icon';
+        iconEl.setAttribute('href', options.urlValue);
+        iconEl.dataset.dvUrlValue = options.urlValue;
+        headerEl.appendChild(iconEl);
+      }
+    }
+
+    const bodyEl = document.createElement('div');
+    bodyEl.className = 'card-body';
+    contentEl.appendChild(bodyEl);
+    return cardEl;
+  }
+
+  it('creates the chip when the header exists and the URL is valid', () => {
+    const cardEl = buildCard({ header: true });
+
+    makeRenderer().updateCardContent(
+      cardEl,
+      cardData('https://example.com'),
+      entry,
+      settings()
+    );
+
+    const iconEl = cardEl.querySelector<HTMLAnchorElement>(
+      '.card-title-url-icon'
+    );
+    expect(iconEl).not.toBeNull();
+    expect(iconEl!.getAttribute('href')).toBe('https://example.com');
+    expect(iconEl!.getAttribute('aria-label')).toBe('https://example.com');
+    expect(iconEl!.target).toBe('_blank');
+    expect(cardEl.classList.contains('has-url-icon')).toBe(true);
+  });
+
+  it('removes the chip and the emptied header when the URL goes', () => {
+    const cardEl = buildCard({ urlValue: 'https://example.com' });
+
+    makeRenderer().updateCardContent(cardEl, cardData(), entry, settings());
+
+    expect(cardEl.querySelector('.card-title-url-icon')).toBeNull();
+    expect(cardEl.querySelector('.card-header')).toBeNull();
+    expect(cardEl.classList.contains('has-url-icon')).toBe(false);
+    expect(cardEl.classList.contains('has-header')).toBe(false);
+  });
+
+  it('keeps a header that still holds a title block when the URL goes', () => {
+    const cardEl = buildCard({
+      urlValue: 'https://example.com',
+      title: true,
+    });
+
+    makeRenderer().updateCardContent(cardEl, cardData(), entry, settings());
+
+    expect(cardEl.querySelector('.card-title-url-icon')).toBeNull();
+    expect(cardEl.querySelector('.card-header')).not.toBeNull();
+    expect(cardEl.classList.contains('has-header')).toBe(true);
+  });
+
+  it('creates the header when the card has none (displayFirstAsTitle OFF)', () => {
+    const cardEl = buildCard();
+
+    makeRenderer().updateCardContent(
+      cardEl,
+      cardData('https://example.com'),
+      entry,
+      settings()
+    );
+
+    const headerEl = cardEl.querySelector<HTMLElement>('.card-header');
+    expect(headerEl).not.toBeNull();
+    expect(headerEl!.parentElement!.className).toBe('card-content');
+    // Header must be the first child of .card-content, ahead of .card-body
+    expect(headerEl!.previousElementSibling).toBeNull();
+    expect(headerEl!.querySelector('.card-title-url-icon')).not.toBeNull();
+    expect(cardEl.classList.contains('has-header')).toBe(true);
+    expect(cardEl.classList.contains('has-url-icon')).toBe(true);
+  });
+
+  it('refreshes an existing chip in place when the URL value changes', () => {
+    const cardEl = buildCard({ urlValue: 'https://old.example' });
+    const before = cardEl.querySelector<HTMLAnchorElement>(
+      '.card-title-url-icon'
+    );
+
+    makeRenderer().updateCardContent(
+      cardEl,
+      cardData('https://new.example'),
+      entry,
+      settings()
+    );
+
+    const after = cardEl.querySelector<HTMLAnchorElement>(
+      '.card-title-url-icon'
+    );
+    expect(after).toBe(before);
+    expect(after!.getAttribute('href')).toBe('https://new.example');
+    expect(after!.getAttribute('aria-label')).toBe('https://new.example');
+    expect(after!.dataset.dvUrlValue).toBe('https://new.example');
   });
 });
 
@@ -633,6 +824,125 @@ describe('applyCssOnlySettings — poster display mode re-clip', () => {
   });
 });
 
+describe('applyCssOnlySettings — class swap gating', () => {
+  function mockConfig(overrides: Record<string, unknown>) {
+    return {
+      get: (key: string) => overrides[key],
+    } as unknown as BasesViewConfig;
+  }
+
+  beforeEach(() => {
+    vi.mocked(getOwnerWindow).mockReturnValue(
+      window as unknown as Window & typeof globalThis
+    );
+  });
+
+  it('swaps the poster mode and image fit classes once across identical calls', () => {
+    const container = document.createElement('div');
+    const config = mockConfig({
+      posterDisplayMode: 'overlay',
+      imageFit: 'contain',
+      posterInteractToReveal: true,
+    });
+
+    applyCssOnlySettings(config, container);
+    const remove = vi.spyOn(container.classList, 'remove');
+    applyCssOnlySettings(config, container);
+
+    expect(remove).not.toHaveBeenCalled();
+    expect(container.classList.contains('poster-mode-overlay')).toBe(true);
+    expect(container.classList.contains('image-fit-contain')).toBe(true);
+    remove.mockRestore();
+  });
+
+  it('still swaps when the value changes', () => {
+    const container = document.createElement('div');
+
+    applyCssOnlySettings(
+      mockConfig({
+        posterDisplayMode: 'fade',
+        imageFit: 'crop',
+        posterInteractToReveal: true,
+      }),
+      container
+    );
+    applyCssOnlySettings(
+      mockConfig({
+        posterDisplayMode: 'overlay',
+        imageFit: 'contain',
+        posterInteractToReveal: true,
+      }),
+      container
+    );
+
+    expect(container.classList.contains('poster-mode-overlay')).toBe(true);
+    expect(container.classList.contains('poster-mode-fade')).toBe(false);
+    expect(container.classList.contains('image-fit-contain')).toBe(true);
+    expect(container.classList.contains('image-fit-crop')).toBe(false);
+  });
+});
+
+describe('applyCssOnlySettings — text preview re-clip gating', () => {
+  function mockConfig(textPreviewLines: number, isStatic = true) {
+    const values: Record<string, unknown> = {
+      textPreviewLines,
+      posterDisplayMode: 'fade',
+      imageFit: 'crop',
+      posterInteractToReveal: !isStatic,
+    };
+    return { get: (key: string) => values[key] } as unknown as BasesViewConfig;
+  }
+
+  function makeStaticContainer(): HTMLElement {
+    const container = document.createElement('div');
+    container.classList.add('poster-static');
+    const card = document.createElement('div');
+    card.className = 'card image-format-poster has-poster';
+    container.appendChild(card);
+    return container;
+  }
+
+  beforeEach(() => {
+    vi.mocked(getOwnerWindow).mockReturnValue(
+      window as unknown as Window & typeof globalThis
+    );
+    vi.mocked(clipPosterStaticOverflowBatch).mockClear();
+  });
+
+  it('re-clips once when the line count is unchanged', () => {
+    const container = makeStaticContainer();
+
+    applyCssOnlySettings(mockConfig(5), container);
+    applyCssOnlySettings(mockConfig(5), container);
+    applyCssOnlySettings(mockConfig(5), container);
+
+    expect(clipPosterStaticOverflowBatch).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-clips again when the line count changes', () => {
+    const container = makeStaticContainer();
+
+    applyCssOnlySettings(mockConfig(5), container);
+    applyCssOnlySettings(mockConfig(6), container);
+
+    expect(clipPosterStaticOverflowBatch).toHaveBeenCalledTimes(2);
+  });
+
+  // The value is recorded outside the poster-static branch, so entering static
+  // mode runs only the mode-transition batch, not a second line-count batch.
+  it('records the line count while not static', () => {
+    const container = makeStaticContainer();
+    container.classList.remove('poster-static');
+
+    applyCssOnlySettings(mockConfig(5, false), container);
+    expect(clipPosterStaticOverflowBatch).not.toHaveBeenCalled();
+
+    applyCssOnlySettings(mockConfig(5, true), container);
+
+    expect(clipPosterStaticOverflowBatch).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('applyViewContainerStyles — card gap variable', () => {
   const settings = (overrides: Partial<ResolvedSettings> = {}) =>
     ({ ...VIEW_DEFAULTS, ...overrides }) as ResolvedSettings;
@@ -690,6 +1000,64 @@ describe('applyViewContainerStyles — card gap variable', () => {
   });
 });
 
+describe('applyViewContainerStyles — subtitle scroll derivation', () => {
+  const SCROLL_BODY_CLASS = 'dynamic-views-subtitle-overflow-scroll';
+
+  const settings = (subtitleLines: number) =>
+    ({ ...VIEW_DEFAULTS, subtitleLines }) as ResolvedSettings;
+
+  afterEach(() => {
+    document.body.classList.remove(SCROLL_BODY_CLASS);
+  });
+
+  /** Returns whether the scroll class landed, for the four-cell truth table below. */
+  const applyWith = (
+    subtitleLines: number,
+    bodyClass: boolean
+  ): HTMLElement => {
+    document.body.classList.toggle(SCROLL_BODY_CLASS, bodyClass);
+    const container = document.createElement('div');
+    applyViewContainerStyles(container, settings(subtitleLines));
+    return container;
+  };
+
+  it('scrolls a single-line subtitle while the body class is set', () => {
+    expect(applyWith(1, true).classList.contains('subtitle-scroll')).toBe(true);
+  });
+
+  it('does not scroll a single-line subtitle without the body class', () => {
+    expect(applyWith(1, false).classList.contains('subtitle-scroll')).toBe(
+      false
+    );
+  });
+
+  // A wrapped subtitle has nothing to scroll, so the wrap rules must stay live.
+  it('does not scroll a multi-line subtitle even with the body class', () => {
+    expect(applyWith(2, true).classList.contains('subtitle-scroll')).toBe(
+      false
+    );
+  });
+
+  it('does not scroll a multi-line subtitle without the body class', () => {
+    expect(applyWith(2, false).classList.contains('subtitle-scroll')).toBe(
+      false
+    );
+  });
+
+  it('writes the subtitle line count regardless of the scroll mode', () => {
+    expect(
+      applyWith(1, true).style.getPropertyValue(
+        '--dynamic-views-subtitle-lines'
+      )
+    ).toBe('1');
+    expect(
+      applyWith(3, false).style.getPropertyValue(
+        '--dynamic-views-subtitle-lines'
+      )
+    ).toBe('3');
+  });
+});
+
 describe('applyViewContainerStyles — view padding override', () => {
   const settings = (overrides: Partial<ResolvedSettings> = {}) =>
     ({ ...VIEW_DEFAULTS, ...overrides }) as ResolvedSettings;
@@ -702,11 +1070,54 @@ describe('applyViewContainerStyles — view padding override', () => {
     return { scrollEl, container };
   };
 
-  it('writes the gap onto the scroll element', () => {
+  // Must stay a PLAIN length: Masonry feeds it to overflow-clip-margin, which
+  // rejects calc()/max() and computes 0, clipping the sticky header background
+  // at the container edge. jsdom reports no value for the chrome inset token, so
+  // these exercise the DEFAULT_CHROME_INSET fallback path — the runtime checks
+  // cover resolution against the real token.
+  it('writes the gap onto the scroll element as a plain length', () => {
     const { scrollEl, container } = mountInScrollEl();
 
     applyViewContainerStyles(container, settings({ cardGapDesktop: 20 }));
 
+    expect(scrollEl.style.getPropertyValue('--bases-view-padding')).toBe(
+      '20px'
+    );
+  });
+
+  // Gaps below the floor are the reason it exists — the slider reaches 0, which
+  // would otherwise put the cards flush against the pane edge.
+  it.each([0, 6, 8])('floors a %ipx gap at the chrome inset', (gap) => {
+    const { scrollEl, container } = mountInScrollEl();
+
+    applyViewContainerStyles(container, settings({ cardGapDesktop: gap }));
+
+    expect(scrollEl.style.getPropertyValue('--bases-view-padding')).toBe(
+      '12px'
+    );
+  });
+
+  it('never writes a calc() or max() expression', () => {
+    const { scrollEl, container } = mountInScrollEl();
+
+    for (const gap of [0, 8, 12, 64]) {
+      applyViewContainerStyles(container, settings({ cardGapDesktop: gap }));
+      const written = scrollEl.style.getPropertyValue('--bases-view-padding');
+      expect(written).toMatch(/^\d+(\.\d+)?px$/);
+    }
+  });
+
+  // The element outlives the view, so a stale marker would make the next view
+  // skip the write entirely and inherit whatever padding was left behind.
+  it('clears the gap guard on teardown so a reused scroll element re-writes', () => {
+    const { scrollEl, container } = mountInScrollEl();
+    applyViewContainerStyles(container, settings({ cardGapDesktop: 20 }));
+    expect(scrollEl.dataset.dynamicViewsGap).toBe('20px');
+
+    clearViewContainerStyles(container);
+    expect(scrollEl.dataset.dynamicViewsGap).toBeUndefined();
+
+    applyViewContainerStyles(container, settings({ cardGapDesktop: 20 }));
     expect(scrollEl.style.getPropertyValue('--bases-view-padding')).toBe(
       '20px'
     );

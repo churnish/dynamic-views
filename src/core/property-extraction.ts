@@ -45,6 +45,17 @@ export function getFirstBasesPropertyValue(
       return value;
     }
 
+    // File-typed values (e.g. `file.file` formulas) carry the file on `.file`, not `.data`
+    // Must precede the empty-property check below, whose {icon} shape this would otherwise satisfy
+    if (
+      value &&
+      typeof value === 'object' &&
+      'file' in value &&
+      (value as { file: unknown }).file instanceof TFile
+    ) {
+      return value;
+    }
+
     // Check for empty property BEFORE formula fallback
     // Bases returns {icon} for both missing and empty - use metadata cache to distinguish
     // Empty properties return {data: null}, missing properties return null

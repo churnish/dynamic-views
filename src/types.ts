@@ -38,7 +38,7 @@ export interface ViewDefaults {
   textPreviewLines: number;
   // Image
   imageProperty: string;
-  fallbackToEmbeds: 'always' | 'if-unavailable' | 'never';
+  showFileImages: 'always' | 'if-unavailable' | 'never';
   imageFormat: 'thumbnail' | 'cover' | 'poster' | 'backdrop';
   posterDisplayMode: 'fade' | 'overlay';
   posterInteractToReveal: boolean;
@@ -91,6 +91,18 @@ export interface PluginData {
   basesStates: Record<string, BasesUIState>;
 }
 
+/** Median card-height profile split by image presence, captured at teardown so
+ *  back-nav can size each deferred-mount card individually instead of applying
+ *  one flat average. Declared here rather than in virtual-scroll.ts to keep
+ *  types.ts import-free. */
+export interface MountEstimateProfile {
+  withImage: { scalable: number; fixed: number };
+  withoutImage: { scalable: number; fixed: number };
+  measuredAtWidth: number;
+  /** Cover wrapper width at measuredAtWidth; 0 if unknown */
+  coverWidth: number;
+}
+
 export interface AnchorScrollState {
   anchorPath: string;
   anchorOffset: number;
@@ -98,6 +110,8 @@ export interface AnchorScrollState {
   columns: number;
   count: number;
   height: number;
+  /** Optional — legacy saved state predates the profile */
+  estimate?: MountEstimateProfile;
 }
 export interface LegacyScrollState {
   top: number;

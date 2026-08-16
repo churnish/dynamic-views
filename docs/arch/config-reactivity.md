@@ -126,7 +126,7 @@ Computed by `getStyleSettingsHash()` in `style-settings.ts`. Captures JS-readabl
 - Property display (list separator, empty marker, hide-empty mode, tag hash prefix)
 - Property display (hide-missing-properties mode)
 - Slideshow (enabled, thumbnail scrubbing disabled, max images)
-- Layout (compact breakpoint, zoom sensitivity, title/subtitle overflow scroll body classes, uniform poster height)
+- Layout (compact breakpoint, title/subtitle overflow scroll body classes)
 - Text preview content (keep headings, keep newlines, omit-first-line mode)
 
 **Adding new body-class toggles**: Any `class-toggle` that affects rendering (JS behavior, not just CSS) MUST be added to `getStyleSettingsHash()` via `hasBodyClass()`. The body class observer detects the `dynamic-views-*` class change but uses hash-based deduplication — if the hash doesn't change, `onStyleChange()` never fires and the re-render pipeline is never triggered.

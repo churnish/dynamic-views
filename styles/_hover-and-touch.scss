@@ -38,6 +38,12 @@ body.dynamic-views-card-background-hover-primary .dynamic-views .card.interact {
   --card-bg: var(--dynamic-views-background-primary);
 }
 
+body.dynamic-views-card-background-hover-secondary
+  .dynamic-views
+  .card.interact {
+  --card-bg: var(--dynamic-views-background-secondary);
+}
+
 /* Dimmed: darken current --card-bg without overriding it (self-reference would cycle). Set background-color and placeholder var directly from the unchanged --card-bg. Offsets = initial placeholder depth + hover card step. Light: card -8, placeholder -23 (-15 initial + -8 hover). Dark: card -5, placeholder -15 (-10 initial + -5 hover). Coupled to --dynamic-views-image-background-dimmed offsets in _grid-masonry-shared.scss — update together. */
 body.dynamic-views-card-background-hover-dimmed .dynamic-views .card.interact {
   background-color: rgb(

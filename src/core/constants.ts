@@ -79,9 +79,6 @@ export const GESTURE_TIMEOUT_MS = 50;
 /** How long a dismissed image viewer keeps suppressing touch-press interact on its source card, so the dismiss tap is not read as a press on the card underneath. */
 export const VIEWER_DISMISS_SUPPRESS_MS = 300;
 
-/** Settle delay (ms) after focusing the window for a clipboard write — the Clipboard API rejects while the document is unfocused, and focus is not observable synchronously. */
-export const CLIPBOARD_FOCUS_SETTLE_MS = 50;
-
 /** Touch tap threshold (ms) — presses longer than this suppress file-open on lift. */
 export const TOUCH_TAP_THRESHOLD_MS = 200;
 
@@ -103,14 +100,8 @@ export const MAX_HOVER_SCALE = 1.04;
 export const VISIBLE_BODY_SELECTOR =
   '.card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)';
 
-// Measurement utility: suppresses CSS Grid row stretch so imageless cards
-// report natural content height during stretchPosterCardsInMixedRows.
-export const ALIGN_START_CLASS = 'dynamic-views-align-start';
-
-// Poster stretch trio — the class signals stretch state and the two CSS variables carry computed values. All three must be set/cleared together; clearing only the class leaks stale CSS variable state. Consumed by `_poster.scss`.
-export const POSTER_STRETCH_CLASS = 'poster-stretch';
-export const POSTER_ROW_MIN_HEIGHT_VAR = '--poster-row-min-height';
-export const POSTER_ASPECT_OVERRIDE_VAR = '--poster-aspect-override';
+/** Selector for the URL chip anchor in a card header — used by shared-renderer and poster clipping. */
+export const URL_ICON_SELECTOR = '.card-title-url-icon';
 
 // Fixed cover height body classes (Style Settings class-select options)
 export const FIXED_COVER_HEIGHT_GRID = 'dynamic-views-fixed-cover-height-grid';

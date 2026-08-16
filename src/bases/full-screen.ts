@@ -13,6 +13,7 @@
  * the spacer approach — symmetric show/hide via overflow-anchor.
  */
 
+import { OPEN_ON_TITLE_CLASS } from '../core/open-file-action';
 import {
   FULL_SCREEN_HIDE_DEAD_ZONE,
   FULL_SCREEN_SHOW_DEAD_ZONE,
@@ -1851,9 +1852,7 @@ export class FullScreenController {
       return;
     }
 
-    const isOpenOnTitle = this.body.classList.contains(
-      'dynamic-views-open-on-title'
-    );
+    const isOpenOnTitle = this.body.classList.contains(OPEN_ON_TITLE_CLASS);
 
     // Don't reveal bars when tapping a card image — let image viewer handle it.
     // Exception: reveal if image viewer disabled via Style Settings AND

@@ -57,10 +57,13 @@ export async function extractImageEmbeds(
   options?: {
     includeYoutube?: boolean;
     includeCardLink?: boolean;
+    /** Widest the card can render, in device px — picks the YouTube rung */
+    youtubeTargetWidth?: number;
   }
 ): Promise<string[]> {
   const includeYoutube = options?.includeYoutube ?? true;
   const includeCardLink = options?.includeCardLink ?? true;
+  const youtubeTargetWidth = options?.youtubeTargetWidth;
   const maxImages = getSlideshowMaxImages();
 
   // Read and truncate content at line boundary to avoid splitting wikilinks
@@ -201,7 +204,7 @@ export async function extractImageEmbeds(
       // it, so attach the handler here rather than leave a rejection unobserved
       youtubeProbes.set(
         videoId,
-        getYouTubeThumbnailUrl(videoId).catch(() => null)
+        getYouTubeThumbnailUrl(videoId, youtubeTargetWidth).catch(() => null)
       );
     }
   }
@@ -222,7 +225,7 @@ export async function extractImageEmbeds(
           // A YouTube embed resolving to null fills no result slot, so this loop
           // can run past the last pre-started probe — resolve those lazily
           const thumbnailUrl = await (youtubeProbes.get(videoId) ??
-            getYouTubeThumbnailUrl(videoId));
+            getYouTubeThumbnailUrl(videoId, youtubeTargetWidth));
           if (thumbnailUrl) {
             resultUrls.push(thumbnailUrl);
           }

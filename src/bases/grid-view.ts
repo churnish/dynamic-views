@@ -13,6 +13,7 @@ import {
   TFile,
 } from 'obsidian';
 import { CardData } from '../core/card-data';
+import { getOwnerWindow } from '../utils/owner-window';
 import {
   basesEntryToCardData,
   transformBasesEntries,
@@ -67,11 +68,7 @@ import {
   GRID_ROW_BUDGET,
   SCROLL_IDLE_SYNC_MS,
   DEFERRED_MOUNT_THRESHOLD,
-  POSTER_STRETCH_CLASS,
-  POSTER_ROW_MIN_HEIGHT_VAR,
-  POSTER_ASPECT_OVERRIDE_VAR,
 } from '../core/constants';
-import { computePosterStretch } from '../core/poster-stretch';
 import {
   setupBasesSwipePrevention,
   setupStyleSettingsObserver,
@@ -130,7 +127,6 @@ import {
   initializeTextPreviewClampForCards,
 } from '../core/text-preview-dom';
 import { CONTENT_HIDDEN_CLASS } from '../core/content-visibility';
-import { registerCompactSettleCallback } from '../core/property-helpers';
 
 // Extend Obsidian types
 declare module 'obsidian' {
@@ -171,6 +167,10 @@ export class DynamicViewsGridView extends BasesView {
   private get plugin(): DynamicViews {
     return this.app.plugins.plugins['dynamic-views'] as DynamicViews;
   }
+  /** Read per access, not cached: a popout can sit on a differently-scaled monitor */
+  private get devicePixelRatio(): number {
+    return getOwnerWindow(this.containerEl).devicePixelRatio;
+  }
   private _resolvedFile: TFile | null | undefined = undefined;
   private _collapsedGroupsLoaded = false;
   private scrollPreservation: ScrollPreservation | null = null;
@@ -184,7 +184,6 @@ export class DynamicViewsGridView extends BasesView {
   private _previousCustomClasses: string[] = [];
   private currentDoc: Document = document;
   private disconnectStyleObserver: (() => void) | null = null;
-  private disconnectCompactSettle: (() => void) | null = null;
 
   // Consolidated state objects (shared patterns with masonry-view)
   private contentCache: ContentCache = {
@@ -226,7 +225,7 @@ export class DynamicViewsGridView extends BasesView {
   private selectionScoping: SelectionScoping | null = null;
   private templateInitializedRef = { value: false };
   private templateCooldownRef = {
-    value: null as ReturnType<typeof setTimeout> | null,
+    value: null as number | null,
   };
 
   // Public accessors for sortState (used by randomize.ts)
@@ -322,9 +321,6 @@ export class DynamicViewsGridView extends BasesView {
   private cardResizeObserver: ResizeObserver | null = null;
   private cardResizeRafId: number | null = null;
   private cardResizeDirty = false;
-  /** Bail-out key for stretchPosterCardsInMixedRows — skips when last run
-   *  was a no-op and card composition hasn't changed. 0 = no bail-out. */
-  private stretchNoopKey = 0;
   private mountRemeasureTimeout: ReturnType<typeof setTimeout> | null = null;
   private isMountRemeasuring = false;
   private frameMountCount: number = 0;
@@ -512,7 +508,8 @@ export class DynamicViewsGridView extends BasesView {
       this.app,
       this.contentCache.textPreviews,
       this.contentCache.images,
-      this.contentCache.hasImageAvailable
+      this.contentCache.hasImageAvailable,
+      this.devicePixelRatio
     );
 
     // Bail if a new render started during content loading
@@ -764,12 +761,6 @@ export class DynamicViewsGridView extends BasesView {
     }, this.containerEl);
     this.register(() => this.disconnectStyleObserver?.());
 
-    this.disconnectCompactSettle = registerCompactSettleCallback(
-      this.containerEl.ownerDocument,
-      () => this.equalizeRowPosterHeights()
-    );
-    this.register(() => this.disconnectCompactSettle?.());
-
     // Detect popout move: sync body classes + rebind observer to new document
     this.registerEvent(
       this.app.workspace.on('layout-change', () => {
@@ -889,11 +880,6 @@ export class DynamicViewsGridView extends BasesView {
       this.onDataUpdated();
     }, this.containerEl);
 
-    this.disconnectCompactSettle?.();
-    this.disconnectCompactSettle = registerCompactSettleCallback(newDoc, () =>
-      this.equalizeRowPosterHeights()
-    );
-
     this.teardownObservers();
 
     // Rebind keydown listener to the new document (was on old document)
@@ -953,7 +939,6 @@ export class DynamicViewsGridView extends BasesView {
     this.lastSyncScrollTop = 0;
     this.lastSyncTime = 0;
     this.cardVerticalPadding = null;
-    this.stretchNoopKey = 0;
     this.ephemeralEstimatedHeight = null;
     this.hasUserScrolled = false;
     this.isLayoutBusy = false;
@@ -1459,10 +1444,7 @@ export class DynamicViewsGridView extends BasesView {
         '--dynamic-views-grid-columns',
         String(cols)
       );
-      this.containerEl.style.setProperty(
-        '--dynamic-views-image-aspect-ratio',
-        String(settings.imageRatio)
-      );
+      // imageRatio is written by applyViewContainerStyles() earlier in this pass
 
       // Transform to CardData (only visible entries)
 
@@ -1516,7 +1498,8 @@ export class DynamicViewsGridView extends BasesView {
         this.app,
         this.contentCache.textPreviews,
         this.contentCache.images,
-        this.contentCache.hasImageAvailable
+        this.contentCache.hasImageAvailable,
+        this.devicePixelRatio
       );
 
       // Abort if a newer render started or if aborted while we were loading
@@ -2183,7 +2166,8 @@ export class DynamicViewsGridView extends BasesView {
       this.app,
       this.contentCache.textPreviews,
       this.contentCache.images,
-      this.contentCache.hasImageAvailable
+      this.contentCache.hasImageAvailable,
+      this.devicePixelRatio
     );
 
     // Rebuild CardData and update DOM for each changed card
@@ -2382,7 +2366,8 @@ export class DynamicViewsGridView extends BasesView {
         this.app,
         this.contentCache.textPreviews,
         this.contentCache.images,
-        this.contentCache.hasImageAvailable
+        this.contentCache.hasImageAvailable,
+        this.devicePixelRatio
       );
 
       // Abort if renderVersion changed during loading
@@ -3362,7 +3347,7 @@ export class DynamicViewsGridView extends BasesView {
   }
 
   private setupCardResizeObserver(): void {
-    const currentWindow = this.containerEl.ownerDocument.defaultView ?? window;
+    const currentWindow = getOwnerWindow(this.containerEl);
     if (this.cardResizeObserver && this.observerWindow === currentWindow)
       return;
 
@@ -3577,6 +3562,9 @@ export class DynamicViewsGridView extends BasesView {
   private equalizeRowHeights(config: {
     expectedFormat: string;
     matchCard: (el: HTMLElement) => boolean;
+    /** Cards failing this contribute ratio 0 instead of their own value.
+     *  Omitted = every matched card contributes. */
+    hasRatio?: (el: HTMLElement) => boolean;
     fixedHeightOffClasses: { masonry: string; none: string };
     cssVariable: string;
   }): void {
@@ -3616,9 +3604,17 @@ export class DynamicViewsGridView extends BasesView {
         }
       }
 
-      // Read phase: batch all getComputedStyle reads
+      // Read phase: batch all getComputedStyle reads. Cards that failed the
+      // hasRatio gate contribute 0 without a read — a failed image keeps a real
+      // --actual-aspect-ratio (image-loader writes the fallback at the same
+      // moment the has-poster class is dropped), so an isNaN check would let
+      // that stale value poison the row max.
       const ratios: { index: number; el: HTMLElement; ratio: number }[] = [];
       for (const { index, el } of indexedCards) {
+        if (config.hasRatio && !config.hasRatio(el)) {
+          ratios.push({ index, el, ratio: 0 });
+          continue;
+        }
         const raw = this.win
           .getComputedStyle(el)
           .getPropertyValue('--actual-aspect-ratio');
@@ -3662,49 +3658,15 @@ export class DynamicViewsGridView extends BasesView {
   private equalizeRowPosterHeights(): void {
     this.equalizeRowHeights({
       expectedFormat: 'poster',
-      matchCard: (el) =>
-        el.classList.contains('image-format-poster') &&
-        el.classList.contains('has-poster'),
+      // Imageless poster cards are matched too — they take the row's ratio so
+      // every card in the row resolves to the same height.
+      matchCard: (el) => el.classList.contains('image-format-poster'),
+      hasRatio: (el) => el.classList.contains('has-poster'),
       fixedHeightOffClasses: {
         masonry: FIXED_POSTER_HEIGHT_MASONRY,
         none: FIXED_POSTER_HEIGHT_NONE,
       },
       cssVariable: '--row-poster-aspect-ratio',
-    });
-    this.stretchPosterCardsInMixedRows();
-  }
-
-  // See poster-stretch.ts for algorithm details.
-  private stretchPosterCardsInMixedRows(): void {
-    if (!this.containerEl?.isConnected) return;
-    if (this.lastRenderedSettings?.imageFormat !== 'poster') return;
-    if (
-      this.containerEl.ownerDocument.body.classList.contains(
-        'dynamic-views-poster-uniform-height'
-      )
-    ) {
-      // Clear stale stretch state from previous runs
-      for (const el of this.containerEl.querySelectorAll(
-        '.' + POSTER_STRETCH_CLASS
-      )) {
-        (el as HTMLElement).style.removeProperty(POSTER_ROW_MIN_HEIGHT_VAR);
-        (el as HTMLElement).style.removeProperty(POSTER_ASPECT_OVERRIDE_VAR);
-        el.classList.remove(POSTER_STRETCH_CLASS);
-      }
-      this.stretchNoopKey = 0;
-      return;
-    }
-    const columns = this.lastColumnCount;
-    if (columns <= 0) return;
-
-    const container = this.containerEl;
-    this.stretchNoopKey = computePosterStretch({
-      virtualItemsByGroup: this.virtualItemsByGroup,
-      columns,
-      stretchNoopKey: this.stretchNoopKey,
-      imageReadyCount: container.getElementsByClassName('image-ready').length,
-      compactStackedCount:
-        container.getElementsByClassName('compact-stacked').length,
     });
   }
 

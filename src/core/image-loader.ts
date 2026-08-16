@@ -45,14 +45,19 @@ export function handleAllImagesFailed(cardEl: HTMLElement): void {
     return;
   }
 
-  // Poster/backdrop: remove reveal-gating class so content is visible
+  // Poster/backdrop: drop the element as well as the reveal-gating class.
+  // The fade gradient, the poster background and the overlay filter are all
+  // scoped to .card-poster / .card-backdrop rather than to .has-poster, so
+  // leaving the element behind paints a fade over an empty box.
   const posterEl = cardEl.querySelector('.card-poster');
   if (posterEl) {
+    posterEl.remove();
     cardEl.classList.remove('has-poster');
     return;
   }
   const backdropEl = cardEl.querySelector('.card-backdrop');
   if (backdropEl) {
+    backdropEl.remove();
     cardEl.classList.remove('has-backdrop');
   }
 }
@@ -100,6 +105,19 @@ export function invalidateCacheForFile(filePath: string): void {
 }
 
 /**
+ * Records the card's cover aspect ratio and marks it as known.
+ *
+ * The class is what lets CSS collapse a cover whose shape it cannot know yet —
+ * reserving space at the fallback ratio would size the cover wrong and resize it
+ * on load. Always set the two together: a card left without the class keeps its
+ * cover collapsed forever.
+ */
+export function setKnownAspectRatio(cardEl: HTMLElement, ratio: number): void {
+  cardEl.style.setProperty('--actual-aspect-ratio', ratio.toString());
+  cardEl.classList.add('image-ratio-known');
+}
+
+/**
  * Apply cached aspect ratio to card immediately
  * Called before image loads to prevent layout flash on re-render
  */
@@ -114,10 +132,7 @@ export function applyCachedImageMetadata(
   if (!cardEl.isConnected) return;
 
   if (cached.aspectRatio !== undefined) {
-    cardEl.style.setProperty(
-      '--actual-aspect-ratio',
-      cached.aspectRatio.toString()
-    );
+    setKnownAspectRatio(cardEl, cached.aspectRatio);
   }
   // Don't add image-ready here - wait for actual image load to trigger fade-in
 }
@@ -158,10 +173,7 @@ export function handleImageLoad(
 
   // Set actual aspect ratio for masonry contain mode (used when "Fixed cover height" is OFF)
   // Use default ratio for invalid/missing dimensions to prevent layout issues
-  cardEl.style.setProperty(
-    '--actual-aspect-ratio',
-    (aspectRatio ?? DEFAULT_ASPECT_RATIO).toString()
-  );
+  setKnownAspectRatio(cardEl, aspectRatio ?? DEFAULT_ASPECT_RATIO);
 
   // Skip transition when fade is unnecessary: shuffle re-render (.skip-cover-fade)
   // or virtual scroll remount (.skip-image-fade — set inside renderCard before

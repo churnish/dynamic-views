@@ -124,6 +124,7 @@ import type {
   AnchorScrollState,
   LegacyScrollState,
   ScrollRestoreState,
+  MountEstimateProfile,
 } from '../types';
 import { CONTENT_HIDDEN_CLASS } from '../core/content-visibility';
 import { setupStickyHeaderObserver } from './sticky-header';
@@ -137,6 +138,10 @@ import {
   estimateUnmountedHeight,
   getScrollAnchor,
   getAnchorTop,
+  buildMountEstimateProfile,
+  estimateCardHeight,
+  hasCardImage,
+  isMountEstimateProfile,
   type ScrollAnchor,
 } from '../core/virtual-scroll';
 import { getOwnerWindow } from '../utils/owner-window';
@@ -164,6 +169,14 @@ export function canFlushImageRelayout(state: {
   return true;
 }
 
+/** Masonry layout dimensions derived without reading a single card's DOM */
+interface DeferredLayoutDimensions {
+  containerWidth: number;
+  gap: number;
+  columns: number;
+  cardWidth: number;
+}
+
 export const MASONRY_VIEW_TYPE = 'dynamic-views-masonry';
 
 export class DynamicViewsMasonryView extends BasesView {
@@ -177,6 +190,10 @@ export class DynamicViewsMasonryView extends BasesView {
   /** Resolves from registry each time — survives hot-reload / plugin re-enable */
   private get plugin(): DynamicViews {
     return this.app.plugins.plugins['dynamic-views'] as DynamicViews;
+  }
+  /** Read per access, not cached: a popout can sit on a differently-scaled monitor */
+  private get devicePixelRatio(): number {
+    return getOwnerWindow(this.containerEl).devicePixelRatio;
   }
   private scrollPreservation: ScrollPreservation | null = null;
   private scrollRestoreState: ScrollRestoreState = null;
@@ -225,7 +242,7 @@ export class DynamicViewsMasonryView extends BasesView {
   private selectionScoping: SelectionScoping | null = null;
   private templateInitializedRef = { value: false };
   private templateCooldownRef = {
-    value: null as ReturnType<typeof setTimeout> | null,
+    value: null as number | null,
   };
 
   // Public accessors for sortState (used by randomize.ts)
@@ -297,6 +314,9 @@ export class DynamicViewsMasonryView extends BasesView {
   private expectedIncrementalHeight: number | null = null;
   /** Estimated card height from ephemeral scroll state — used for deferred mount layout */
   private ephemeralEstimatedHeight: number | null = null;
+  /** Per-card height profile from ephemeral scroll state — refines the flat
+   *  ephemeralEstimatedHeight, which is only the fallback when absent */
+  private ephemeralEstimate: MountEstimateProfile | null = null;
   private totalEntries: number = 0;
 
   /** Recalculate totalEntries excluding collapsed groups. Called on
@@ -498,7 +518,8 @@ export class DynamicViewsMasonryView extends BasesView {
       this.app,
       this.contentCache.textPreviews,
       this.contentCache.images,
-      this.contentCache.hasImageAvailable
+      this.contentCache.hasImageAvailable,
+      this.devicePixelRatio
     );
 
     // Bail if a new render started during content loading
@@ -1398,15 +1419,22 @@ export class DynamicViewsMasonryView extends BasesView {
         !!this.deferredMountState &&
         this.virtualItemCount > DEFERRED_MOUNT_THRESHOLD;
       if (useDeferredMount) {
+        // The saved height is the scroll height of a COLUMN, not the sum of every
+        // card — with C columns the cards stack C-deep, so the per-card average is
+        // height * C / count. Dividing by count alone underestimated every card by
+        // a factor of C, and masonry writes item.height straight onto the card at
+        // mount, flex-compressing the cover wrapper until remeasure (#417 sibling).
+        // Legacy saved state predates the columns field; fall back to 1.
+        const saved = this.deferredMountState!;
+        const savedColumns = 'columns' in saved ? saved.columns : 1;
         this.ephemeralEstimatedHeight =
-          this.deferredMountState!.height / this.deferredMountState!.count;
+          (saved.height * Math.max(1, savedColumns)) / saved.count;
+        // Per-card profile supersedes the flat average when present
+        this.ephemeralEstimate =
+          'estimate' in saved ? (saved.estimate ?? null) : null;
       }
 
-      // Set CSS variable for image aspect ratio
-      this.containerEl.style.setProperty(
-        '--dynamic-views-image-aspect-ratio',
-        String(settings.imageRatio)
-      );
+      // imageRatio is written by applyViewContainerStyles() earlier in this pass
 
       // Transform to CardData (only visible entries)
 
@@ -1460,7 +1488,8 @@ export class DynamicViewsMasonryView extends BasesView {
         this.app,
         this.contentCache.textPreviews,
         this.contentCache.images,
-        this.contentCache.hasImageAvailable
+        this.contentCache.hasImageAvailable,
+        this.devicePixelRatio
       );
 
       // Abort if a newer render started or if aborted while we were loading
@@ -1481,11 +1510,13 @@ export class DynamicViewsMasonryView extends BasesView {
       // Clear and re-render
       this.containerEl.empty();
 
-      // Reset batch append state for full re-render — preserve
-      // ephemeralEstimatedHeight (set above, needed in the card loop below)
+      // Reset batch append state for full re-render — preserve the ephemeral
+      // estimates (set above, needed in the card loop below)
       const savedEstimatedHeight = this.ephemeralEstimatedHeight;
+      const savedEstimate = this.ephemeralEstimate;
       this.resetVirtualState();
       this.ephemeralEstimatedHeight = savedEstimatedHeight;
+      this.ephemeralEstimate = savedEstimate;
 
       // Cleanup card renderer observers before re-rendering
       this.cardRenderer.cleanup();
@@ -1516,6 +1547,21 @@ export class DynamicViewsMasonryView extends BasesView {
       // Clear CSS variable cache to pick up any style changes
       // (prevents layout thrashing from repeated getComputedStyle calls per card)
       clearStyleSettingsCache();
+
+      // Deferred mount sizes cards before runDeferredLayout runs, and back-nav
+      // builds a fresh view instance where lastLayoutCardWidth is still 0 — so
+      // the dimensions have to be derived here and handed down.
+      const deferredDims = useDeferredMount
+        ? this.computeDeferredDimensions(settings)
+        : null;
+      // Contain caps the cover at min(imageRatio, aspect ratio), so a cached
+      // ratio pins this card's cover exactly. Crop and the fixed-height class
+      // both collapse to the plain slider ratio, which the median already
+      // captures; poster's scalable term is the whole card, not the cover.
+      const containOverride =
+        settings.imageFormat === 'cover' &&
+        settings.imageFit === 'contain' &&
+        !isFixedHeightForMasonry(this.containerEl.ownerDocument.body, 'cover');
 
       // Render groups with headers (or ungrouped cards directly)
       let displayedSoFar = 0;
@@ -1596,12 +1642,33 @@ export class DynamicViewsMasonryView extends BasesView {
           const card = cards[i];
           const entry = groupEntries[i];
           if (useDeferredMount) {
+            const hasImage = hasCardImage(card);
+            let coverRatio = 0;
+            if (containOverride && hasImage) {
+              const url = Array.isArray(card.imageUrl)
+                ? card.imageUrl[0]
+                : card.imageUrl!;
+              const cached = getCachedAspectRatio(url);
+              if (cached !== undefined) {
+                coverRatio = Math.min(cached, settings.imageRatio);
+              }
+            }
+            // measuredHeight/measuredAtWidth stay 0 — that pair is the
+            // never-measured signal every remeasure consumer keys off.
             this.virtualItems.push({
               index: displayedSoFar + i,
               x: 0,
               y: 0,
               width: 0,
-              height: this.ephemeralEstimatedHeight!,
+              height:
+                this.ephemeralEstimate && deferredDims
+                  ? estimateCardHeight(
+                      this.ephemeralEstimate,
+                      hasImage,
+                      deferredDims.cardWidth,
+                      coverRatio
+                    )
+                  : this.ephemeralEstimatedHeight!,
               measuredHeight: 0,
               measuredAtWidth: 0,
               scalableHeight: 0,
@@ -1648,7 +1715,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
       // Initial layout — deferred mount uses DOM-free layout with estimated heights
       if (useDeferredMount) {
-        this.runDeferredLayout(settings);
+        this.runDeferredLayout(settings, deferredDims);
       } else if (this.updateLayoutRef.current) {
         this.updateLayoutRef.current('initial-render');
       }
@@ -2720,24 +2787,42 @@ export class DynamicViewsMasonryView extends BasesView {
     return true;
   }
 
-  /** Run layout with estimated heights — no DOM reads. Used by deferred mount to compute positions before any cards are mounted. */
-  private runDeferredLayout(settings: ResolvedSettings): void {
-    if (!this.masonryContainer) return;
-
+  /** Column count and card width for the deferred-mount path. Cannot use
+   *  lastLayoutCardWidth — it is still 0 on the fresh view instance back-nav
+   *  builds, and is only written once a layout has run. */
+  private computeDeferredDimensions(
+    settings: ResolvedSettings
+  ): DeferredLayoutDimensions | null {
+    if (!this.masonryContainer) return null;
     const containerWidth = Math.floor(
       this.masonryContainer.getBoundingClientRect().width
     );
-    if (containerWidth === 0) return;
-
+    if (containerWidth === 0) return null;
     const gap = getCardSpacing(this.containerEl);
-    const minColumns = settings.minimumColumns;
-    const dims = calculateMasonryDimensions({
+    return {
       containerWidth,
-      cardSize: settings.cardSize,
-      minColumns,
       gap,
-    });
-    const { columns, cardWidth } = dims;
+      ...calculateMasonryDimensions({
+        containerWidth,
+        cardSize: settings.cardSize,
+        minColumns: settings.minimumColumns,
+        gap,
+      }),
+    };
+  }
+
+  /** Run layout with estimated heights — no DOM reads. Used by deferred mount to compute positions before any cards are mounted. */
+  private runDeferredLayout(
+    settings: ResolvedSettings,
+    precomputed?: DeferredLayoutDimensions | null
+  ): void {
+    if (!this.masonryContainer) return;
+
+    const dims = precomputed ?? this.computeDeferredDimensions(settings);
+    if (!dims) return;
+
+    const minColumns = settings.minimumColumns;
+    const { containerWidth, gap, columns, cardWidth } = dims;
 
     this.lastLayoutCardWidth = cardWidth;
     this.lastLayoutColumnCount = columns;
@@ -3083,6 +3168,7 @@ export class DynamicViewsMasonryView extends BasesView {
     this.hasUserScrolled = false;
     this.lastLayoutColumnCount = 0;
     this.ephemeralEstimatedHeight = null;
+    this.ephemeralEstimate = null;
   }
 
   private cacheCardVerticalPadding(el: HTMLElement): void {
@@ -3752,7 +3838,8 @@ export class DynamicViewsMasonryView extends BasesView {
       this.app,
       this.contentCache.textPreviews,
       this.contentCache.images,
-      this.contentCache.hasImageAvailable
+      this.contentCache.hasImageAvailable,
+      this.devicePixelRatio
     );
 
     // Rebuild CardData and update DOM for each changed card
@@ -3936,7 +4023,8 @@ export class DynamicViewsMasonryView extends BasesView {
         this.app,
         this.contentCache.textPreviews,
         this.contentCache.images,
-        this.contentCache.hasImageAvailable
+        this.contentCache.hasImageAvailable,
+        this.devicePixelRatio
       );
 
       // Abort if renderVersion changed during loading
@@ -4629,16 +4717,38 @@ export class DynamicViewsMasonryView extends BasesView {
       this.scrollEl.clientHeight
     );
     if (!anchor) return {};
-    return {
-      scroll: {
-        anchorPath: anchor.path,
-        anchorOffset: anchor.offset,
-        anchorIndex: anchor.index,
-        columns: this.lastLayoutColumnCount,
-        count: this.virtualItemCount,
-        height: this.scrollEl.scrollHeight,
-      } satisfies AnchorScrollState,
+    const scroll: AnchorScrollState = {
+      anchorPath: anchor.path,
+      anchorOffset: anchor.offset,
+      anchorIndex: anchor.index,
+      columns: this.lastLayoutColumnCount,
+      count: this.virtualItemCount,
+      height: this.scrollEl.scrollHeight,
     };
+    // updateCachedGroupOffsets(true) above already forced layout, so the
+    // offsetWidth/offsetHeight reads below cost nothing extra.
+    const estimate = buildMountEstimateProfile(
+      this.virtualItems,
+      this.lastLayoutCardWidth,
+      this.measureMountedCoverWidth()
+    );
+    if (estimate) scroll.estimate = estimate;
+    return { scroll };
+  }
+
+  /** Cover wrapper width of the first mounted card that actually renders one.
+   *  Cards parked in the hidden buffer carry content-visibility: hidden, so
+   *  their descendants measure 0 — skip them. */
+  private measureMountedCoverWidth(): number {
+    for (const item of this.virtualItems) {
+      const el = item.el;
+      if (!el || el.classList.contains(CONTENT_HIDDEN_CLASS)) continue;
+      const wrapper = el.querySelector<HTMLElement>(
+        ':scope > .card-cover-wrapper'
+      );
+      if (wrapper && wrapper.offsetHeight > 0) return wrapper.offsetWidth;
+    }
+    return 0;
   }
 
   setEphemeralState(state: Record<string, unknown>): void {
@@ -4654,7 +4764,12 @@ export class DynamicViewsMasonryView extends BasesView {
         typeof s.height !== 'number'
       )
         return;
-      const scrollState = s as unknown as AnchorScrollState;
+      // Copy before pruning — `s` belongs to the caller
+      const scrollState = { ...(s as unknown as AnchorScrollState) };
+      // Drop only a malformed profile; the anchor itself is still usable
+      if (!isMountEstimateProfile(scrollState.estimate)) {
+        delete scrollState.estimate;
+      }
       this.scrollRestoreState = { ...scrollState };
       this.deferredMountState = { ...scrollState };
       return;

@@ -109,20 +109,27 @@ div.property-pair.property-pair-{N}
   └─ div.property.property-{N+1}.pair-right
 ```
 
+**Subtitles use the same renderer**: `.card-subtitle` is filled by `renderPropertyContent` with property names forced to `hide`, so it hosts the same subtree as an unpaired property row — including `span.list-wrapper` for list values, `span.date-wrapper` for date values, and styled `a.tag` pills for tag properties. Tag pills in the subtitle take their chrome (border, radius, padding, background) from the Tags style settings but every typographic trait from Subtitle; see [styles/_tags.scss](../../styles/_tags.scss).
+
 ## Structural content classes
 
-Render-time classes that replace `:has()` selectors (see AGENTS.md constraint). Both backends use the shared `VISIBLE_BODY_SELECTOR` module-level constant:
+Classes that replace `:has()` selectors (see AGENTS.md constraint). All five are derived from the card's current DOM by `syncStructuralClasses()` in [shared-renderer.ts](../../src/bases/shared-renderer.ts), which runs at render time and again at the end of every `updateCardContent()` — so they re-derive on in-place updates too, not only on a full render. Every toggle is `classList.toggle(name, condition)`, making the function idempotent and able to clear a class as readily as set it.
+
+Both backends use the shared `VISIBLE_BODY_SELECTOR` module-level constant:
 
 ```
 .card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)
 ```
 
-| Class | Element | Selector | Set from | CSS effect |
-|---|---|---|---|---|
-| `has-header` | `.card` | `.card-header` exists | Card root querySelector | Prevents cover-only padding reset from zeroing padding on title-only cards |
-| `has-url-icon` | `.card` | `.card-title-url-icon` exists | Card root querySelector; re-toggled by `updateUrlButton()` | Gates the poster header's `padding-block-end` strip (and the card/body rules that hand the 4px back), which contain the icon's hover halo where it bleeds past the header |
-| `has-card-content` | `.card` | `VISIBLE_BODY_SELECTOR` on card descendants | Inline querySelector | Drives title divider border and cover-only padding resets |
-| `has-body-content` | `.card-body` | `VISIBLE_BODY_SELECTOR` on body children | Card-body ref querySelector | Without it, `card-body` is `display: none` (collapses to avoid gap from `card-content` flex layout) |
+| Class | Element | Selector | CSS effect |
+|---|---|---|---|
+| `has-header` | `.card` | `.card-header` exists | Prevents cover-only padding reset from zeroing padding on title-only cards |
+| `has-url-icon` | `.card` | `URL_ICON_SELECTOR` (`.card-title-url-icon`) exists | Gates the poster header's `padding-block-end` strip (and the card/body rules that hand the 4px back), which contain the icon's hover halo where it bleeds past the header |
+| `has-card-content` | `.card` | `VISIBLE_BODY_SELECTOR` on card descendants | Drives title divider border and cover-only padding resets |
+| `has-body-content` | `.card-body` | `VISIBLE_BODY_SELECTOR` on body children | Without it, `card-body` is `display: none` (collapses to avoid gap from `card-content` flex layout) |
+| `has-properties-bottom` | `.card` | `.card-properties-bottom` exists | Gates rules that need to know a bottom property row is present |
+
+`has-url-icon` is derived from the DOM rather than from `CardData.hasValidUrl`: the class must track the icon, and a valid URL on a card with no `.card-content` renders no icon at all.
 
 Both exclude `.card-previews.thumbnail-placeholder-only` — a previews container with only a thumbnail placeholder, hidden by CSS when the "Show thumbnail placeholder" style setting is off. The CSS rule scoping (`body:not(.dynamic-views-show-thumbnail-placeholder)`) ensures `card-body` is never hidden when placeholders are visible.
 

@@ -23,7 +23,7 @@ vi.mock('../../src/constants', () => ({
     fallbackToContent: true,
     textPreviewLines: 5,
     imageProperty: '',
-    fallbackToEmbeds: 'always',
+    showFileImages: 'always',
     imageFormat: 'thumbnail',
     thumbnailSize: 80,
     imagePosition: 'right',

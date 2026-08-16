@@ -150,7 +150,6 @@ The image viewer can be disabled in Style Settings, or constrained to the curren
 | Zoom | Ctrl/Cmd+scroll / Pinch |
 | Pan (while zoomed) | Scroll / Drag |
 | Previous / next image | ← / → |
-| Copy image | Ctrl/Cmd+C |
 | Drag into a note | Drag (constrained to pane, not zoomed) |
 | Close | Click background / Esc / Space |
 

@@ -220,6 +220,53 @@ export class Plugin extends Component {
   }
 }
 
+export class SettingTab {
+  app!: App;
+  containerEl: HTMLElement = document.createElement('div');
+  icon = '';
+  settingItems: any[] = [];
+
+  getSettingDefinitions(): any[] {
+    return [];
+  }
+
+  /** Re-evaluates `visible`/`disabled` predicates against existing DOM */
+  refreshDomState(): void {
+    // Mock predicate refresh
+  }
+
+  /** Rebuilds rows from a fresh getSettingDefinitions() call */
+  update(): void {
+    // Mock definition rebuild
+  }
+
+  display(): void {
+    // Mock render
+  }
+
+  hide(): void {
+    // Mock teardown
+  }
+
+  getControlValue(key: string): unknown {
+    return undefined;
+  }
+
+  setControlValue(key: string, value: unknown): void | Promise<void> {
+    // Mock write path
+  }
+}
+
+export class PluginSettingTab extends SettingTab {
+  plugin: Plugin;
+
+  constructor(app: App, plugin: Plugin) {
+    super();
+    this.app = app;
+    this.plugin = plugin;
+  }
+}
+
 export interface PluginManifest {
   id: string;
   name: string;

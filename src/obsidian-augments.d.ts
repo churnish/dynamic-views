@@ -2,7 +2,7 @@
  * Obsidian module augmentations for undocumented APIs used by this plugin.
  */
 
-import { App, TFile, Plugin, LinkCache } from 'obsidian';
+import { App, TFile, Plugin, LinkCache, EventRef } from 'obsidian';
 
 declare global {
   interface Window {
@@ -22,6 +22,12 @@ declare module 'obsidian' {
     /** Access installed plugins by ID (undocumented API) */
     plugins: {
       plugins: Record<string, Plugin | undefined>;
+      /**
+       * Fires (debounced) whenever any community plugin is enabled or disabled.
+       * `Events.on` tolerates unknown event names, so if Obsidian ever drops
+       * this event the listener silently never fires rather than throwing.
+       */
+      on(name: 'changed', callback: () => unknown): EventRef;
     };
     /** Drag manager for file/link/folder drag operations (undocumented API) */
     dragManager: {

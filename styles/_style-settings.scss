@@ -51,7 +51,7 @@ settings:
     -
         id: dynamic-views-backdrop-overlay-light
         title: Light overlay strength
-        description: Opacity of light overlay.
+        description: Opacity of light backdrop overlay.
         type: variable-number-slider
         default: 70
         min: 0
@@ -60,7 +60,7 @@ settings:
     -
         id: dynamic-views-backdrop-overlay-dark
         title: Dark overlay strength
-        description: Opacity of dark overlay.
+        description: Opacity of dark backdrop overlay.
         type: variable-number-slider
         default: 60
         min: 0
@@ -69,7 +69,7 @@ settings:
     -
         id: dynamic-views-backdrop-overlay-blur
         title: Overlay blur
-        description: Blur images when overlay tint applied.
+        description: Blur backdrop images when overlay tint applied.
         type: variable-number-slider
         default: 0
         min: 0
@@ -79,7 +79,7 @@ settings:
     -
         id: dynamic-views-backdrop-hover-zoom
         title: Image zoom
-        description: Enlarge images on hover.
+        description: Enlarge backdrop images on hover.
         type: class-toggle
     -
         id: cards-heading
@@ -252,6 +252,9 @@ settings:
                 label: Primary
                 value: dynamic-views-card-background-primary
             -
+                label: Secondary
+                value: dynamic-views-card-background-secondary
+            -
                 label: Accent
                 value: dynamic-views-card-background-accent
             -
@@ -306,6 +309,9 @@ settings:
             -
                 label: Primary
                 value: dynamic-views-card-background-hover-primary
+            -
+                label: Secondary
+                value: dynamic-views-card-background-hover-secondary
             -
                 label: Dimmed
                 value: dynamic-views-card-background-hover-dimmed
@@ -410,6 +416,55 @@ settings:
         default-light: '#'
         default-dark: '#'
     -
+        id: dynamic-views-card-shadow-color-hover
+        title: Shadow color (hover)
+        description: Theme color preset for card shadow on hover. Does not apply in embedded views.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-card-shadow-color-hover-default
+        options:
+            -
+                label: Default
+                value: dynamic-views-card-shadow-color-hover-default
+            -
+                label: Accent
+                value: dynamic-views-card-shadow-color-hover-accent
+            -
+                label: Red
+                value: dynamic-views-card-shadow-color-hover-red
+            -
+                label: Orange
+                value: dynamic-views-card-shadow-color-hover-orange
+            -
+                label: Yellow
+                value: dynamic-views-card-shadow-color-hover-yellow
+            -
+                label: Green
+                value: dynamic-views-card-shadow-color-hover-green
+            -
+                label: Cyan
+                value: dynamic-views-card-shadow-color-hover-cyan
+            -
+                label: Blue
+                value: dynamic-views-card-shadow-color-hover-blue
+            -
+                label: Purple
+                value: dynamic-views-card-shadow-color-hover-purple
+            -
+                label: Pink
+                value: dynamic-views-card-shadow-color-hover-pink
+            -
+                label: Custom
+                value: dynamic-views-card-shadow-color-hover-custom
+    -
+        id: dynamic-views-card-shadow-color-hover-custom
+        title: Custom shadow color (hover)
+        description: Custom color for card shadows on hover.
+        type: variable-themed-color
+        format: hex
+        default-light: '#'
+        default-dark: '#'
+    -
         id: dynamic-views-card-hover-enlarge
         title: Enlarge
         description: Make cards slightly bigger on hover. Does not apply in embedded views.
@@ -422,7 +477,7 @@ settings:
     -
         id: dynamic-views-hide-scroll-gradients
         title: Hide scroll gradients
-        description: Do not show gradient fade on scrollable text elements.
+        description: Do not show gradient fade on scrollable card text elements.
         type: class-toggle
     -
         id: cover-heading
@@ -465,18 +520,9 @@ settings:
                 label: Custom
                 value: dynamic-views-cover-bg-custom
     -
-        id: dynamic-views-cover-background-color-custom
-        title: Custom background
-        description: Custom background color for contained images and placeholders.
-        type: variable-themed-color
-        format: rgb
-        opacity: false
-        default-light: '#'
-        default-dark: '#'
-    -
         id: dynamic-views-fixed-cover-height
         title: Fixed height
-        description: Show background bars above and below contained images that do not fit.
+        description: Show background bars above and below contained cover images that do not fit.
         type: class-select
         allowEmpty: false
         default: dynamic-views-fixed-cover-height-grid
@@ -516,9 +562,13 @@ settings:
     -
         id: dynamic-views-side-cover-height
         title: Side cover height
-        description: Minimum height for cards with left or right cover position.
-        type: variable-text
-        default: 150px
+        description: Minimum height for cards with left or right cover position. Set to 0 to let cards shrink to fit content.
+        type: variable-number-slider
+        default: 150
+        min: 0
+        max: 400
+        step: 5
+        format: px
     -
         id: dynamic-views-round-covers
         title: Round covers
@@ -531,7 +581,7 @@ settings:
         type: variable-number-slider
         default: 0
         min: 0
-        max: 48
+        max: 64
         step: 1
         format: px
     -
@@ -547,7 +597,7 @@ settings:
     -
         id: dynamic-views-cover-disable-hover-zoom
         title: Disable image zoom
-        description: Do not enlarge images on hover.
+        description: Do not enlarge cover images on hover.
         type: class-toggle
     -
         id: dynamic-views-show-cover-divider
@@ -609,6 +659,15 @@ settings:
         step: 1
         format: ''
     -
+        id: dynamic-views-cover-background-color-custom
+        title: Custom background
+        description: Custom background color for contained cover images and placeholders.
+        type: variable-themed-color
+        format: rgb
+        opacity: false
+        default-light: '#'
+        default-dark: '#'
+    -
         id: dates-heading
         title: Dates
         type: heading
@@ -617,30 +676,40 @@ settings:
     -
         id: dynamic-views-date-format
         title: Date format
-        description: Moment.js format for date-only properties.
+        description: Moment.js format for date-only properties. Leave empty to use your locale's format.
         type: variable-text
-        default: YYYY-MM-DD
+        default: ''
     -
         id: dynamic-views-time-format
         title: Time format
-        description: Moment.js format for time-only display.
+        description: Moment.js format for time-only display. Leave empty to use your locale's format.
         type: variable-text
-        default: HH:mm
+        default: ''
     -
         id: dynamic-views-datetime-format
         title: Datetime format
-        description: Moment.js format for date & time properties.
+        description: Moment.js format for date & time properties. Leave empty to use your locale's format.
         type: variable-text
-        default: YYYY-MM-DD, HH:mm
+        default: ''
     -
-        id: dynamic-views-timestamp-recent-full
-        title: Full recent timestamps
-        description: Show date for today's created and modified timestamps.
+        id: dynamic-views-timestamp-recent-short
+        title: Short recent timestamps
+        description: Show only time for created and modified timestamps from today.
         type: class-toggle
     -
-        id: dynamic-views-timestamp-past-full
-        title: Full past timestamps
-        description: Show time for created and modified timestamps older than today.
+        id: dynamic-views-timestamp-past-short
+        title: Short past timestamps
+        description: Show only date for created and modified timestamps older than today.
+        type: class-toggle
+    -
+        id: dynamic-views-date-separators-solid
+        title: Do not dim separators
+        description: Make separators in dates and times solid.
+        type: class-toggle
+    -
+        id: dynamic-views-date-separators-unpadded
+        title: Do not pad separators
+        description: Remove space around separators in dates and times.
         type: class-toggle
     -
         id: groups-heading
@@ -655,25 +724,25 @@ settings:
         type: class-toggle
         default: false
     -
-        id: dynamic-views-hide-group-divider
+        id: dynamic-views-hide-group-divider-line
         title: Hide divider line
         description: Do not show horizontal line between groups.
         type: class-toggle
     -
         id: group-value-heading
-        title: Property value
+        title: Group property value
         type: heading
         level: 3
         collapsed: false
     -
         id: dynamic-views-group-value-font
-        title: Property value font
-        description: Font name as it appears on your system.
+        title: Font
+        description: Font name for group header property values as it appears on your system.
         type: variable-text
         default: ''
     -
         id: dynamic-views-group-value-size
-        title: Property value size
+        title: Size
         description: Font size for group header property values.
         type: class-select
         allowEmpty: false
@@ -696,51 +765,13 @@ settings:
                 value: dynamic-views-group-value-size-custom
     -
         id: dynamic-views-group-value-size-custom
-        title: Custom property value size
+        title: Custom size
         description: Set custom font size for group header property values (e.g., 0.9em, 14px, 0.875rem).
         type: variable-text
         default: ''
     -
-        id: dynamic-views-group-value-bold
-        title: Property value bold
-        description: Make group header property values bold.
-        type: class-toggle
-        default: true
-    -
-        id: dynamic-views-group-value-italic
-        title: Property value italic
-        description: Make group header property values italic.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-group-value-small-caps
-        title: Property value small caps
-        description: Display group header property values in small caps.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-group-value-case
-        title: Property value case
-        description: Text case transformation for group header property values.
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-group-value-case-preserve
-        options:
-            -
-                label: Preserve
-                value: dynamic-views-group-value-case-preserve
-            -
-                label: Lowercase
-                value: dynamic-views-group-value-case-lowercase
-            -
-                label: Uppercase
-                value: dynamic-views-group-value-case-uppercase
-            -
-                label: Title case
-                value: dynamic-views-group-value-case-title
-    -
         id: dynamic-views-group-value-color
-        title: Property value color
+        title: Color
         description: Theme color preset for group header property values.
         type: class-select
         allowEmpty: false
@@ -787,32 +818,70 @@ settings:
                 value: dynamic-views-group-value-color-custom
     -
         id: dynamic-views-group-value-color-custom
-        title: Custom property value color
+        title: Custom color
         description: Set custom color for group header property values.
         type: variable-themed-color
         format: hex
         default-light: '#'
         default-dark: '#'
     -
+        id: dynamic-views-group-value-bold
+        title: Bold
+        description: Make group header property values bold.
+        type: class-toggle
+        default: true
+    -
+        id: dynamic-views-group-value-italic
+        title: Italic
+        description: Make group header property values italic.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-group-value-small-caps
+        title: Small caps
+        description: Display group header property values in small caps.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-group-value-case
+        title: Case
+        description: Text case transformation for group header property values.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-group-value-case-preserve
+        options:
+            -
+                label: Preserve
+                value: dynamic-views-group-value-case-preserve
+            -
+                label: Lowercase
+                value: dynamic-views-group-value-case-lowercase
+            -
+                label: Uppercase
+                value: dynamic-views-group-value-case-uppercase
+            -
+                label: Title case
+                value: dynamic-views-group-value-case-title
+    -
         id: group-property-heading
-        title: Property name
+        title: Group property name
         type: heading
         level: 3
         collapsed: false
     -
         id: dynamic-views-hide-group-property-names
         title: Hide property names
-        description: Hide names of properties.
+        description: Hide names of properties in group headers.
         type: class-toggle
     -
         id: dynamic-views-group-property-font
-        title: Property name font
-        description: Font name as it appears on your system.
+        title: Font
+        description: Font name for group header property names as it appears on your system.
         type: variable-text
         default: ''
     -
         id: dynamic-views-group-property-size
-        title: Property name size
+        title: Size
         description: Font size for group header property names.
         type: class-select
         allowEmpty: false
@@ -835,51 +904,13 @@ settings:
                 value: dynamic-views-group-property-size-custom
     -
         id: dynamic-views-group-property-size-custom
-        title: Custom property name size
+        title: Custom size
         description: Set custom font size for group header property names (e.g., 0.8em, 13px, 0.8125rem).
         type: variable-text
         default: ''
     -
-        id: dynamic-views-group-property-bold
-        title: Property name bold
-        description: Make group header property names bold.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-group-property-italic
-        title: Property name italic
-        description: Make group header property names italic.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-group-property-small-caps
-        title: Property name small caps
-        description: Display group header property names in small caps.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-group-property-case
-        title: Property name case
-        description: Text case transformation for group header property names.
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-group-property-case-preserve
-        options:
-            -
-                label: Preserve
-                value: dynamic-views-group-property-case-preserve
-            -
-                label: Lowercase
-                value: dynamic-views-group-property-case-lowercase
-            -
-                label: Uppercase
-                value: dynamic-views-group-property-case-uppercase
-            -
-                label: Title case
-                value: dynamic-views-group-property-case-title
-    -
         id: dynamic-views-group-property-color
-        title: Property name color
+        title: Color
         description: Theme color preset for group header property names.
         type: class-select
         allowEmpty: false
@@ -926,32 +957,70 @@ settings:
                 value: dynamic-views-group-property-color-custom
     -
         id: dynamic-views-group-property-color-custom
-        title: Custom property name color
+        title: Custom color
         description: Set custom color for group header property names.
         type: variable-themed-color
         format: hex
         default-light: '#'
         default-dark: '#'
     -
+        id: dynamic-views-group-property-bold
+        title: Bold
+        description: Make group header property names bold.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-group-property-italic
+        title: Italic
+        description: Make group header property names italic.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-group-property-small-caps
+        title: Small caps
+        description: Display group header property names in small caps.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-group-property-case
+        title: Case
+        description: Text case transformation for group header property names.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-group-property-case-preserve
+        options:
+            -
+                label: Preserve
+                value: dynamic-views-group-property-case-preserve
+            -
+                label: Lowercase
+                value: dynamic-views-group-property-case-lowercase
+            -
+                label: Uppercase
+                value: dynamic-views-group-property-case-uppercase
+            -
+                label: Title case
+                value: dynamic-views-group-property-case-title
+    -
         id: group-count-heading
-        title: Result count
+        title: Group result count
         type: heading
         level: 3
         collapsed: false
     -
-        id: dynamic-views-hide-group-count
+        id: dynamic-views-hide-group-result-count
         title: Hide result count
         description: Hide number of results for group.
         type: class-toggle
     -
         id: dynamic-views-group-count-font
-        title: Result count font
-        description: Font name as it appears on your system.
+        title: Font
+        description: Font name for group result count as it appears on your system.
         type: variable-text
         default: ''
     -
         id: dynamic-views-group-count-size
-        title: Result count size
+        title: Size
         description: Font size for the group result count.
         type: class-select
         allowEmpty: false
@@ -974,51 +1043,13 @@ settings:
                 value: dynamic-views-group-count-size-custom
     -
         id: dynamic-views-group-count-size-custom
-        title: Custom result count size
+        title: Custom size
         description: Set custom font size for the group result count (e.g., 0.8em, 12px, 0.75rem).
         type: variable-text
         default: ''
     -
-        id: dynamic-views-group-count-bold
-        title: Result count bold
-        description: Make the group result count bold.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-group-count-italic
-        title: Result count italic
-        description: Make the group result count italic.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-group-count-small-caps
-        title: Result count small caps
-        description: Display the group result count in small caps.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-group-count-case
-        title: Result count case
-        description: Text case transformation for the group result count.
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-group-count-case-preserve
-        options:
-            -
-                label: Preserve
-                value: dynamic-views-group-count-case-preserve
-            -
-                label: Lowercase
-                value: dynamic-views-group-count-case-lowercase
-            -
-                label: Uppercase
-                value: dynamic-views-group-count-case-uppercase
-            -
-                label: Title case
-                value: dynamic-views-group-count-case-title
-    -
         id: dynamic-views-group-count-color
-        title: Result count color
+        title: Color
         description: Theme color preset for the group result count.
         type: class-select
         allowEmpty: false
@@ -1065,12 +1096,50 @@ settings:
                 value: dynamic-views-group-count-color-custom
     -
         id: dynamic-views-group-count-color-custom
-        title: Custom result count color
+        title: Custom color
         description: Set custom color for the group result count.
         type: variable-themed-color
         format: hex
         default-light: '#'
         default-dark: '#'
+    -
+        id: dynamic-views-group-count-bold
+        title: Bold
+        description: Make the group result count bold.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-group-count-italic
+        title: Italic
+        description: Make the group result count italic.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-group-count-small-caps
+        title: Small caps
+        description: Display the group result count in small caps.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-group-count-case
+        title: Case
+        description: Text case transformation for the group result count.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-group-count-case-preserve
+        options:
+            -
+                label: Preserve
+                value: dynamic-views-group-count-case-preserve
+            -
+                label: Lowercase
+                value: dynamic-views-group-count-case-lowercase
+            -
+                label: Uppercase
+                value: dynamic-views-group-count-case-uppercase
+            -
+                label: Title case
+                value: dynamic-views-group-count-case-title
     -
         id: images-heading
         title: Images
@@ -1106,17 +1175,12 @@ settings:
     -
         id: dynamic-views-poster-disable-scroll
         title: Disable scroll
-        description: Do not vertically scroll card content when it does not fit. Only applies when 'Interact to show details' is enabled.
-        type: class-toggle
-    -
-        id: dynamic-views-poster-uniform-height
-        title: Uniform height
-        description: In Grid, make cards with no image same height as poster cards. Hide content that does not fit.
+        description: Do not vertically scroll poster card content when it does not fit. Applies when 'Interact to show details' is enabled.
         type: class-toggle
     -
         id: dynamic-views-poster-background
         title: Background
-        description: Background color for contained images.
+        description: Background color for contained poster images.
         type: class-select
         allowEmpty: false
         default: dynamic-views-poster-bg-dimmed
@@ -1130,15 +1194,6 @@ settings:
             -
                 label: Custom
                 value: dynamic-views-poster-bg-custom
-    -
-        id: dynamic-views-poster-background-color-custom
-        title: Custom background
-        description: Custom background color for contained images.
-        type: variable-themed-color
-        format: rgb
-        opacity: false
-        default-light: '#'
-        default-dark: '#'
     -
         id: dynamic-views-poster-fade-tint
         title: Fade tint
@@ -1176,7 +1231,7 @@ settings:
     -
         id: dynamic-views-poster-overlay-light
         title: Light overlay strength
-        description: Opacity of light overlay.
+        description: Opacity of light poster overlay.
         type: variable-number-slider
         default: 70
         min: 0
@@ -1185,7 +1240,7 @@ settings:
     -
         id: dynamic-views-poster-overlay-dark
         title: Dark overlay strength
-        description: Opacity of dark overlay.
+        description: Opacity of dark poster overlay.
         type: variable-number-slider
         default: 70
         min: 0
@@ -1194,7 +1249,7 @@ settings:
     -
         id: dynamic-views-poster-overlay-blur
         title: Overlay blur
-        description: Blur images when overlay tint is applied.
+        description: Blur poster images when overlay tint is applied.
         type: variable-number-slider
         default: 0
         min: 0
@@ -1222,6 +1277,15 @@ settings:
                 label: Disable
                 value: dynamic-views-fixed-poster-height-none
     -
+        id: dynamic-views-poster-background-color-custom
+        title: Custom background
+        description: Custom background color for contained poster images.
+        type: variable-themed-color
+        format: rgb
+        opacity: false
+        default-light: '#'
+        default-dark: '#'
+    -
         id: properties-heading
         title: Properties
         type: heading
@@ -1232,7 +1296,7 @@ settings:
         title: List item separator
         description: Separator between items in list-type properties. Whitespace preserved.
         type: variable-text
-        default: ", "
+        default: ''
         quotes: true
     -
         id: dynamic-views-empty-value-marker
@@ -1242,9 +1306,55 @@ settings:
         default: "—"
         quotes: true
     -
+        id: dynamic-views-hide-missing-properties
+        title: Hide missing properties
+        description: Hide properties that note does not have.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-empty-properties
+        title: Hide empty properties
+        description: When to hide properties with empty values.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-empty-properties-hide-with-names
+        options:
+            -
+                label: Enable
+                value: dynamic-views-empty-properties-hide
+            -
+                label: If names hidden
+                value: dynamic-views-empty-properties-hide-with-names
+            -
+                label: Disable
+                value: dynamic-views-empty-properties-show
+    -
+        id: dynamic-views-full-row-property-alignment
+        title: Alignment
+        description: How to align values with inline property names when not shown side-by-side.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-full-row-align-left
+        options:
+            -
+                label: Left
+                value: dynamic-views-full-row-align-left
+            -
+                label: Right
+                value: dynamic-views-full-row-align-right
+    -
+        id: dynamic-views-compact-breakpoint
+        title: Compact breakpoint
+        description: Card width in pixels at which paired properties stack vertically. Set to 0 to disable.
+        type: variable-number-slider
+        default: 390
+        min: 0
+        max: 800
+        step: 10
+    -
         id: dynamic-views-property-font
         title: Font
-        description: Font name as it appears on your system.
+        description: Font name for property values as it appears on your system.
         type: variable-text
         default: ''
     -
@@ -1276,44 +1386,6 @@ settings:
         description: Custom font size of property values (e.g., 0.8em, 13px, 0.8125rem).
         type: variable-text
         default: ''
-    -
-        id: dynamic-views-property-bold
-        title: Bold
-        description: Make property values bold.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-property-italic
-        title: Italic
-        description: Make property values italic.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-property-small-caps
-        title: Small caps
-        description: Display property values in small caps.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-property-case
-        title: Case
-        description: Text case transformation for property values.
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-property-case-preserve
-        options:
-            -
-                label: Preserve
-                value: dynamic-views-property-case-preserve
-            -
-                label: Lowercase
-                value: dynamic-views-property-case-lowercase
-            -
-                label: Uppercase
-                value: dynamic-views-property-case-uppercase
-            -
-                label: Title case
-                value: dynamic-views-property-case-title
     -
         id: dynamic-views-property-color-with-names
         title: Color (names shown)
@@ -1419,57 +1491,49 @@ settings:
     -
         id: dynamic-views-property-color-without-names-custom
         title: Custom color (names hidden)
-        description: Set custom color.
+        description: Set custom color for property values when property names hidden.
         type: variable-themed-color
         format: hsl-split
         default-light: '#'
         default-dark: '#'
     -
-        id: dynamic-views-hide-missing-properties
-        title: Hide missing properties
-        description: Hide properties that note does not have.
+        id: dynamic-views-property-bold
+        title: Bold
+        description: Make property values bold.
         type: class-toggle
         default: false
     -
-        id: dynamic-views-empty-properties
-        title: Empty properties
-        description: How to display properties with empty values.
+        id: dynamic-views-property-italic
+        title: Italic
+        description: Make property values italic.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-property-small-caps
+        title: Small caps
+        description: Display property values in small caps.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-property-case
+        title: Case
+        description: Text case transformation for property values.
         type: class-select
         allowEmpty: false
-        default: dynamic-views-empty-properties-hide-with-names
+        default: dynamic-views-property-case-preserve
         options:
             -
-                label: Show
-                value: dynamic-views-empty-properties-show
+                label: Preserve
+                value: dynamic-views-property-case-preserve
             -
-                label: Hide if names hidden
-                value: dynamic-views-empty-properties-hide-with-names
+                label: Lowercase
+                value: dynamic-views-property-case-lowercase
             -
-                label: Hide
-                value: dynamic-views-empty-properties-hide
-    -
-        id: dynamic-views-full-row-property-alignment
-        title: Full-row property alignment
-        description: How to align values with inline property names when not shown side-by-side.
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-full-row-align-left
-        options:
+                label: Uppercase
+                value: dynamic-views-property-case-uppercase
             -
-                label: Left
-                value: dynamic-views-full-row-align-left
-            -
-                label: Right
-                value: dynamic-views-full-row-align-right
-    -
-        id: dynamic-views-compact-breakpoint
-        title: Compact breakpoint
-        description: Card width in pixels at which paired properties stack vertically. Set to 0 to disable.
-        type: variable-number-slider
-        default: 390
-        min: 0
-        max: 800
-        step: 10
+                label: Title case
+                value: dynamic-views-property-case-title
     -
         id: property-names-heading
         title: Property names
@@ -1479,7 +1543,7 @@ settings:
     -
         id: dynamic-views-property-name-font
         title: Font
-        description: Font name as it appears on your system.
+        description: Font name for property names as it appears on your system.
         type: variable-text
         default: ''
     -
@@ -1511,44 +1575,6 @@ settings:
         description: Custom font size for property names (e.g., 0.8em, 13px, 0.8125rem).
         type: variable-text
         default: ''
-    -
-        id: dynamic-views-property-name-bold
-        title: Bold
-        description: Make property names bold.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-property-name-italic
-        title: Italic
-        description: Make property names italic.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-property-name-small-caps
-        title: Small caps
-        description: Use small caps for property names.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-property-name-case
-        title: Case
-        description: Text case transformation for property names.
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-property-name-case-preserve
-        options:
-            -
-                label: Preserve
-                value: dynamic-views-property-name-case-preserve
-            -
-                label: Lowercase
-                value: dynamic-views-property-name-case-lowercase
-            -
-                label: Uppercase
-                value: dynamic-views-property-name-case-uppercase
-            -
-                label: Title case
-                value: dynamic-views-property-name-case-title
     -
         id: dynamic-views-property-name-color
         title: Color
@@ -1598,12 +1624,50 @@ settings:
                 value: dynamic-views-property-name-color-custom
     -
         id: dynamic-views-property-name-color-custom
-        title: Custom text color
-        description: Set custom color.
+        title: Custom color
+        description: Set custom color for property names.
         type: variable-themed-color
         format: hex
         default-light: '#'
         default-dark: '#'
+    -
+        id: dynamic-views-property-name-bold
+        title: Bold
+        description: Make property names bold.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-property-name-italic
+        title: Italic
+        description: Make property names italic.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-property-name-small-caps
+        title: Small caps
+        description: Use small caps for property names.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-property-name-case
+        title: Case
+        description: Text case transformation for property names.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-property-name-case-preserve
+        options:
+            -
+                label: Preserve
+                value: dynamic-views-property-name-case-preserve
+            -
+                label: Lowercase
+                value: dynamic-views-property-name-case-lowercase
+            -
+                label: Uppercase
+                value: dynamic-views-property-name-case-uppercase
+            -
+                label: Title case
+                value: dynamic-views-property-name-case-title
     -
         id: subtitle-heading
         title: Subtitle
@@ -1611,9 +1675,50 @@ settings:
         level: 2
         collapsed: true
     -
+        id: dynamic-views-subtitle-position
+        title: Position
+        description: Subtitle placement relative to title.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-subtitle-below
+        options:
+            -
+                label: Above title
+                value: dynamic-views-subtitle-above
+            -
+                label: Below title
+                value: dynamic-views-subtitle-below
+    -
+        id: dynamic-views-subtitle-alignment
+        title: Alignment
+        description: Horizontal subtitle alignment.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-subtitle-align-left
+        options:
+            -
+                label: Left
+                value: dynamic-views-subtitle-align-left
+            -
+                label: Center
+                value: dynamic-views-subtitle-align-center
+            -
+                label: Right
+                value: dynamic-views-subtitle-align-right
+    -
+        id: dynamic-views-subtitle-overflow-scroll
+        title: Scroll one-line subtitles
+        description: Scroll long subtitles horizontally instead of truncating them. Applies when subtitle lines is set to 1 in view settings.
+        type: class-toggle
+    -
+        id: dynamic-views-subtitle-hyphenate
+        title: Hyphenate
+        description: Break subtitle words at syllable boundaries when wrapping. Not supported on Windows or Linux.
+        type: class-toggle
+    -
         id: dynamic-views-subtitle-font
         title: Font
-        description: Font name as it appears on your system.
+        description: Font name for subtitle as it appears on your system.
         type: variable-text
         default: ''
     -
@@ -1645,44 +1750,6 @@ settings:
         description: Custom subtitle font size (e.g., 0.9em, 14px).
         type: variable-text
         default: ''
-    -
-        id: dynamic-views-subtitle-bold
-        title: Bold
-        description: Make subtitle text bold.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-subtitle-italic
-        title: Italic
-        description: Make subtitle text italic.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-subtitle-small-caps
-        title: Small caps
-        description: Display subtitle text in small caps.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-subtitle-case
-        title: Case
-        description: Text case transformation for subtitle.
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-subtitle-case-preserve
-        options:
-            -
-                label: Preserve
-                value: dynamic-views-subtitle-case-preserve
-            -
-                label: Lowercase
-                value: dynamic-views-subtitle-case-lowercase
-            -
-                label: Uppercase
-                value: dynamic-views-subtitle-case-uppercase
-            -
-                label: Title case
-                value: dynamic-views-subtitle-case-title
     -
         id: dynamic-views-subtitle-color
         title: Color
@@ -1732,53 +1799,50 @@ settings:
                 value: dynamic-views-subtitle-color-custom
     -
         id: dynamic-views-subtitle-color-custom
-        title: Custom text color
-        description: Set custom color.
+        title: Custom color
+        description: Set custom color for subtitle.
         type: variable-themed-color
         format: hex
         default-light: '#'
         default-dark: '#'
     -
-        id: dynamic-views-subtitle-position
-        title: Position
-        description: Subtitle placement relative to title.
+        id: dynamic-views-subtitle-bold
+        title: Bold
+        description: Make subtitle text bold.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-subtitle-italic
+        title: Italic
+        description: Make subtitle text italic.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-subtitle-small-caps
+        title: Small caps
+        description: Display subtitle text in small caps.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-subtitle-case
+        title: Case
+        description: Text case transformation for subtitle.
         type: class-select
         allowEmpty: false
-        default: dynamic-views-subtitle-below
+        default: dynamic-views-subtitle-case-preserve
         options:
             -
-                label: Above title
-                value: dynamic-views-subtitle-above
+                label: Preserve
+                value: dynamic-views-subtitle-case-preserve
             -
-                label: Below title
-                value: dynamic-views-subtitle-below
-    -
-        id: dynamic-views-subtitle-alignment
-        title: Alignment
-        description: Horizontal subtitle alignment.
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-subtitle-align-left
-        options:
+                label: Lowercase
+                value: dynamic-views-subtitle-case-lowercase
             -
-                label: Left
-                value: dynamic-views-subtitle-align-left
+                label: Uppercase
+                value: dynamic-views-subtitle-case-uppercase
             -
-                label: Center
-                value: dynamic-views-subtitle-align-center
-            -
-                label: Right
-                value: dynamic-views-subtitle-align-right
-    -
-        id: dynamic-views-subtitle-overflow-scroll
-        title: Scroll one-line subtitles
-        description: Scroll long subtitles horizontally instead of truncating them. Applies only where subtitle lines is set to 1 in view settings.
-        type: class-toggle
-    -
-        id: dynamic-views-subtitle-hyphenate
-        title: Hyphenate
-        description: Break words at syllable boundaries when wrapping. Not available on Windows or Linux.
-        type: class-toggle
+                label: Title case
+                value: dynamic-views-subtitle-case-title
     -
         id: tags-heading
         title: Tags
@@ -1805,6 +1869,18 @@ settings:
             -
                 label: Theme default
                 value: dynamic-views-tag-style-theme
+    -
+        id: dynamic-views-show-tag-hash
+        title: Show hash
+        description: Prefix tags with ​#​.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-tag-font
+        title: Font
+        description: Font name for tags as it appears on your system.
+        type: variable-text
+        default: ''
     -
         id: dynamic-views-tag-size
         title: Size
@@ -1834,44 +1910,6 @@ settings:
         description: Set custom font size for tags (e.g., 0.8em, 13px, 0.8125rem).
         type: variable-text
         default: ''
-    -
-        id: dynamic-views-tag-bold
-        title: Bold
-        description: Make tags bold.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-tag-italic
-        title: Italic
-        description: Make tags italic.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-tag-small-caps
-        title: Small caps
-        description: Display tags in small caps.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-tag-case
-        title: Case
-        description: Text case transformation for tags.
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-tag-case-preserve
-        options:
-            -
-                label: Preserve
-                value: dynamic-views-tag-case-preserve
-            -
-                label: Lowercase
-                value: dynamic-views-tag-case-lowercase
-            -
-                label: Uppercase
-                value: dynamic-views-tag-case-uppercase
-            -
-                label: Title case
-                value: dynamic-views-tag-case-title
     -
         id: dynamic-views-tag-color
         title: Color
@@ -1921,18 +1959,50 @@ settings:
                 value: dynamic-views-tag-color-custom
     -
         id: dynamic-views-tag-color-custom
-        title: Custom tag color
-        description: Applied when Tag color is set to Custom.
+        title: Custom color
+        description: Set custom color for tags.
         type: variable-themed-color
         format: hsl-split
         default-light: '#'
         default-dark: '#'
     -
-        id: dynamic-views-show-tag-hash
-        title: Show hash
-        description: Prefix tags with ​#​.
+        id: dynamic-views-tag-bold
+        title: Bold
+        description: Make tags bold.
         type: class-toggle
         default: false
+    -
+        id: dynamic-views-tag-italic
+        title: Italic
+        description: Make tags italic.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-tag-small-caps
+        title: Small caps
+        description: Display tags in small caps.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-tag-case
+        title: Case
+        description: Text case transformation for tags.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-tag-case-preserve
+        options:
+            -
+                label: Preserve
+                value: dynamic-views-tag-case-preserve
+            -
+                label: Lowercase
+                value: dynamic-views-tag-case-lowercase
+            -
+                label: Uppercase
+                value: dynamic-views-tag-case-uppercase
+            -
+                label: Title case
+                value: dynamic-views-tag-case-title
     -
         id: text-preview-heading
         title: Text preview
@@ -1940,9 +2010,61 @@ settings:
         level: 2
         collapsed: true
     -
+        id: dynamic-views-text-preview-alignment
+        title: Alignment
+        description: Horizontal alignment of text preview.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-text-preview-align-left
+        options:
+            -
+                label: Left
+                value: dynamic-views-text-preview-align-left
+            -
+                label: Center
+                value: dynamic-views-text-preview-align-center
+            -
+                label: Right
+                value: dynamic-views-text-preview-align-right
+            -
+                label: Justify
+                value: dynamic-views-text-preview-align-justify
+    -
+        id: dynamic-views-text-preview-hyphenate
+        title: Hyphenate
+        description: Break text preview words at syllable boundaries when wrapping. Not supported on Windows or Linux.
+        type: class-toggle
+    -
+        id: dynamic-views-omit-first-line
+        title: Omit first line
+        description: When first line should not be shown in text preview.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-omit-first-line-match
+        options:
+            -
+                label: Always
+                value: dynamic-views-omit-first-line-always
+            -
+                label: If matches title
+                value: dynamic-views-omit-first-line-match
+            -
+                label: Never
+                value: dynamic-views-omit-first-line-never
+    -
+        id: dynamic-views-text-preview-preserve-headings
+        title: Preserve headings
+        description: Show heading text in text preview rather than omit it.
+        type: class-toggle
+    -
+        id: dynamic-views-text-preview-preserve-line-breaks
+        title: Preserve line breaks
+        description: Do not collapse newlines in text preview when showing note content.
+        type: class-toggle
+    -
         id: dynamic-views-text-preview-font
         title: Font
-        description: Font name as it appears on your system.
+        description: Font name for text preview as it appears on your system.
         type: variable-text
         default: ''
     -
@@ -1974,43 +2096,6 @@ settings:
         description: Custom font size for text preview (e.g., 0.9em, 14px, 0.875rem).
         type: variable-text
         default: ''
-    -
-        id: dynamic-views-text-preview-bold
-        title: Bold
-        description: Make text preview bold.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-text-preview-italic
-        title: Italic
-        description: Italicize text preview.
-        type: class-toggle
-    -
-        id: dynamic-views-text-preview-small-caps
-        title: Small caps
-        description: Display text preview in small caps.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-text-preview-case
-        title: Case
-        description: Text case transformation for text preview.
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-text-preview-case-preserve
-        options:
-            -
-                label: Preserve
-                value: dynamic-views-text-preview-case-preserve
-            -
-                label: Lowercase
-                value: dynamic-views-text-preview-case-lowercase
-            -
-                label: Uppercase
-                value: dynamic-views-text-preview-case-uppercase
-            -
-                label: Title case
-                value: dynamic-views-text-preview-case-title
     -
         id: dynamic-views-text-preview-color
         title: Color
@@ -2061,63 +2146,48 @@ settings:
     -
         id: dynamic-views-text-preview-color-custom
         title: Custom color
-        description: Set custom color.
+        description: Set custom color for text preview.
         type: variable-themed-color
         format: hex
         default-light: '#'
         default-dark: '#'
     -
-        id: dynamic-views-text-preview-alignment
-        title: Alignment
-        description: Horizontal alignment of text preview.
+        id: dynamic-views-text-preview-bold
+        title: Bold
+        description: Make text preview bold.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-text-preview-italic
+        title: Italic
+        description: Italicize text preview.
+        type: class-toggle
+    -
+        id: dynamic-views-text-preview-small-caps
+        title: Small caps
+        description: Display text preview in small caps.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-text-preview-case
+        title: Case
+        description: Text case transformation for text preview.
         type: class-select
         allowEmpty: false
-        default: dynamic-views-text-preview-align-left
+        default: dynamic-views-text-preview-case-preserve
         options:
             -
-                label: Left
-                value: dynamic-views-text-preview-align-left
+                label: Preserve
+                value: dynamic-views-text-preview-case-preserve
             -
-                label: Center
-                value: dynamic-views-text-preview-align-center
+                label: Lowercase
+                value: dynamic-views-text-preview-case-lowercase
             -
-                label: Right
-                value: dynamic-views-text-preview-align-right
+                label: Uppercase
+                value: dynamic-views-text-preview-case-uppercase
             -
-                label: Justify
-                value: dynamic-views-text-preview-align-justify
-    -
-        id: dynamic-views-text-preview-hyphenate
-        title: Hyphenate
-        description: Break words at syllable boundaries when wrapping. Not available on Windows or Linux.
-        type: class-toggle
-    -
-        id: dynamic-views-omit-first-line
-        title: Omit first line
-        description: When first line should not be shown in text preview.
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-omit-first-line-match
-        options:
-            -
-                label: Always
-                value: dynamic-views-omit-first-line-always
-            -
-                label: If matches title
-                value: dynamic-views-omit-first-line-match
-            -
-                label: Never
-                value: dynamic-views-omit-first-line-never
-    -
-        id: dynamic-views-text-preview-preserve-headings
-        title: Preserve headings
-        description: Show heading text in text preview rather than omit it.
-        type: class-toggle
-    -
-        id: dynamic-views-text-preview-preserve-line-breaks
-        title: Preserve line breaks
-        description: Do not collapse newlines when showing note content.
-        type: class-toggle
+                label: Title case
+                value: dynamic-views-text-preview-case-title
     -
         id: thumbnail-heading
         title: Thumbnail
@@ -2127,11 +2197,11 @@ settings:
     -
         id: dynamic-views-thumbnail-border-radius
         title: Border radius
-        description: Thumbnails corner roundness.
+        description: Corner roundness of thumbnails.
         type: variable-number-slider
         default: 4
         min: 0
-        max: 48
+        max: 64
         step: 1
         format: px
     -
@@ -2199,9 +2269,36 @@ settings:
         type: class-toggle
         default: false
     -
+        id: dynamic-views-title-alignment
+        title: Alignment
+        description: Horizontal title alignment.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-title-align-left
+        options:
+            -
+                label: Left
+                value: dynamic-views-title-align-left
+            -
+                label: Center
+                value: dynamic-views-title-align-center
+            -
+                label: Right
+                value: dynamic-views-title-align-right
+    -
+        id: dynamic-views-title-overflow-scroll
+        title: Scroll one-line titles
+        description: Scroll long titles horizontally instead of truncating them. Applies when title lines is set to 1 in view settings.
+        type: class-toggle
+    -
+        id: dynamic-views-title-hyphenate
+        title: Hyphenate
+        description: Break title words at syllable boundaries when wrapping. Not supported on Windows or Linux.
+        type: class-toggle
+    -
         id: dynamic-views-title-font
         title: Font
-        description: Font name as it appears on your system.
+        description: Font name for title as it appears on your system.
         type: variable-text
         default: ''
     -
@@ -2233,44 +2330,6 @@ settings:
         description: Custom font size for title (e.g., 1em, 16px, 1.2rem).
         type: variable-text
         default: ''
-    -
-        id: dynamic-views-title-bold
-        title: Bold
-        description: Make title text bold.
-        type: class-toggle
-        default: true
-    -
-        id: dynamic-views-title-italic
-        title: Italic
-        description: Make title text italic.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-title-small-caps
-        title: Small caps
-        description: Display title text in small caps.
-        type: class-toggle
-        default: false
-    -
-        id: dynamic-views-title-case
-        title: Case
-        description: Text case transformation for title.
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-title-case-preserve
-        options:
-            -
-                label: Preserve
-                value: dynamic-views-title-case-preserve
-            -
-                label: Lowercase
-                value: dynamic-views-title-case-lowercase
-            -
-                label: Uppercase
-                value: dynamic-views-title-case-uppercase
-            -
-                label: Title case
-                value: dynamic-views-title-case-title
     -
         id: dynamic-views-title-color
         title: Color
@@ -2378,39 +2437,50 @@ settings:
                 value: dynamic-views-title-hover-color-custom
     -
         id: dynamic-views-title-hover-color-custom
-        title: Custom hover color
+        title: Custom color (hover)
         description: Set custom title hover color.
         type: variable-themed-color
         format: hex
         default-light: '#'
         default-dark: '#'
     -
-        id: dynamic-views-title-alignment
-        title: Alignment
-        description: Horizontal title alignment.
+        id: dynamic-views-title-bold
+        title: Bold
+        description: Make title text bold.
+        type: class-toggle
+        default: true
+    -
+        id: dynamic-views-title-italic
+        title: Italic
+        description: Make title text italic.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-title-small-caps
+        title: Small caps
+        description: Display title text in small caps.
+        type: class-toggle
+        default: false
+    -
+        id: dynamic-views-title-case
+        title: Case
+        description: Text case transformation for title.
         type: class-select
         allowEmpty: false
-        default: dynamic-views-title-align-left
+        default: dynamic-views-title-case-preserve
         options:
             -
-                label: Left
-                value: dynamic-views-title-align-left
+                label: Preserve
+                value: dynamic-views-title-case-preserve
             -
-                label: Center
-                value: dynamic-views-title-align-center
+                label: Lowercase
+                value: dynamic-views-title-case-lowercase
             -
-                label: Right
-                value: dynamic-views-title-align-right
-    -
-        id: dynamic-views-title-overflow-scroll
-        title: Scroll one-line titles
-        description: Scroll long titles horizontally instead of truncating them. Applies only where title lines is set to 1 in view settings.
-        type: class-toggle
-    -
-        id: dynamic-views-title-hyphenate
-        title: Hyphenate
-        description: Break words at syllable boundaries when wrapping. Not available on Windows or Linux.
-        type: class-toggle
+                label: Uppercase
+                value: dynamic-views-title-case-uppercase
+            -
+                label: Title case
+                value: dynamic-views-title-case-title
     -
         id: view-heading
         title: View
@@ -2457,7 +2527,7 @@ settings:
                 value: dynamic-views-view-background-custom
     -
         id: dynamic-views-view-background-custom
-        title: Background (custom)
+        title: Custom background
         description: Custom background color for card views.
         type: variable-themed-color
         format: hex
@@ -2488,6 +2558,9 @@ body:not(.dynamic-views-card-border-color-hover-custom)
 body:not(.dynamic-views-card-shadow-color-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-card-shadow-color-custom'],
+body:not(.dynamic-views-card-shadow-color-hover-custom)
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-card-shadow-color-hover-custom'],
 body:not(.dynamic-views-cover-bg-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-cover-background-color-custom'],
@@ -2515,7 +2588,7 @@ body:not(.dynamic-views-group-value-color-custom)
 body:not(.dynamic-views-group-count-color-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-group-count-color-custom'],
-body.dynamic-views-hide-group-count
+body.dynamic-views-hide-group-result-count
   .style-settings-container
   .setting-item:is(
     [data-id='dynamic-views-group-count-font'],
@@ -2541,12 +2614,12 @@ body.dynamic-views-hide-group-property-names
     [data-id='dynamic-views-group-property-color'],
     [data-id='dynamic-views-group-property-color-custom']
   ),
-body.dynamic-views-image-viewer-disabled
-  .style-settings-container
-  .setting-item[data-id='dynamic-views-image-viewer-constrain-to-pane'],
 /* Named explicitly rather than `[data-id='…-image-viewer-disabled'] ~ .setting-item`:
    the sibling sweep hid every row added after it, so "Disable HDR" — which has
    nothing to do with the viewer — disappeared along with the constrain toggle. */
+body.dynamic-views-image-viewer-disabled
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-image-viewer-constrain-to-pane'],
 body:not(.dynamic-views-property-color-with-names-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-property-color-with-names-custom'],
@@ -2628,37 +2701,15 @@ body.dynamic-views-poster-color-scheme-light
 // When adding a new display:none rule for a setting that can be first or last in its group, add a compensating border-radius rule here.
 
 // Each Groups sub-heading is its own container, so each needs its own visually-last row.
-// Every sub-section ends with a Custom color row that is hidden unless Custom is selected;
-// the two with a hide toggle collapse to the toggle itself when everything below it goes.
-body:not(.dynamic-views-group-value-color-custom)
-  .style-settings-container
-  .setting-item[data-id='dynamic-views-group-value-color'],
+// Every typography section now ends with Case, which is never hidden, so no compensation is
+// needed there. Only the two hide toggles still matter: they suppress every row below them,
+// collapsing the sub-section to the toggle itself.
 body.dynamic-views-hide-group-property-names
   .style-settings-container
   .setting-item[data-id='dynamic-views-hide-group-property-names'],
-body:not(
-    .dynamic-views-hide-group-property-names,
-    .dynamic-views-group-property-color-custom
-  )
+body.dynamic-views-hide-group-result-count
   .style-settings-container
-  .setting-item[data-id='dynamic-views-group-property-color'],
-body.dynamic-views-hide-group-count
-  .style-settings-container
-  .setting-item[data-id='dynamic-views-hide-group-count'],
-body:not(
-    .dynamic-views-hide-group-count,
-    .dynamic-views-group-count-color-custom
-  )
-  .style-settings-container
-  .setting-item[data-id='dynamic-views-group-count-color'] {
-  border-bottom-right-radius: var(--setting-items-radius);
-  border-bottom-left-radius: var(--setting-items-radius);
-}
-
-// Property names: Custom text color is now the last row and stays hidden unless Custom is selected → Color becomes visually last
-body:not(.dynamic-views-property-name-color-custom)
-  .style-settings-container
-  .setting-item[data-id='dynamic-views-property-name-color'] {
+  .setting-item[data-id='dynamic-views-hide-group-result-count'] {
   border-bottom-right-radius: var(--setting-items-radius);
   border-bottom-left-radius: var(--setting-items-radius);
 }

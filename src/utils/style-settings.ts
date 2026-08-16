@@ -214,46 +214,46 @@ export function getCardSpacing(containerEl?: HTMLElement): number {
 }
 
 /**
- * Check if recent timestamps should show time only (default behavior)
- * Returns false when user enables "Show full recent timestamps"
+ * Check if recent timestamps should show time only
+ * Returns true when user enables "Short recent timestamps"; full datetime is the default
  */
 export function shouldShowRecentTimeOnly(): boolean {
-  return !hasBodyClass('dynamic-views-timestamp-recent-full');
+  return hasBodyClass('dynamic-views-timestamp-recent-short');
 }
 
 /**
- * Check if older timestamps should show date only (default behavior)
- * Returns false when user enables "Show full older timestamps"
+ * Check if older timestamps should show date only
+ * Returns true when user enables "Short past timestamps"; full datetime is the default
  */
 export function shouldShowOlderDateOnly(): boolean {
-  return !hasBodyClass('dynamic-views-timestamp-past-full');
+  return hasBodyClass('dynamic-views-timestamp-past-short');
 }
 
 /**
  * Get datetime format from Style Settings
- * Returns Moment.js format string for full datetime display
+ * Returns Moment.js format string for full datetime display.
+ * Empty setting falls back to the locale's own date + time patterns.
  */
 export function getDatetimeFormat(): string {
-  return getCSSTextVariable(
-    '--dynamic-views-datetime-format',
-    'YYYY-MM-DD, HH:mm'
-  );
+  return getCSSTextVariable('--dynamic-views-datetime-format', 'L, LT');
 }
 
 /**
  * Get date format from Style Settings
- * Returns Moment.js format string for date-only display (older timestamps)
+ * Returns Moment.js format string for date-only display (older timestamps).
+ * Empty setting falls back to the locale's own date pattern.
  */
 export function getDateFormat(): string {
-  return getCSSTextVariable('--dynamic-views-date-format', 'YYYY-MM-DD');
+  return getCSSTextVariable('--dynamic-views-date-format', 'L');
 }
 
 /**
  * Get time format from Style Settings
- * Returns Moment.js format string for time-only display (recent timestamps)
+ * Returns Moment.js format string for time-only display (recent timestamps).
+ * Empty setting falls back to the locale's own time pattern.
  */
 export function getTimeFormat(): string {
-  return getCSSTextVariable('--dynamic-views-time-format', 'HH:mm');
+  return getCSSTextVariable('--dynamic-views-time-format', 'LT');
 }
 
 /**
@@ -261,7 +261,7 @@ export function getTimeFormat(): string {
  * Returns the separator for list-type properties
  */
 export function getListSeparator(): string {
-  return getCSSTextVariable('--dynamic-views-list-separator', ', ');
+  return getCSSTextVariable('--dynamic-views-list-separator', ' ');
 }
 
 /**
@@ -380,7 +380,6 @@ export function getStyleSettingsHash(): string {
     // Body classes for overflow and layout modes
     hasBodyClass('dynamic-views-title-overflow-scroll'),
     hasBodyClass('dynamic-views-subtitle-overflow-scroll'),
-    hasBodyClass('dynamic-views-poster-uniform-height'),
     // Text preview content options (affect stripped text output)
     preserveTextPreviewHeadings(),
     preserveTextPreviewNewlines(),

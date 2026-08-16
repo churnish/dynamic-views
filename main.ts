@@ -34,11 +34,15 @@ import {
   clearInFlightLoads,
   invalidateContentCacheForPath,
 } from './src/core/content-loader';
-import { closeAllViewers } from './src/core/image-viewer';
 import { installDropTextPatch } from './src/core/drag';
 import { invalidateCacheForFile } from './src/core/image-loader';
 import { getNotebookNavigatorAPI } from './src/core/notebook-navigator';
-import type { OwnerWindow } from './src/utils/owner-window';
+import {
+  applyOpenFileActionClass,
+  removeOpenFileActionClasses,
+} from './src/core/open-file-action';
+import { closeAllViewers } from './src/core/image-viewer';
+import { getOwnerWindow } from './src/utils/owner-window';
 
 /** Undocumented Bases view shape — used only by __slowMount debug utility */
 interface DebugBasesView {
@@ -60,6 +64,8 @@ export default class DynamicViews extends Plugin {
   persistenceManager: PersistenceManager;
   /** Tracks which NN API instance we registered menus with */
   private nnRegisteredApi: unknown = null;
+  /** Disposer for the folder menu registered against `nnRegisteredApi` */
+  private nnMenuDispose: (() => void) | null = null;
 
   async onload() {
     initExternalBlobCache();
@@ -70,8 +76,9 @@ export default class DynamicViews extends Plugin {
 
     // Set initial body classes for settings
     const settings = this.persistenceManager.getPluginSettings();
-    document.body.classList.add(
-      `dynamic-views-open-on-${settings.openFileAction}`
+    applyOpenFileActionClass(
+      [document, ...this.getAllPopoutDocuments()],
+      settings.openFileAction
     );
 
     // Register settings tab
@@ -323,24 +330,21 @@ export default class DynamicViews extends Plugin {
     );
 
     // Register folder context menus in Notebook Navigator.
-    // NN's async onload may not finish before onLayoutReady — retry briefly.
-    // registerInterval auto-clears on plugin unload.
+    // NN's async onload may not have finished by onLayoutReady, and NN may be
+    // installed or enabled later in the session — the plugin registry's
+    // `changed` event covers both without polling. It fires for every plugin
+    // toggle in the vault; the API identity check makes repeat calls no-ops.
     this.app.workspace.onLayoutReady(() => {
-      if (!this.registerNotebookNavigatorMenus()) {
-        // NN not installed — skip retry loop
-        if (!this.app.plugins?.plugins?.['notebook-navigator']) return;
-        const deadline = Date.now() + 10_000;
-        const id = this.registerInterval(
-          window.setInterval(() => {
-            if (
-              this.registerNotebookNavigatorMenus() ||
-              Date.now() >= deadline
-            ) {
-              window.clearInterval(id);
-            }
-          }, 500)
-        );
-      }
+      this.register(() => this.disposeNotebookNavigatorMenus());
+      this.registerNotebookNavigatorMenus();
+      // `app.plugins` is undocumented. Guard the subscription so a future
+      // Obsidian that reshapes it degrades to startup-only registration
+      // instead of throwing here. An unknown event name is already safe —
+      // Obsidian's Events.on returns a ref without validating the name.
+      const pluginsChanged = this.app.plugins?.on?.('changed', () => {
+        this.registerNotebookNavigatorMenus();
+      });
+      if (pluginsChanged) this.registerEvent(pluginsChanged);
     });
   }
 
@@ -383,6 +387,10 @@ export default class DynamicViews extends Plugin {
     const nnApi = getNotebookNavigatorAPI(this.app);
     if (!nnApi) return false;
     if (nnApi === this.nnRegisteredApi) return true;
+    // Disabling and re-enabling NN yields a fresh API object with a rebuilt
+    // menu registry, so drop the previous registration before adding a new one
+    // — otherwise repeated toggling accumulates stale disposers.
+    this.disposeNotebookNavigatorMenus();
     this.nnRegisteredApi = nnApi;
 
     const dispose = nnApi.menus.registerFolderMenu(({ addItem, folder }) => {
@@ -437,8 +445,23 @@ export default class DynamicViews extends Plugin {
       });
     });
 
-    this.register(dispose);
+    this.nnMenuDispose = dispose;
     return true;
+  }
+
+  /**
+   * Drop the current Notebook Navigator folder menu registration, if any.
+   * The disposer may belong to an already-unloaded NN instance, so it can throw.
+   */
+  private disposeNotebookNavigatorMenus(): void {
+    const dispose = this.nnMenuDispose;
+    this.nnMenuDispose = null;
+    if (!dispose) return;
+    try {
+      dispose();
+    } catch (error) {
+      console.warn('Notebook Navigator menu disposal failed:', error);
+    }
   }
 
   private getActiveDynamicViewsGroupedView():
@@ -499,7 +522,7 @@ export default class DynamicViews extends Plugin {
         const update = () => {
           badge.textContent = `${(card as HTMLElement).offsetWidth}px`;
         };
-        const win: OwnerWindow = card.ownerDocument.defaultView ?? window;
+        const win = getOwnerWindow(card);
         const ro = new win.ResizeObserver(update);
         ro.observe(card);
         (badge as HTMLElement & { _ro?: ResizeObserver })._ro = ro;
@@ -509,7 +532,6 @@ export default class DynamicViews extends Plugin {
     );
     console.debug(`refreshed width badges (${count} cards)`);
   }
-
 
   getAllPopoutDocuments(): Document[] {
     const floating = (
@@ -524,10 +546,7 @@ export default class DynamicViews extends Plugin {
     delete this.app.__slowMount;
 
     // Remove body classes added during load
-    const settings = this.persistenceManager.getPluginSettings();
-    document.body.classList.remove(
-      `dynamic-views-open-on-${settings.openFileAction}`
-    );
+    removeOpenFileActionClasses([document, ...this.getAllPopoutDocuments()]);
     document.body.classList.remove(
       'dynamic-views-file-type-flair',
       'dynamic-views-file-type-icon',

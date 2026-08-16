@@ -14,7 +14,6 @@ import {
   isFormulaProperty,
   shouldCollapseField,
   hasWrappedPairs,
-  registerCompactSettleCallback,
 } from '../../src/core/property-helpers';
 
 describe('property-helpers', () => {
@@ -581,112 +580,6 @@ describe('property-helpers', () => {
       expect(gridCard.classList.contains('compact-stacked')).toBe(true);
       // Masonry card is not wrapped and not in grid — should not be synced
       expect(masonryCard.classList.contains('compact-stacked')).toBe(false);
-    });
-
-    // --- Compact settle callback tests ---
-
-    it('compact settle callback fires after batch processes eligible cards', async () => {
-      const mod = await freshModule();
-      const card = createCompactCard({ wrapped: true });
-
-      const cb = vi.fn();
-      mod.registerCompactSettleCallback(document, cb);
-
-      mod.queueCompactStackedCheck(card, 300);
-      flushRaf();
-
-      expect(cb).toHaveBeenCalledTimes(1);
-    });
-
-    it('unregistered compact settle callback does not fire', async () => {
-      const mod = await freshModule();
-      const card = createCompactCard({ wrapped: true });
-
-      const cb = vi.fn();
-      const unregister = mod.registerCompactSettleCallback(document, cb);
-      unregister();
-
-      mod.queueCompactStackedCheck(card, 300);
-      flushRaf();
-
-      expect(cb).not.toHaveBeenCalled();
-    });
-
-    it('compact settle callback does not fire on no-op batch (empty pending set)', async () => {
-      const mod = await freshModule();
-
-      const cb = vi.fn();
-      mod.registerCompactSettleCallback(document, cb);
-
-      // Queue and immediately cancel — pending set will be empty at flush
-      const card = createCompactCard({ wrapped: true });
-      mod.queueCompactStackedCheck(card, 300);
-      mod.invalidateCompactStackedCache(card);
-      flushRaf();
-
-      expect(cb).not.toHaveBeenCalled();
-    });
-
-    it('compact settle callback rebinds across documents (popout window)', async () => {
-      const mod = await freshModule();
-      const doc2 = document.implementation.createHTMLDocument('popout');
-
-      const grid2 = doc2.createElement('div');
-      grid2.classList.add('dynamic-views-grid');
-      doc2.body.appendChild(grid2);
-
-      const cb = vi.fn();
-
-      // Register on doc A, then unregister (simulates popout close)
-      const unregisterA = mod.registerCompactSettleCallback(document, cb);
-      unregisterA();
-
-      // Register on doc B (simulates popout reopen in new window)
-      mod.registerCompactSettleCallback(doc2, cb);
-
-      // Queue card in doc A — should NOT fire callback (unregistered)
-      const cardA = createCompactCard({ wrapped: true });
-      mod.queueCompactStackedCheck(cardA, 300);
-      flushRaf();
-      expect(cb).not.toHaveBeenCalled();
-
-      // Queue card in doc B — SHOULD fire callback
-      const cardB = doc2.createElement('div');
-      cardB.classList.add('compact-mode');
-      grid2.appendChild(cardB);
-      // Mock wrapping detection
-      const left = doc2.createElement('div');
-      left.classList.add('pair-left');
-      left.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
-      const right = doc2.createElement('div');
-      right.classList.add('pair-right');
-      right.getBoundingClientRect = () => ({ top: 20 }) as DOMRect;
-      const pair = doc2.createElement('div');
-      pair.classList.add('property-pair');
-      pair.appendChild(left);
-      pair.appendChild(right);
-      cardB.appendChild(pair);
-
-      mod.queueCompactStackedCheck(cardB, 300);
-      // Flush doc2's rAF — use the mock since doc2 doesn't have real rAF
-      flushRaf();
-
-      expect(cb).toHaveBeenCalledTimes(1);
-    });
-
-    it('compact settle callback does not fire when all pending cards are filtered out', async () => {
-      const mod = await freshModule();
-
-      const cb = vi.fn();
-      mod.registerCompactSettleCallback(document, cb);
-
-      // Queue card then disconnect it — eligible.length will be 0
-      const card = createCompactCard({ wrapped: true });
-      mod.queueCompactStackedCheck(card, 300);
-      card.remove();
-      flushRaf();
-
-      expect(cb).not.toHaveBeenCalled();
     });
   });
 });

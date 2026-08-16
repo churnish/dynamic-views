@@ -85,19 +85,21 @@ body.is-ios .dynamic-views-grid .card.dynamic-views-height-locked {
 /* Group divider spacing — .is-grouped prefix overrides Obsidian's
    .is-grouped .bases-cards-container .bases-cards-group padding
    (3 classes, same specificity — last-write wins). */
-/* Cards-to-divider spacing follows the card gap; the divider's own placement and
-   the gap below it stay fixed (see the ::after below and the grid row-gap). */
+/* Cards-to-divider spacing follows the card gap, floored at the chrome inset; the
+   divider's own placement and the gap below it stay fixed (see the ::after below
+   and the grid row-gap). */
 .is-grouped .dynamic-views-group-section > .dynamic-views-group {
-  padding: 0 0 var(--dynamic-views-card-gap, var(--size-4-3)) 0;
+  padding: 0 0 var(--dynamic-views-card-gap-floored) 0;
   /* Header-to-cards spacing lives here rather than on the heading's padding: the
      heading is the sticky box, so padding there would stretch its background
      pseudo and push the stuck border away from the text. Offset by the heading's
-     own fixed padding so the total tracks the gap. Clamped at 0 — below that the
-     margin goes negative and pulls the first card row under the heading, which
-     paints over it at z-index 20. */
+     own fixed padding so the total tracks the gap. The floor keeps this positive
+     on its own; max(0px) survives only to guard an overridden chrome inset
+     smaller than that padding, which would otherwise pull the first card row
+     under the heading, which paints over it at z-index 20. */
   margin-top: max(
     0px,
-    calc(var(--dynamic-views-card-gap, var(--size-2-2)) - var(--size-2-2))
+    calc(var(--dynamic-views-card-gap-floored) - var(--size-2-2))
   );
   position: relative;
   /* The element also carries Obsidian's .bases-cards-group, which draws its own
@@ -115,14 +117,18 @@ body.is-ios .dynamic-views-grid .card.dynamic-views-height-locked {
   content: '';
   position: absolute;
   bottom: 0;
-  left: calc(var(--size-4-3) - var(--dynamic-views-bases-view-padding));
-  right: calc(var(--size-4-3) - var(--dynamic-views-bases-view-padding));
+  left: calc(
+    var(--dynamic-views-chrome-inset) - var(--dynamic-views-bases-view-padding)
+  );
+  right: calc(
+    var(--dynamic-views-chrome-inset) - var(--dynamic-views-bases-view-padding)
+  );
   border-top: 1px solid var(--dynamic-views-background-modifier-border);
   pointer-events: none;
 }
 
 /* Padding is retained so hiding the line does not also collapse group spacing. */
-body.dynamic-views-hide-group-divider
+body.dynamic-views-hide-group-divider-line
   .is-grouped
   .dynamic-views-group-section
   > .dynamic-views-group::after {
@@ -244,4 +250,8 @@ body:is(
   contain: layout style paint;
   overflow: hidden;
   pointer-events: none;
+  /* The lane carries .dynamic-views-grid so cards get grid CSS, but its box is
+     exactly ONE column wide — inheriting the multi-column count would split it
+     again and measure every card at a fraction of its real width (#417). */
+  --dynamic-views-grid-columns: 1;
 }

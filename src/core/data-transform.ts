@@ -103,43 +103,6 @@ function isCustomTimestampProperty(
 }
 
 /**
- * Convert resolved property value to plain text for subtitle
- * Handles tags marker, array JSON, and regular strings
- * Uses fixed ", " separator (configurable separator is for property rows only)
- */
-function resolveSubtitleToPlainText(
-  subtitleValue: string | null,
-  settings: ResolvedSettings,
-  cardData: CardData
-): string | undefined {
-  if (!subtitleValue) return undefined;
-
-  // Handle tags marker - use correct array based on property name
-  if (subtitleValue === 'tags') {
-    const isYamlOnly =
-      settings.subtitleProperty === 'tags' ||
-      settings.subtitleProperty === 'note.tags';
-    const tags = isYamlOnly ? cardData.yamlTags : cardData.tags;
-    return tags.length > 0 ? tags.join(', ') : undefined;
-  }
-
-  // Handle array JSON (starts with specific prefix)
-  if (subtitleValue.startsWith('{"type":"array"')) {
-    try {
-      const parsed = JSON.parse(subtitleValue) as {
-        type: string;
-        items: string[];
-      };
-      if (parsed.type === 'array') return parsed.items.join(', ');
-    } catch {
-      /* fall through to return raw value */
-    }
-  }
-
-  return subtitleValue || undefined;
-}
-
-/**
  * Apply smart timestamp logic to properties
  * If sorting by created/modified time, automatically show that timestamp
  * (unless both are already shown)
@@ -404,32 +367,38 @@ export function basesEntryToCardData(
       seen.add(prop);
       return true;
     })
-    .map((prop) => ({
-      name: prop,
-      value: resolveBasesProperty(app, prop, entry, cardData, settings),
-    }));
+    .map((prop) => {
+      const meta: { isDate?: boolean } = {};
+      const value = resolveBasesProperty(
+        app,
+        prop,
+        entry,
+        cardData,
+        settings,
+        meta
+      );
+      return { name: prop, value, isDate: meta.isDate === true };
+    });
 
-  // Resolve subtitle property (supports comma-separated list)
+  // Resolve subtitle property (supports comma-separated list).
+  // File timestamps are not special-cased here: resolveFileProperty already formats
+  // them, so one resolution path covers every property type the subtitle can hold.
   if (settings.subtitleProperty && processedSubtitleProps.length > 0) {
     for (const prop of processedSubtitleProps) {
-      const timestamp = resolveTimestampProperty(prop, ctime, mtime, false);
-      if (timestamp) {
-        cardData.subtitle = timestamp;
-        break;
-      }
+      const meta: { isDate?: boolean } = {};
       const resolved = resolveBasesProperty(
         app,
         prop,
         entry,
         cardData,
-        settings
+        settings,
+        meta
       );
       if (resolved !== null && resolved !== '') {
-        cardData.subtitle = resolveSubtitleToPlainText(
-          resolved,
-          settings,
-          cardData
-        );
+        // Marker strings (tags, array JSON) are passed through untouched so the
+        // renderer rebuilds pills and list separators exactly as it does for rows
+        cardData.subtitle = resolved;
+        cardData.subtitleIsDate = meta.isDate === true;
         break;
       }
     }
@@ -536,13 +505,16 @@ function resolveFileProperty(
 /**
  * Resolve property value for Bases entry
  * Returns null for missing/empty properties
+ * @param meta - Optional out-param: set `isDate` when the value is a formatted date. An out-param
+ * keeps the `string | null` return that every caller and assertion already relies on.
  */
 export function resolveBasesProperty(
   app: App,
   propertyName: string,
   entry: BasesEntry,
   cardData: CardData,
-  settings: ResolvedSettings
+  settings: ResolvedSettings,
+  meta?: { isDate?: boolean }
 ): string | null {
   if (!propertyName || propertyName === '') {
     return null;
@@ -570,11 +542,19 @@ export function resolveBasesProperty(
   if (timestampData) {
     // Use styled formatting only for custom timestamp properties
     const isCustomTimestamp = isCustomTimestampProperty(propertyName, settings);
+    if (meta) meta.isDate = true;
     return formatTimestamp(
       timestampData.timestamp,
       timestampData.isDateOnly,
       isCustomTimestamp
     );
+  }
+
+  // File-typed values carry the file on `.file` and have no `.data`, so they must be handled
+  // before the `data == null` guard below returns an empty value
+  const fileValue = (value as { file?: unknown })?.file;
+  if (fileValue instanceof TFile) {
+    return `[[${fileValue.path}|${fileValue.basename}]]`;
   }
 
   // Extract .data for Bases properties

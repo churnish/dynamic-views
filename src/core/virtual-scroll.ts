@@ -5,6 +5,7 @@
 
 import type { BasesEntry } from 'obsidian';
 import type { CardData, CardHandle } from './card-data';
+import type { MountEstimateProfile } from '../types';
 import {
   UNMEASURED_CARD_HEIGHT,
   FIXED_COVER_HEIGHT_MASONRY,
@@ -187,4 +188,147 @@ export function estimateUnmountedHeight(
     );
   }
   return item.height > 0 ? item.height : UNMEASURED_CARD_HEIGHT;
+}
+
+/** Below this the medians are noise, and a bad profile is worse than the flat
+ *  average it replaces. */
+const MIN_ESTIMATE_SAMPLES = 3;
+
+/** A card counts as having an image when imageUrl holds at least one URL.
+ *  Single definition — the profile builder and the deferred-mount caller must
+ *  partition identically or the per-card estimate reads the wrong group. */
+export function hasCardImage(cardData: Pick<CardData, 'imageUrl'>): boolean {
+  const url = cardData.imageUrl;
+  return Array.isArray(url) ? url.length > 0 : !!url;
+}
+
+function median(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = sorted.length >> 1;
+  return sorted.length % 2 === 0
+    ? (sorted[mid - 1] + sorted[mid]) / 2
+    : sorted[mid];
+}
+
+/**
+ * Build a median height profile from DOM-measured items, split by image presence.
+ * Returns null when there is not enough measured data to be worth trusting.
+ */
+export function buildMountEstimateProfile(
+  items: Pick<
+    VirtualItem,
+    | 'measuredAtWidth'
+    | 'measuredHeight'
+    | 'scalableHeight'
+    | 'fixedHeight'
+    | 'cardData'
+  >[],
+  referenceWidth: number,
+  coverWidth: number
+): MountEstimateProfile | null {
+  if (referenceWidth <= 0) return null;
+
+  const imaged: { scalable: number[]; fixed: number[] } = {
+    scalable: [],
+    fixed: [],
+  };
+  const plain: { scalable: number[]; fixed: number[] } = {
+    scalable: [],
+    fixed: [],
+  };
+
+  for (const item of items) {
+    if (item.measuredHeight <= 0) continue;
+    // Unmounted items keep the width they were last DOM-measured at, so after a
+    // resize the population is mixed — blending widths would skew both medians.
+    if (Math.abs(item.measuredAtWidth - referenceWidth) > 1) continue;
+    const bucket = hasCardImage(item.cardData) ? imaged : plain;
+    bucket.scalable.push(item.scalableHeight);
+    bucket.fixed.push(item.fixedHeight);
+  }
+
+  if (imaged.scalable.length + plain.scalable.length < MIN_ESTIMATE_SAMPLES) {
+    return null;
+  }
+
+  const withImage = {
+    scalable: median(imaged.scalable),
+    fixed: median(imaged.fixed),
+  };
+  const withoutImage = {
+    scalable: median(plain.scalable),
+    fixed: median(plain.fixed),
+  };
+
+  // An empty group borrows the other's text block, which is comparable, but
+  // never its cover height. Both groups cannot be empty past the sample gate.
+  if (imaged.scalable.length === 0) {
+    withImage.scalable = 0;
+    withImage.fixed = withoutImage.fixed;
+  } else if (plain.scalable.length === 0) {
+    withoutImage.scalable = 0;
+    withoutImage.fixed = withImage.fixed;
+  }
+
+  // Rounded because the profile is JSON-persisted in ephemeral scroll state
+  return {
+    withImage: {
+      scalable: Math.round(withImage.scalable),
+      fixed: Math.round(withImage.fixed),
+    },
+    withoutImage: {
+      scalable: Math.round(withoutImage.scalable),
+      fixed: Math.round(withoutImage.fixed),
+    },
+    measuredAtWidth: Math.round(referenceWidth),
+    coverWidth: Math.round(Math.max(0, coverWidth)),
+  };
+}
+
+/**
+ * Estimate one card's mount height from a saved profile.
+ * Scales the same way estimateUnmountedHeight does — cover linear with width,
+ * text as sqrt — but picks the median pair by whether this card has an image.
+ * `coverRatio` (contain mode only) replaces the median cover with this card's own.
+ */
+export function estimateCardHeight(
+  profile: MountEstimateProfile,
+  hasImage: boolean,
+  cardWidth: number,
+  coverRatio: number
+): number {
+  const group = hasImage ? profile.withImage : profile.withoutImage;
+  if (profile.measuredAtWidth <= 0 || cardWidth <= 0) {
+    return group.fixed || UNMEASURED_CARD_HEIGHT;
+  }
+  const widthScale = cardWidth / profile.measuredAtWidth;
+  const scalable =
+    coverRatio > 0 && profile.coverWidth > 0
+      ? coverRatio * profile.coverWidth * widthScale
+      : group.scalable * widthScale;
+  const fixed = group.fixed * Math.sqrt(profile.measuredAtWidth / cardWidth);
+  return Math.max(1, scalable + fixed);
+}
+
+function isEstimateGroup(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false;
+  const group = value as { scalable?: unknown; fixed?: unknown };
+  return typeof group.scalable === 'number' && typeof group.fixed === 'number';
+}
+
+/** Shallow structural check for a restored profile — ephemeral state is JSON
+ *  round-tripped by Obsidian, so a stale or malformed shape must be dropped
+ *  rather than trusted. */
+export function isMountEstimateProfile(
+  value: unknown
+): value is MountEstimateProfile {
+  if (!value || typeof value !== 'object') return false;
+  const profile = value as Partial<MountEstimateProfile>;
+  return (
+    isEstimateGroup(profile.withImage) &&
+    isEstimateGroup(profile.withoutImage) &&
+    typeof profile.measuredAtWidth === 'number' &&
+    typeof profile.coverWidth === 'number'
+  );
 }

@@ -6,7 +6,7 @@ import {
   applySmartTimestamp,
 } from '../../src/core/data-transform';
 
-import { App } from 'obsidian';
+import { App, TFile } from 'obsidian';
 
 // Mock dependencies
 vi.mock('../../src/core/property-display', async () => {
@@ -45,7 +45,7 @@ describe('data-transform', () => {
       createdTimeProperty: 'created time',
       modifiedTimeProperty: 'modified time',
       fallbackToInNote: true,
-      fallbackToEmbeds: 'always',
+      showFileImages: 'always',
       pairProperties: true,
     } as any;
 
@@ -894,6 +894,66 @@ describe('data-transform', () => {
 
         // Empty string indicates property exists but is empty
         expect(result).toBe('');
+      });
+    });
+
+    describe('file-typed values (Bases)', () => {
+      const mockCardData: any = {
+        path: 'test.md',
+        folderPath: '',
+        tags: [],
+        yamlTags: [],
+        ctime: 1000000,
+        mtime: 2000000,
+      };
+
+      it('should render a file-typed value as a wikilink with basename display', async () => {
+        const { getFirstBasesPropertyValue } =
+          (await import('../../src/core/property-extraction')) as any;
+        const file = new TFile();
+        file.path = 'Notes/Test.md';
+        file.basename = 'Test';
+        getFirstBasesPropertyValue.mockReturnValue({
+          icon: 'file',
+          app: mockApp,
+          file,
+        });
+
+        const mockEntry: any = {
+          file: { path: 'test.md' },
+          getValue: vi.fn(),
+        };
+
+        const result = resolveBasesProperty(
+          mockApp,
+          'formula.file',
+          mockEntry,
+          mockCardData,
+          mockSettings
+        );
+
+        expect(result).toBe('[[Notes/Test.md|Test]]');
+      });
+
+      it('should leave values carrying .data unchanged', async () => {
+        const { getFirstBasesPropertyValue } =
+          (await import('../../src/core/property-extraction')) as any;
+        getFirstBasesPropertyValue.mockReturnValue({ data: 'plain value' });
+
+        const mockEntry: any = {
+          file: { path: 'test.md' },
+          getValue: vi.fn(),
+        };
+
+        const result = resolveBasesProperty(
+          mockApp,
+          'someProp',
+          mockEntry,
+          mockCardData,
+          mockSettings
+        );
+
+        expect(result).toBe('plain value');
       });
     });
   });

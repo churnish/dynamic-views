@@ -82,6 +82,10 @@ body {
   --dynamic-views-touch-size-m: var(--touch-size-m, 44px);
   --dynamic-views-layer-modal: var(--layer-modal, 50);
   --dynamic-views-cursor: var(--cursor, default);
+  /* Optical space either side of an inline separator glyph — path `/` and date
+     punctuation share it so the two cannot drift apart. In em so it tracks the
+     font size presets rather than staying fixed as text grows. */
+  --dynamic-views-separator-spacing: 0.15em;
 
   /* Colors */
   --dynamic-views-color-base-100: var(--color-base-100, #222222);
@@ -128,7 +132,8 @@ body {
     rgba(0, 0, 0, 0.1)
   );
   --dynamic-views-raised-background: var(--raised-background, transparent);
-  /* Obsidian's native lightbox chrome — absent before 1.13, hence the fallbacks */
+  /* Obsidian's native lightbox chrome. Fallbacks are the plugin's convention for
+     every external variable, not a version guard — the manifest requires 1.13. */
   --dynamic-views-lightbox-background: var(--lightbox-background, black);
   --dynamic-views-lightbox-titlebar-color: var(
     --lightbox-titlebar-color,
@@ -161,6 +166,11 @@ body {
     --link-external-color-hover,
     hsl(255, 90%, 76%)
   );
+  --dynamic-views-link-unresolved-color: var(
+    --link-unresolved-color,
+    var(--dynamic-views-text-accent)
+  );
+  --dynamic-views-link-unresolved-opacity: var(--link-unresolved-opacity, 0.7);
 
   /* Interactive */
   --dynamic-views-interactive-accent: var(
@@ -178,7 +188,7 @@ body {
     var(--dynamic-views-image-aspect-ratio, 1),
     2
   );
-  --dynamic-views-list-separator: ', ';
+  --dynamic-views-list-separator: ' ';
   --dynamic-views-empty-value-marker: '—';
   /* Custom colors from HSL components — hover variants shift hue slightly
      cooler (-3°), minimal saturation boost (×1.02), noticeable lightness
@@ -240,10 +250,59 @@ body {
 @include font-size-setting(subtitle, ui-small);
 @include font-size-setting(text-preview, ui-small);
 @include font-size-setting(property, ui-small);
+@include font-size-setting(tag, ui-smaller);
 @include font-size-setting(property-name, ui-smaller);
 @include font-size-setting(group-property, ui-small);
 @include font-size-setting(group-value, ui-small);
 @include font-size-setting(group-count, ui-smaller);
+
+/* Typography traits — body classes set variables that each element's own base rule
+   consumes. Keeps the rightmost selector off elements that exist per card, which
+   Blink buckets by rightmost simple selector when invalidating style. */
+/* No class (Style Settings absent, or the toggle off) leaves the variable unset, so
+   consumers fall through to the var() fallback that reproduces the untoggled state. */
+@mixin typography-setting($stem, $emit-weight: true) {
+  @if $emit-weight {
+    body.dynamic-views-#{$stem}-bold {
+      --dynamic-views-#{$stem}-weight: calc(
+        var(--dynamic-views-font-weight) + var(--dynamic-views-bold-modifier)
+      );
+    }
+  }
+
+  body.dynamic-views-#{$stem}-italic {
+    --dynamic-views-#{$stem}-style: italic;
+  }
+
+  body.dynamic-views-#{$stem}-small-caps {
+    --dynamic-views-#{$stem}-variant: small-caps;
+  }
+
+  // $transform is interpolated because Sass treats custom property values as plain
+  // strings — a bare variable reference would be emitted verbatim.
+  @each $variant,
+    $transform
+      in (lowercase: lowercase, uppercase: uppercase, title: capitalize)
+  {
+    body.dynamic-views-#{$stem}-case-#{$variant} {
+      --dynamic-views-#{$stem}-case: #{$transform};
+    }
+  }
+}
+
+@include typography-setting(title);
+@include typography-setting(subtitle);
+@include typography-setting(text-preview);
+@include typography-setting(tag);
+@include typography-setting(property);
+@include typography-setting(property-name);
+/* Group value bold defaults ON and its weight comes from Obsidian's own Bases styling,
+   not the plugin. There is no fallback value that means "declare nothing", so the base
+   rule stays weight-free and the unbold branch in _grid-masonry-shared.scss stays a
+   descendant rule — emitting a weight variable here would leave it unconsumed. */
+@include typography-setting(group-value, $emit-weight: false);
+@include typography-setting(group-property);
+@include typography-setting(group-count);
 
 /* Resolve title hover color to a single variable for all presets.
    Named colors (red-pink) already set --dynamic-views-title-hover-color-value

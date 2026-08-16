@@ -130,15 +130,16 @@ It returns **the applied line count**, or `0` when not even one line fits. The t
 
 | Context | Caller | Variant | Notes |
 |---|---|---|---|
-| Grid initial render | `shared-renderer.ts` | Single | Clip only (no prior state). Masonry defers to the card RO — cards have no final size at render time |
-| Uniform height initial render | `shared-renderer.ts` | Single | Imageless cards in Grid when the `dynamic-views-poster-uniform-height` body class is present |
-| Card ResizeObserver | `shared-renderer.ts` | Single | One branch covering both poster-static cards and uniform-height imageless cards. Size-guarded (`lastClipWidth`/`lastClipHeight`) |
-| `textPreviewLines` change | `applyCssOnlySettings` | Batch | Gated by `lastClippedTextPreviewLines` so an unchanged value fires nothing |
-| Static mode toggled ON | `applyCssOnlySettings` | Batch | All poster cards in container |
+| Grid initial render | `shared-renderer.ts` | Single | One condition covering static cards and imageless cards. Masonry defers to the card RO — cards have no final size at render time |
+| Card ResizeObserver | `shared-renderer.ts` | Single | One branch covering both poster-static cards and imageless Grid cards. Size-guarded (`lastClipWidth`/`lastClipHeight`) |
+| `textPreviewLines` change | `applyCssOnlySettings` | Batch | Gated by `lastClippedTextPreviewLines` so an unchanged value fires nothing. Imageless Grid cards are included regardless of static mode |
+| Static mode toggled ON | `applyCssOnlySettings` | Batch | Cards with an image only — static mode does not change the imageless content area |
 | Display mode changed | `applyCssOnlySettings` | Batch | Deferred via `requestAnimationFrame` (CSS needs one frame to recalculate layout after class swap) |
-| Compact-stacked settling | `processCompactStackedBatch` | Batch | Poster-static cards plus uniform-height imageless cards, after stacking changes property heights |
+| Compact-stacked settling | `processCompactStackedBatch` | Batch | Poster-static cards plus imageless Grid cards, after stacking changes property heights |
 
-Every entry point above goes through `clearPosterClipState`, so none of them needs to filter out content-hidden cards. Choosing *which* cards to pass is still the caller's job — the batch sites select `.card.image-format-poster.has-poster`.
+Every entry point above goes through `clearPosterClipState`, so none of them needs to filter out content-hidden cards. Choosing *which* cards to pass is still the caller's job. The batch sites select `.card.image-format-poster`, except the static-mode transition, which stays on `.has-poster`.
+
+**Why imageless cards clip unconditionally in Grid**: their height is constrained by `aspect-ratio` like every other poster card in the row, so content overflows with no reveal interaction to recover it. The clip is therefore not tied to `posterInteractToReveal`. Masonry is excluded — it writes an explicit per-card height and never applies the ratio to imageless cards.
 
 `resetPosterClipping(cards: HTMLElement[])` exists as a standalone function for the transition-to-interactive path only (static mode toggled OFF). It takes an **array**, not a single card: restoring the container's line budget means re-measuring paragraph heights, so a per-card variant would cost one reflow per card. It runs its own three phases — clear every card's clip state and paragraph clamp, read paragraph metrics at the restored budget, re-clamp — for one reflow total.
 
@@ -209,36 +210,15 @@ This class gates ~60 CSS rules (hover colors, cursors, zoom, slideshow nav). It 
 
 Leaking it on dismissed cards causes stale hover effects, particularly visible on iPad with pointer input.
 
-## Poster stretch (Grid only)
+## Card height in Grid
 
-In mixed CSS Grid rows (poster + imageless cards), poster cards use `aspect-ratio` for height while imageless cards use natural content height. When imageless cards are taller, `stretchPosterCardsInMixedRows()` stretches poster cards to match via `--poster-row-min-height`. The pure algorithm lives in `src/core/poster-stretch.ts` (`computePosterStretch`).
+Poster card height in Grid always follows the image aspect ratio — imageless cards included. The three Grid `aspect-ratio` rules in `card/_poster.scss` (fixed height on, dynamic, dynamic + contain) all select `.card.image-format-poster` with no `.has-poster` qualifier, so every card in a row resolves to the same ratio-derived height with no JS stretching involved.
 
-**4-phase read/write separation** prevents layout thrashing:
+`overflow: hidden` on `.card.image-format-poster` is load-bearing: it zeroes the Grid automatic minimum size, letting `aspect-ratio` win over content height. Overflowing content is hidden by the clipping pipeline above.
 
-1. **Phase 0 (write)**: Clear `poster-stretch` class, `--poster-row-min-height`, `--poster-aspect-override` from all poster cards. Apply `dynamic-views-align-start` to imageless cards to suppress Grid row stretch during measurement.
-2. **Phase 1 (read)**: Collect natural heights via `getBoundingClientRect()` for all cards (one forced reflow).
-3. **Phase 2 (write)**: Remove `dynamic-views-align-start` from imageless cards.
-4. **Phase 3-4 (read then write)**: Compare per-row heights and apply stretch where imageless > poster.
+**Masonry is excluded.** Its four `aspect-ratio` rules keep `.has-poster` — Masonry sizes each card individually and writes an explicit inline height, so applying the ratio to imageless cards would clip content with no row uniformity to gain.
 
-**Bail-out optimization**: `stretchNoopKey` caches a composition hash (`totalItems × 1M + imageReadyCount × 10K + compactStackedCount × 100 + columns`). If the key matches the previous run AND the previous run produced no changes, the entire 4-phase cycle is skipped.
-
-### Compact-stacked timing
-
-`stretchPosterCardsInMixedRows` is called via `equalizeRowPosterHeights()`, which runs after card RO fires. But `processCompactStackedBatch()` is RAF-deferred — compact-stacked state hasn't settled when the RO runs. This caused inflated measurements (imageless cards reporting pre-stacked heights).
-
-Fix: `registerCompactSettleCallback(doc, cb)` in `property-helpers.ts` provides per-document post-settle notification. Grid-view registers `equalizeRowPosterHeights` as a callback, re-running stretch with settled heights. The callback rebinds in `handleDocumentChange()` for popout window moves.
-
-## Uniform height (Style Settings)
-
-The `dynamic-views-poster-uniform-height` body class (class-toggle in Style Settings) constrains imageless cards to poster aspect-ratio height instead of stretching poster cards up.
-
-**CSS**: `aspect-ratio: 1 / var(--dynamic-views-image-aspect-ratio, 1)` + `overflow: hidden` on `.card.image-format-poster:not(.has-poster)` in Grid. Same variable as poster cards.
-
-**JS**: `stretchPosterCardsInMixedRows()` early-returns when the body class is present. Before returning, it clears any stale stretch state (`poster-stretch` class + CSS vars) and resets `stretchNoopKey`.
-
-**Clipping**: `clipPosterStaticOverflow` runs on imageless cards to hide property rows that don't fit — same logic as poster-static cards. Three entry points extended: initial render, card RO resize, and compact-stacked settlement.
-
-**Reactivity**: The body class is included in `getStyleSettingsHash()` (`style-settings.ts`). When toggled, the hash changes → `onDataUpdated()` → re-render → stretch/clip recalculated. Without hash inclusion, the body class observer's dedup gate filters out the change.
+**Row equalization**: with fixed poster height off, `equalizeRowPosterHeights()` writes `--row-poster-aspect-ratio` so every card in a row matches the tallest image. Its `matchCard` selects all poster cards, but the ratio *read* is gated on `has-poster` (`hasRatio` in the config). That gate is load-bearing, not an optimization: `image-loader.ts` writes the fallback `--actual-aspect-ratio: 0.75` at the same moment `showImagePlaceholder` drops `has-poster`, so a failed-image card is imageless *and* carries a real ratio that would otherwise poison the row max. The write loop is ungated — an all-imageless row writes `0`, and `aspect-ratio: 1 / 0` degenerates to natural height. Skipping the write instead would leave a stale ratio from a previous row composition, since row membership shifts with column count and virtual-scroll re-indexing.
 
 ## Invariants
 
@@ -252,6 +232,5 @@ The `dynamic-views-poster-uniform-height` body class (class-toggle in Style Sett
 8. Loop call sites MUST use `clipPosterStaticOverflowBatch` — per-card `clipPosterStaticOverflow` in a loop causes O(K) forced reflows.
 9. `clearPosterClipState` does NOT guard on `has-poster` — callers are responsible for passing the right cards.
 10. New Style Settings body-class toggles that affect rendering MUST be added to `getStyleSettingsHash()` — without hash inclusion, the body class observer's dedup gate silently swallows the change.
-11. `stretchPosterCardsInMixedRows` MUST clear stale stretch state before early-returning for uniform height — otherwise `poster-stretch` class and CSS vars persist from a previous run.
-12. `clampToFit` MUST NOT exceed the container's line-count value. The cap is read in the measure phase, never in the write phase — a `getComputedStyle` call during writes would break invariant 6 and force one style recalc per card in the batch path.
-13. Content is only scrollable outside `poster-static`. Scrolling is gated behind interact-to-reveal on every platform, not just touch, so poster cards do not behave differently by input device — see the rationale comment in `card/_poster.scss`.
+11. `clampToFit` MUST NOT exceed the container's line-count value. The cap is read in the measure phase, never in the write phase — a `getComputedStyle` call during writes would break invariant 6 and force one style recalc per card in the batch path.
+12. Content is only scrollable outside `poster-static`. Scrolling is gated behind interact-to-reveal on every platform, not just touch, so poster cards do not behave differently by input device — see the rationale comment in `card/_poster.scss`.

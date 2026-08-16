@@ -33,7 +33,7 @@ Prevents concurrent requests for the same image with the same configuration acro
 | `inFlightImages`       | `Map<compositeKey, Promise<ImageLoadResult>>` | Module | Entry deleted after Promise settles |
 | `inFlightTextPreviews` | `Map<compositeKey, Promise<string>>`          | Module | Entry deleted after Promise settles |
 
-**Composite key format** (image): `path|fallbackToEmbeds|includeYoutube|includeCardLink`
+**Composite key format** (image): `path|showFileImages|includeYoutube|includeCardLink|youtubeTargetWidth|maxImages`
 **Composite key format** (text): `path|fallbackToContent|omitFirstLine|hasTextPreview[|fileName|titleString]|preserveHeadings|preserveNewlines`
 
 Every parameter affecting output is encoded in the key. Same path with different config generates different entries.
@@ -78,15 +78,15 @@ loadImageForEntry(path, ...)
 
 Order in `loadImageForEntry()`: Per-caller cache check -> Self-image check (sync, short-circuits) -> Property image processing -> Embed extraction (async) -> Empty string.
 
-The self-image check runs BEFORE property processing. When `fallbackToEmbeds !== 'never'`, no property values exist, and the file itself is an image, it returns the file's resource path immediately — skipping property processing and embed extraction entirely.
+The self-image check runs BEFORE property processing. When `showFileImages !== 'never'`, no property values exist, and the file itself is an image, it returns the file's resource path immediately — skipping property processing and embed extraction entirely.
 
-| `fallbackToEmbeds` setting | Behavior                                             |
+| `showFileImages` setting | Behavior                                             |
 | -------------------------- | ---------------------------------------------------- |
 | `'always'`                 | Property images + append in-note embeds              |
 | `'if-unavailable'`         | Embeds only if property images array is empty        |
 | `'never'`                  | Property images only, no embeds, no self-image check |
 
-**Self-image**: Image files (extension in `VALID_IMAGE_EXTENSIONS`) use themselves as card image when no property images exist. Gated on `fallbackToEmbeds !== 'never'` AND `imagePropertyValues.length === 0`. Synchronous (`getResourcePath`), bypasses in-flight dedup.
+**Self-image**: Image files (extension in `VALID_IMAGE_EXTENSIONS`) use themselves as card image when no property images exist. Gated on `showFileImages !== 'never'` AND `imagePropertyValues.length === 0`. Synchronous (`getResourcePath`), bypasses in-flight dedup.
 
 ## Embed extraction (`extractImageEmbeds()`)
 
@@ -130,11 +130,31 @@ Two details are load-bearing:
 ### YouTube thumbnail extraction
 
 - Triggered for YouTube URLs in embeds (not in properties -- YouTube URLs in properties are skipped as non-images)
-- Quality cascade: `maxresdefault` (1280x720) -> `hqdefault` (480x360) -> `mqdefault` (320x180)
-- Each quality validated with 5s timeout, `naturalWidth >= 320px` check (placeholders are ~120px)
-- Returns `null` if all qualities fail
+- Served as WebP from `i.ytimg.com/vi_webp`, roughly half the bytes of the JPEG at identical pixels
+- Rungs, widest first: `maxresdefault` (1280x720) -> `sddefault` (640x480) -> `hqdefault` (480x360) -> `mqdefault` (320x180)
+- Each rung validated with 5s timeout, `naturalWidth >= 320px` check (placeholders are 120x90)
+- Returns `null` if all rungs fail
 
-Probes are pre-started concurrently before the resolution loop, keyed by **video ID** so `youtu.be/X` and `watch?v=X` share one (upstream dedup is by path). At most `maxImages` pre-start: a 100KB link dump admits thousands of YouTube embeds, and three sequential requests each would compete with real card images on a phone when only `maxImages` can be shown. Embeds past that bound resolve lazily inside the loop, which is reachable because a YouTube embed resolving to `null` fills no result slot.
+#### Rung selection
+
+Selection starts at the **narrowest rung that covers the card's target width**, then descends. `mq`/`hq` exist for every live video; `sd`/`maxres` are conditional, which is what makes descent mandatory rather than an optimisation. A target wider than every rung uses the full ladder.
+
+Targets come from **stable upper bounds, never live values** (`getYouTubeTargetWidth`):
+
+| Format | Target (CSS px) |
+| --- | --- |
+| `thumbnail` | `128` (the slider maximum) x DPR |
+| `cover` / `poster` / `backdrop` | `2 x cardSize` x DPR |
+
+`thumbnailSize` is a CSS-only setting, so changing it re-renders nothing and re-extracts nothing -- a target read from its live value would be permanently stale. `cardSize` is a *minimum* column width, and a pane resize moves the rendered width with no settings change at all. Both bounds over-fetch slightly, which costs a rung at worst and can never go blurry.
+
+DPR is read **in the view** via `getOwnerWindow(containerEl)` and threaded down as a number: bare `window` is prohibited in `src/core/` and `src/bases/`, and a popout on a differently-scaled monitor genuinely has a different ratio.
+
+The `MIN_THUMBNAIL_WIDTH` check is load-bearing and applies on both hosts. A missing rung answers **HTTP 404 carrying a decodable 120x90 grey image**, and `<img>` decides load-vs-error by whether the bytes decode, not by status -- so the placeholder fires `onload` and only the width check rejects it.
+
+The resolved-thumbnail memo is keyed by **video ID plus requested target width**. Keyed by ID alone, the first caller's rung would win for the whole session and a thumbnail-sized view would inherit a poster-sized view's 1280px image. The *resolved* rung cannot be the key -- it is unknown until the probe finishes.
+
+Probes are pre-started concurrently before the resolution loop, keyed by **video ID** so `youtu.be/X` and `watch?v=X` share one (upstream dedup is by path). At most `maxImages` pre-start: a 100KB link dump admits thousands of YouTube embeds, and sequential requests for each would compete with real card images on a phone when only `maxImages` can be shown. Embeds past that bound resolve lazily inside the loop, which is reachable because a YouTube embed resolving to `null` fills no result slot.
 
 ## Broken URL tracking
 
@@ -251,4 +271,4 @@ When a file's content changes and the image URL differs between old and new `Car
 
 This drives the update strategy in `updateCardsInPlace`:
 - **Image changed** → full card replacement via `renderCard` (image DOM is too intertwined with cover/slideshow/aspect-ratio to patch)
-- **Image unchanged** → surgical `updateCardContent()` (title, subtitle, properties, text preview, URL icon)
+- **Image unchanged** → surgical `updateCardContent()` (title, subtitle, properties, text preview, URL icon, structural classes)

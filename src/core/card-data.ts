@@ -16,8 +16,10 @@ export interface CardData {
   folderPath: string;
   textPreview?: string;
   subtitle?: string;
+  /** Subtitle value is a formatted date — mirrors the per-property `isDate` flag below */
+  subtitleIsDate?: boolean;
   imageUrl?: string | string[];
   urlValue?: string | null;
   hasValidUrl?: boolean;
-  properties: Array<{ name: string; value: unknown }>;
+  properties: Array<{ name: string; value: unknown; isDate?: boolean }>;
 }

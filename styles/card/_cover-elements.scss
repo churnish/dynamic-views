@@ -127,6 +127,22 @@ body:is(
   );
 }
 
+/* Shape not known yet: collapse instead of reserving space at the fallback
+   ratio, which would size the cover wrong and resize it once the image loads.
+   Only the dynamic-height paths need this — everywhere else the height comes
+   from the slider and is correct before anything loads. Scoped to .has-cover so
+   placeholder cards, which never load an image, keep their reserved space. */
+body:is(
+    .dynamic-views-fixed-cover-height-masonry,
+    .dynamic-views-fixed-cover-height-none
+  )
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-bottom.image-format-cover.has-cover:not(.image-ratio-known)
+  .card-cover {
+  padding-top: 0;
+}
+
 /* Circular cover: 50% makes any shape circular */
 body.dynamic-views-round-covers
   .dynamic-views
@@ -248,6 +264,165 @@ body.dynamic-views-show-cover-divider
   .card.card-cover-right.image-format-cover
   .card-cover-wrapper {
   border-left: var(--card-border-thickness-fixed) solid var(--card-border-color);
+}
+
+/* ============================================
+   COVER-CONTENT SHADOW
+   ============================================ */
+
+/* Dramatic tier geometry, mirroring the three layers of --shadow-l (the same
+   tier the "Dramatic" card shadow preset uses). The values are inlined because
+   CSS cannot re-point the layers of a var-provided shadow list, and this shadow
+   has to follow the cover position — the card shadow colour override in
+   _core.scss inlines the same numbers for the same reason. Each layer's spread
+   is the negation of its offset, so the shadow leans toward the content instead
+   of ringing the cover.
+
+   Obsidian's own --shadow-l differs between themes in the outer layer only
+   (light 15px/30px at 0.1, dark 30px/90px at 0.2), hence the parameters. A theme
+   that redefines --shadow-l is not followed — reading a shadow list back apart
+   would take JS. */
+@mixin cover-edge-shadow($outer-offset, $outer-blur, $outer-alpha) {
+  box-shadow:
+    calc(var(--cover-shadow-dir-x) * 1.8px)
+      calc(var(--cover-shadow-dir-y) * 1.8px) 7.3px -1.8px rgba(0, 0, 0, 0.071),
+    calc(var(--cover-shadow-dir-x) * 6.3px)
+      calc(var(--cover-shadow-dir-y) * 6.3px) 24.7px -6.3px rgba(0, 0, 0, 0.112),
+    calc(var(--cover-shadow-dir-x) * #{$outer-offset})
+      calc(var(--cover-shadow-dir-y) * #{$outer-offset}) #{$outer-blur}
+      calc(-1 * #{$outer-offset}) rgba(0, 0, 0, $outer-alpha);
+}
+
+/* Raised-content band. Compresses the tier into a gradient: most of the weight
+   in the first few pixels, trailing off over the tier's outer blur distance. */
+@mixin cover-edge-band($edge-alpha, $mid-alpha, $mid-stop, $reach) {
+  background: linear-gradient(
+    var(--cover-shadow-angle),
+    rgba(0, 0, 0, $edge-alpha) 0,
+    rgba(0, 0, 0, $mid-alpha) $mid-stop,
+    transparent $reach
+  );
+}
+
+/* Cast direction, expressed once per cover position as unitless signs pointing
+   from the cover toward the content. Scoped to the body class so cards carry no
+   extra inherited custom properties while the setting is off. */
+body.dynamic-views-cover-shadow-cover .dynamic-views .card.image-format-cover {
+  --cover-shadow-dir-x: 0;
+  --cover-shadow-dir-y: 0;
+}
+body.dynamic-views-cover-shadow-cover
+  .dynamic-views
+  .card.card-cover-top.image-format-cover {
+  --cover-shadow-dir-y: 1;
+}
+body.dynamic-views-cover-shadow-cover
+  .dynamic-views
+  .card.card-cover-bottom.image-format-cover {
+  --cover-shadow-dir-y: -1;
+}
+body.dynamic-views-cover-shadow-cover
+  .dynamic-views
+  .card.card-cover-left.image-format-cover {
+  --cover-shadow-dir-x: 1;
+}
+body.dynamic-views-cover-shadow-cover
+  .dynamic-views
+  .card.card-cover-right.image-format-cover {
+  --cover-shadow-dir-x: -1;
+}
+
+/* Gradient angle for the raised-content band, pointing at the cover edge that
+   touches the content: 0deg starts the gradient at the bottom edge, 90deg at the
+   left, 180deg at the top, 270deg at the right. */
+body.dynamic-views-cover-shadow-content
+  .dynamic-views
+  .card.card-cover-top.image-format-cover {
+  --cover-shadow-angle: 0deg;
+}
+body.dynamic-views-cover-shadow-content
+  .dynamic-views
+  .card.card-cover-bottom.image-format-cover {
+  --cover-shadow-angle: 180deg;
+}
+body.dynamic-views-cover-shadow-content
+  .dynamic-views
+  .card.card-cover-left.image-format-cover {
+  --cover-shadow-angle: 270deg;
+}
+body.dynamic-views-cover-shadow-content
+  .dynamic-views
+  .card.card-cover-right.image-format-cover {
+  --cover-shadow-angle: 90deg;
+}
+
+/* Under cover: the shadow sits beneath the cover, cast onto the content.
+   z-index lifts the wrapper and its shadow above card content, which would
+   otherwise paint its text over the shadow. The card border ::after sits at
+   z-index 5, so the border still draws on top. */
+body.dynamic-views-cover-shadow-cover
+  .dynamic-views
+  .card.image-format-cover
+  .card-cover-wrapper {
+  z-index: 1;
+  @include cover-edge-shadow(15px, 30px, 0.1);
+}
+
+body.theme-dark.dynamic-views-cover-shadow-cover
+  .dynamic-views
+  .card.image-format-cover
+  .card-cover-wrapper {
+  @include cover-edge-shadow(30px, 90px, 0.2);
+}
+
+/* Only top/bottom wrappers are in flow — left/right are already absolutely
+   positioned and must not be reset to relative. */
+body.dynamic-views-cover-shadow-cover
+  .dynamic-views
+  .card:is(.card-cover-top, .card-cover-bottom).image-format-cover
+  .card-cover-wrapper {
+  position: relative;
+}
+
+/* Under content: the shadow sits beneath the content, cast onto the cover along
+   the edge the two share, painted over the image itself. An overlay pseudo-element is the only
+   layer that sits above the cover image — inset shadows on the wrapper, on
+   .card-cover or on the image embed all paint below the positioned img. The
+   overlay only exists while this setting is on, keeping the WebKit remount
+   layer-creation cost (see _poster.scss) off the default path. */
+body.dynamic-views-cover-shadow-content
+  .dynamic-views
+  .card:is(.card-cover-top, .card-cover-bottom).image-format-cover
+  .card-cover-wrapper {
+  position: relative;
+}
+
+/* Cover-only cards excluded — with no content there is nothing casting. */
+body.dynamic-views-cover-shadow-content
+  .dynamic-views
+  .card.image-format-cover:is(.has-card-content, .has-header)
+  .card-cover-wrapper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  /* Must clear the cover img's own z-index: 1, or the image paints over the
+     band. Stays below the card border ::after at z-index 5. */
+  z-index: 2;
+  /* A gradient, not an inset box-shadow: inset spread is uniform, and the
+     Dramatic tier's blur is roughly four times its offset, so the blur reaches
+     inward on all four edges and shades the whole perimeter. The stops
+     approximate the light tier — 30px reach, ~0.28 combined alpha. */
+  @include cover-edge-band(0.28, 0.1, 8px, 30px);
+}
+
+/* Dark theme: matches the heavier outer layer of the dark --shadow-l. */
+body.theme-dark.dynamic-views-cover-shadow-content
+  .dynamic-views
+  .card.image-format-cover:is(.has-card-content, .has-header)
+  .card-cover-wrapper::after {
+  @include cover-edge-band(0.38, 0.14, 12px, 60px);
 }
 
 /* ============================================

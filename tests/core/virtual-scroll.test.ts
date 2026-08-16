@@ -3,8 +3,13 @@ import {
   estimateUnmountedHeight,
   getScrollAnchor,
   getAnchorTop,
+  buildMountEstimateProfile,
+  estimateCardHeight,
+  hasCardImage,
+  isMountEstimateProfile,
 } from '../../src/core/virtual-scroll';
 import type { VirtualItem } from '../../src/core/virtual-scroll';
+import type { MountEstimateProfile } from '../../src/types';
 import {
   UNMEASURED_CARD_HEIGHT,
   FIXED_COVER_HEIGHT_GRID,
@@ -323,6 +328,11 @@ function stub(
     groupKey: string | undefined;
     path: string;
     index: number;
+    measuredHeight: number;
+    measuredAtWidth: number;
+    scalableHeight: number;
+    fixedHeight: number;
+    imageUrl: string | string[] | undefined;
   }>
 ): VirtualItem {
   return {
@@ -331,8 +341,15 @@ function stub(
     y: overrides.y ?? 0,
     height: overrides.height ?? 100,
     groupKey: overrides.groupKey ?? undefined,
-    cardData: { path: overrides.path ?? 'note.md' },
+    cardData: {
+      path: overrides.path ?? 'note.md',
+      imageUrl: overrides.imageUrl,
+    },
     index: overrides.index ?? 0,
+    measuredHeight: overrides.measuredHeight ?? 0,
+    measuredAtWidth: overrides.measuredAtWidth ?? 0,
+    scalableHeight: overrides.scalableHeight ?? 0,
+    fixedHeight: overrides.fixedHeight ?? 0,
   } as unknown as VirtualItem;
 }
 
@@ -423,5 +440,328 @@ describe('getAnchorTop', () => {
     const offsets = new Map<string | undefined, number>([['g1', 400]]);
     const items = [stub({ y: 60, path: 'card.md', index: 0, groupKey: 'g1' })];
     expect(getAnchorTop('card.md', items, offsets)).toBe(460);
+  });
+});
+
+describe('hasCardImage', () => {
+  it('is true for a single URL', () => {
+    expect(hasCardImage({ imageUrl: 'app://local/a.png' })).toBe(true);
+  });
+
+  it('is true for a non-empty array', () => {
+    expect(hasCardImage({ imageUrl: ['app://local/a.png'] })).toBe(true);
+  });
+
+  it('is false for an empty array', () => {
+    expect(hasCardImage({ imageUrl: [] })).toBe(false);
+  });
+
+  it('is false for undefined', () => {
+    expect(hasCardImage({ imageUrl: undefined })).toBe(false);
+  });
+
+  it('is false for an empty string', () => {
+    expect(hasCardImage({ imageUrl: '' })).toBe(false);
+  });
+});
+
+/** Measured item shaped for the profile builder */
+function measured(
+  scalable: number,
+  fixed: number,
+  width: number,
+  imageUrl?: string
+): VirtualItem {
+  return stub({
+    measuredHeight: scalable + fixed,
+    measuredAtWidth: width,
+    scalableHeight: scalable,
+    fixedHeight: fixed,
+    imageUrl,
+  });
+}
+
+const IMG = 'app://local/a.png';
+
+describe('buildMountEstimateProfile', () => {
+  it('takes the median of each group', () => {
+    const items = [
+      measured(100, 50, 300, IMG),
+      measured(300, 70, 300, IMG),
+      measured(200, 60, 300, IMG),
+      measured(0, 90, 300),
+      measured(0, 110, 300),
+      measured(0, 100, 300),
+    ];
+    expect(buildMountEstimateProfile(items, 300, 250)).toEqual({
+      withImage: { scalable: 200, fixed: 60 },
+      withoutImage: { scalable: 0, fixed: 100 },
+      measuredAtWidth: 300,
+      coverWidth: 250,
+    });
+  });
+
+  it('averages the middle pair for an even sample count', () => {
+    const items = [
+      measured(100, 40, 300, IMG),
+      measured(200, 60, 300, IMG),
+      measured(0, 80, 300),
+      measured(0, 100, 300),
+    ];
+    expect(buildMountEstimateProfile(items, 300, 250)).toEqual({
+      withImage: { scalable: 150, fixed: 50 },
+      withoutImage: { scalable: 0, fixed: 90 },
+      measuredAtWidth: 300,
+      coverWidth: 250,
+    });
+  });
+
+  it('copies the imaged fixed height when no imageless card was measured', () => {
+    const items = [
+      measured(100, 50, 300, IMG),
+      measured(200, 60, 300, IMG),
+      measured(300, 70, 300, IMG),
+    ];
+    expect(buildMountEstimateProfile(items, 300, 250)).toMatchObject({
+      withImage: { scalable: 200, fixed: 60 },
+      withoutImage: { scalable: 0, fixed: 60 },
+    });
+  });
+
+  it('copies the imageless fixed height when no imaged card was measured', () => {
+    const items = [
+      measured(0, 80, 300),
+      measured(0, 100, 300),
+      measured(0, 120, 300),
+    ];
+    expect(buildMountEstimateProfile(items, 300, 0)).toMatchObject({
+      withImage: { scalable: 0, fixed: 100 },
+      withoutImage: { scalable: 0, fixed: 100 },
+    });
+  });
+
+  it('accepts a group with a single sample', () => {
+    const items = [
+      measured(240, 60, 300, IMG),
+      measured(0, 80, 300),
+      measured(0, 100, 300),
+    ];
+    expect(buildMountEstimateProfile(items, 300, 250)).toMatchObject({
+      withImage: { scalable: 240, fixed: 60 },
+      withoutImage: { scalable: 0, fixed: 90 },
+    });
+  });
+
+  it('returns null below three surviving samples', () => {
+    const items = [measured(200, 60, 300, IMG), measured(0, 100, 300)];
+    expect(buildMountEstimateProfile(items, 300, 250)).toBeNull();
+  });
+
+  it('returns null when referenceWidth is 0', () => {
+    const items = [
+      measured(100, 50, 300, IMG),
+      measured(200, 60, 300, IMG),
+      measured(300, 70, 300, IMG),
+    ];
+    expect(buildMountEstimateProfile(items, 0, 250)).toBeNull();
+  });
+
+  it('skips never-measured items', () => {
+    const items = [
+      measured(100, 50, 300, IMG),
+      measured(200, 60, 300, IMG),
+      measured(300, 70, 300, IMG),
+      stub({ imageUrl: IMG }),
+      stub({}),
+    ];
+    expect(buildMountEstimateProfile(items, 300, 250)).toMatchObject({
+      withImage: { scalable: 200, fixed: 60 },
+    });
+  });
+
+  it('ignores samples measured at a different card width', () => {
+    const items = [
+      measured(100, 50, 300, IMG),
+      measured(200, 60, 300, IMG),
+      measured(300, 70, 300, IMG),
+      measured(900, 900, 180, IMG),
+      measured(900, 900, 180, IMG),
+      measured(900, 900, 180, IMG),
+    ];
+    expect(buildMountEstimateProfile(items, 300, 250)).toMatchObject({
+      withImage: { scalable: 200, fixed: 60 },
+    });
+  });
+
+  it('keeps samples within the 1px width tolerance', () => {
+    const items = [
+      measured(100, 50, 299, IMG),
+      measured(200, 60, 300, IMG),
+      measured(300, 70, 301, IMG),
+    ];
+    expect(buildMountEstimateProfile(items, 300, 250)).toMatchObject({
+      withImage: { scalable: 200, fixed: 60 },
+    });
+  });
+
+  it('returns null when every sample was measured at another width', () => {
+    const items = [
+      measured(100, 50, 180, IMG),
+      measured(200, 60, 180, IMG),
+      measured(300, 70, 180, IMG),
+    ];
+    expect(buildMountEstimateProfile(items, 300, 250)).toBeNull();
+  });
+
+  it('rounds every persisted number to an integer', () => {
+    const items = [
+      measured(100.4, 50.5, 300.6, IMG),
+      measured(0, 80.5, 300.6),
+      measured(0, 81.5, 300.6),
+    ];
+    const profile = buildMountEstimateProfile(items, 300.6, 250.4)!;
+    for (const value of [
+      profile.withImage.scalable,
+      profile.withImage.fixed,
+      profile.withoutImage.scalable,
+      profile.withoutImage.fixed,
+      profile.measuredAtWidth,
+      profile.coverWidth,
+    ]) {
+      expect(Number.isInteger(value)).toBe(true);
+    }
+  });
+});
+
+describe('estimateCardHeight', () => {
+  const profile: MountEstimateProfile = {
+    withImage: { scalable: 200, fixed: 60 },
+    withoutImage: { scalable: 0, fixed: 100 },
+    measuredAtWidth: 300,
+    coverWidth: 280,
+  };
+
+  it('matches estimateUnmountedHeight for the imaged group', () => {
+    expect(estimateCardHeight(profile, true, 150, 0)).toBeCloseTo(
+      estimateUnmountedHeight(
+        {
+          scalableHeight: 200,
+          fixedHeight: 60,
+          measuredAtWidth: 300,
+          height: 260,
+        },
+        150
+      ),
+      5
+    );
+  });
+
+  it('matches estimateUnmountedHeight for the imageless group', () => {
+    expect(estimateCardHeight(profile, false, 450, 0)).toBeCloseTo(
+      estimateUnmountedHeight(
+        {
+          scalableHeight: 0,
+          fixedHeight: 100,
+          measuredAtWidth: 300,
+          height: 100,
+        },
+        450
+      ),
+      5
+    );
+  });
+
+  it('reproduces the measured height at the original width', () => {
+    expect(estimateCardHeight(profile, true, 300, 0)).toBe(260);
+  });
+
+  it('replaces the median cover with the cached ratio in contain mode', () => {
+    // 0.5 * 280 * (150 / 300) + 60 * sqrt(2) = 70 + 84.85
+    expect(estimateCardHeight(profile, true, 150, 0.5)).toBeCloseTo(154.85, 1);
+  });
+
+  it('ignores the cover ratio when coverWidth is unknown', () => {
+    const noCover: MountEstimateProfile = { ...profile, coverWidth: 0 };
+    expect(estimateCardHeight(noCover, true, 150, 0.5)).toBeCloseTo(
+      estimateCardHeight(noCover, true, 150, 0),
+      5
+    );
+  });
+
+  it('picks the group before the unmeasured guard', () => {
+    const unusable: MountEstimateProfile = { ...profile, measuredAtWidth: 0 };
+    expect(estimateCardHeight(unusable, true, 200, 0)).toBe(60);
+    expect(estimateCardHeight(unusable, false, 200, 0)).toBe(100);
+  });
+
+  it('falls back to UNMEASURED_CARD_HEIGHT when the picked group has no fixed height', () => {
+    const empty: MountEstimateProfile = {
+      withImage: { scalable: 0, fixed: 0 },
+      withoutImage: { scalable: 0, fixed: 100 },
+      measuredAtWidth: 0,
+      coverWidth: 0,
+    };
+    expect(estimateCardHeight(empty, true, 200, 0)).toBe(
+      UNMEASURED_CARD_HEIGHT
+    );
+  });
+
+  it('falls back when cardWidth is 0', () => {
+    expect(estimateCardHeight(profile, false, 0, 0)).toBe(100);
+  });
+
+  it('clamps to at least 1px', () => {
+    const zeroed: MountEstimateProfile = {
+      withImage: { scalable: 0, fixed: 0 },
+      withoutImage: { scalable: 0, fixed: 0 },
+      measuredAtWidth: 300,
+      coverWidth: 0,
+    };
+    expect(estimateCardHeight(zeroed, true, 150, 0)).toBe(1);
+  });
+});
+
+describe('isMountEstimateProfile', () => {
+  const valid: MountEstimateProfile = {
+    withImage: { scalable: 200, fixed: 60 },
+    withoutImage: { scalable: 0, fixed: 100 },
+    measuredAtWidth: 300,
+    coverWidth: 280,
+  };
+
+  it('accepts a well-formed profile', () => {
+    expect(isMountEstimateProfile(valid)).toBe(true);
+  });
+
+  it('rejects undefined and non-objects', () => {
+    expect(isMountEstimateProfile(undefined)).toBe(false);
+    expect(isMountEstimateProfile(null)).toBe(false);
+    expect(isMountEstimateProfile(42)).toBe(false);
+  });
+
+  it('rejects a missing group', () => {
+    expect(
+      isMountEstimateProfile({
+        withImage: valid.withImage,
+        measuredAtWidth: 300,
+        coverWidth: 280,
+      })
+    ).toBe(false);
+  });
+
+  it('rejects a non-numeric group member', () => {
+    expect(
+      isMountEstimateProfile({
+        ...valid,
+        withImage: { scalable: '200', fixed: 60 },
+      })
+    ).toBe(false);
+  });
+
+  it('rejects non-numeric widths', () => {
+    expect(isMountEstimateProfile({ ...valid, measuredAtWidth: '300' })).toBe(
+      false
+    );
+    expect(isMountEstimateProfile({ ...valid, coverWidth: null })).toBe(false);
   });
 });

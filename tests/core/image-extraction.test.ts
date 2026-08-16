@@ -30,7 +30,7 @@ async function waitForProbe(
   videoId: string,
   quality: string
 ): Promise<MockImage> {
-  const url = `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
+  const url = `https://i.ytimg.com/vi_webp/${videoId}/${quality}.webp`;
   for (let tick = 0; tick < 50; tick++) {
     const img = mockImages().find((candidate) => candidate.src === url);
     if (img) return img;
@@ -586,8 +586,8 @@ image: https://example.com/cover.png
     describe('YouTube thumbnail resolution', () => {
       const VIDEO_A = 'AAAAAAAAAAA';
       const VIDEO_B = 'BBBBBBBBBBB';
-      const thumbnail = (videoId: string) =>
-        `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+      const thumbnail = (videoId: string, quality = 'maxresdefault') =>
+        `https://i.ytimg.com/vi_webp/${videoId}/${quality}.webp`;
 
       beforeEach(() => {
         vi.useFakeTimers();
@@ -651,6 +651,7 @@ image: https://example.com/cover.png
         expect(mockImages()).toHaveLength(1);
 
         await failProbe(VIDEO_A, 'maxresdefault');
+        await failProbe(VIDEO_A, 'sddefault');
         await failProbe(VIDEO_A, 'hqdefault');
         await failProbe(VIDEO_A, 'mqdefault');
         await succeedProbe(VIDEO_B);
@@ -667,6 +668,22 @@ image: https://example.com/cover.png
           await extractImageEmbeds(mockFile, mockApp, { includeYoutube: false })
         ).toEqual([]);
         expect(mockImages()).toEqual([]);
+      });
+
+      it('should probe the rung the target width asks for', async () => {
+        mockApp.vault.cachedRead = vi
+          .fn()
+          .mockResolvedValue(`![](https://www.youtube.com/watch?v=${VIDEO_A})`);
+
+        // The whole point of threading the width down five signatures: without
+        // it the card fetches 1280px for a thumbnail it renders at 128px
+        const promise = extractImageEmbeds(mockFile, mockApp, {
+          youtubeTargetWidth: 384,
+        });
+        await succeedProbe(VIDEO_A, 'hqdefault');
+
+        expect(await promise).toEqual([thumbnail(VIDEO_A, 'hqdefault')]);
+        expect(mockImages()).toHaveLength(1);
       });
 
       it('should start no probes for a non-YouTube external image', async () => {

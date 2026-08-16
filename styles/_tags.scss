@@ -1,13 +1,16 @@
 /* Tag style: Outline (default) - reset all theme styles, apply only plugin styles */
-body:not(.dynamic-views-tag-style-theme) .dynamic-views .card-properties .tag {
+body:not(.dynamic-views-tag-style-theme)
+  .dynamic-views
+  :is(.card-properties, .card-subtitle)
+  .tag {
   all: unset;
   border-radius: var(--dynamic-views-pill-radius);
   border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
   color: var(--tag-text-color);
-  /* Padding stays em so the pill scales with the property value size */
+  /* Padding stays em so the pill scales with whatever tag size lands */
   font-size: var(
-    --dynamic-views-property-size-value,
-    var(--dynamic-views-font-ui-small)
+    --dynamic-views-tag-size-value,
+    var(--dynamic-views-font-ui-smaller)
   );
   line-height: 1;
   padding: calc(0.25em - 1px) calc(0.65em - 1px);
@@ -15,6 +18,9 @@ body:not(.dynamic-views-tag-style-theme) .dynamic-views .card-properties .tag {
 }
 
 /* Tag outline hover: card (hover/touch intent) */
+/* Deliberately NOT widened to .card-subtitle: at (0,8,1) it would outrank the
+   subtitle's own hover colour rule in _property-colors.scss at (0,7,2) and flip
+   subtitle tags to the tag hover colour, which the subtitle owns. */
 body:not(.dynamic-views-tag-style-theme):not(.dynamic-views-tag-style-fill)
   .dynamic-views
   .card.interact
@@ -24,7 +30,10 @@ body:not(.dynamic-views-tag-style-theme):not(.dynamic-views-tag-style-fill)
 }
 
 /* Tag style: Fill - colored background based on text color */
-body.dynamic-views-tag-style-fill .dynamic-views .card-properties .tag {
+body.dynamic-views-tag-style-fill
+  .dynamic-views
+  :is(.card-properties, .card-subtitle)
+  .tag {
   border: none;
   padding: 0.25em 0.65em;
   background-color: color-mix(in srgb, var(--tag-text-color) 10%, transparent);
@@ -35,7 +44,7 @@ body.dynamic-views-tag-style-fill .dynamic-views .card-properties .tag {
 body.dynamic-views-tag-style-fill
   .dynamic-views
   .card.interact
-  .card-properties
+  :is(.card-properties, .card-subtitle)
   .tag:is(:hover, :active) {
   background-color: color-mix(in srgb, var(--tag-text-color) 20%, transparent);
 }
@@ -43,14 +52,17 @@ body.dynamic-views-tag-style-fill
 /* Tag style: Theme style - no overrides, inherits Obsidian's a.tag styles */
 
 /* Tag style: Plaintext */
-body.dynamic-views-tag-style-plaintext .dynamic-views .card-properties .tag {
+body.dynamic-views-tag-style-plaintext
+  .dynamic-views
+  :is(.card-properties, .card-subtitle)
+  .tag {
   background-color: transparent;
   border: none;
   padding: 0;
   border-radius: 0;
   font-size: var(
-    --dynamic-views-property-size-value,
-    var(--dynamic-views-font-ui-small)
+    --dynamic-views-tag-size-value,
+    var(--dynamic-views-font-ui-smaller)
   );
 }
 
@@ -58,27 +70,29 @@ body.dynamic-views-tag-style-plaintext .dynamic-views .card-properties .tag {
 body.dynamic-views-tag-style-plaintext
   .dynamic-views
   .card.interact
-  .card-properties
+  :is(.card-properties, .card-subtitle)
   .tag:is(:hover, :active) {
   text-decoration: underline;
 }
 
 /* Tag color presets - semantic colors applied at element level via semantic color tokens */
+/* Widened to the subtitle because Fill derives its pill background from
+   --tag-text-color, which the subtitle's own colour override does not supply. */
 body.dynamic-views-tag-color-faint:not(.dynamic-views-tag-style-theme)
   .dynamic-views
-  .card-properties
+  :is(.card-properties, .card-subtitle)
   .tag {
   --tag-text-color: var(--dynamic-views-text-faint);
 }
 body.dynamic-views-tag-color-muted:not(.dynamic-views-tag-style-theme)
   .dynamic-views
-  .card-properties
+  :is(.card-properties, .card-subtitle)
   .tag {
   --tag-text-color: var(--dynamic-views-text-muted);
 }
 body.dynamic-views-tag-color-normal:not(.dynamic-views-tag-style-theme)
   .dynamic-views
-  .card-properties
+  :is(.card-properties, .card-subtitle)
   .tag {
   --tag-text-color: var(--dynamic-views-text-normal);
 }
@@ -119,7 +133,7 @@ body.dynamic-views-tag-color-custom {
 /* Custom fallback via semantic color tokens */
 body.dynamic-views-tag-color-custom:not(.dynamic-views-tag-style-theme)
   .dynamic-views
-  .card-properties
+  :is(.card-properties, .card-subtitle)
   .tag {
   --tag-text-color: var(
     --dynamic-views-tag-color-custom,
@@ -127,62 +141,98 @@ body.dynamic-views-tag-color-custom:not(.dynamic-views-tag-style-theme)
   );
 }
 
+/* Tag typography is consumed here and in the Theme rule below rather than on `.tag`
+   alone, because the Outline reset above uses `all: unset` — which resets every
+   inherited property to `inherit` but leaves custom properties intact. Both rules
+   match the reset's specificity (0,4,1) and are declared later in this same partial,
+   so the cascade resolves in their favour.
+   The fallbacks are literals rather than `inherit`, which deliberately severs tags
+   from the property row's own typography: each stem owns its traits. Font is the
+   one carve-out — it has no literal default, so it falls back to `inherit` and
+   unset means "keep the property row's font", as it always did. */
 /* Tag color application (skip when using theme styling) */
-body:not(.dynamic-views-tag-style-theme) .dynamic-views .card-properties .tag {
+body:not(.dynamic-views-tag-style-theme)
+  .dynamic-views
+  :is(.card-properties, .card-subtitle)
+  .tag {
   --tag-text-color: var(
     --dynamic-views-tag-color-value,
     var(--dynamic-views-text-faint)
   );
+  font-family: var(--dynamic-views-tag-font, inherit);
+  font-weight: var(
+    --dynamic-views-tag-weight,
+    var(--dynamic-views-font-weight)
+  );
+  font-style: var(--dynamic-views-tag-style, normal);
+  font-variant: var(--dynamic-views-tag-variant, normal);
+  text-transform: var(--dynamic-views-tag-case, none);
 }
 
 /* Theme default keeps the theme's colours and pill, but not its size: Obsidian
-   core sets `a.tag { font-size: var(--tag-size) }` (0.875em), which would size
-   tags independently of the property value setting. */
-body.dynamic-views-tag-style-theme .dynamic-views .card-properties .tag {
+   core sets `a.tag { font-size: var(--tag-size) }` (0.875em), which would
+   override the plugin's own tag size setting. */
+body.dynamic-views-tag-style-theme
+  .dynamic-views
+  :is(.card-properties, .card-subtitle)
+  .tag {
   font-size: var(
-    --dynamic-views-property-size-value,
+    --dynamic-views-tag-size-value,
+    var(--dynamic-views-font-ui-smaller)
+  );
+  font-family: var(--dynamic-views-tag-font, inherit);
+  font-weight: var(
+    --dynamic-views-tag-weight,
+    var(--dynamic-views-font-weight)
+  );
+  font-style: var(--dynamic-views-tag-style, normal);
+  font-variant: var(--dynamic-views-tag-variant, normal);
+  text-transform: var(--dynamic-views-tag-case, none);
+}
+
+/* Subtitle tags: Subtitle owns every typographic trait — font, size, case,
+   colour, weight, italic, small caps. The Tags settings supply only the pill:
+   border, radius, padding, background. The one exception is Match theme, where
+   the theme owns the colour and the branch below leaves it alone.
+   Both branches tie the widened rules above at (0,4,1) and are declared later,
+   so the cascade resolves in their favour. A bare `body .dynamic-views
+   .card-subtitle .tag` would score (0,3,1) and lose every declaration. */
+/* Colour is `inherit`, NOT the subtitle colour variable: the color-setting mixin
+   emits `color` directly for the faint/muted/normal variants without ever setting
+   --dynamic-views-subtitle-color-value, so the variable form would render faint
+   under a muted or normal subtitle. */
+/* line-height is listed deliberately — poster clipping measures the subtitle's
+   computed line height, and `all: unset` above would otherwise leave tags on the
+   inherited value only by accident. */
+body:not(.dynamic-views-tag-style-theme) .dynamic-views .card-subtitle .tag {
+  color: inherit;
+  font-family: var(--dynamic-views-subtitle-font);
+  font-size: var(
+    --dynamic-views-subtitle-size-value,
     var(--dynamic-views-font-ui-small)
   );
-}
-
-/* Tag typography.
-   The Outline reset above uses `all: unset`, which resets every inherited property
-   (font-weight, font-style, font-variant, text-transform) to `inherit`. These rules
-   match its specificity (0,4,1) and are declared later in this same partial, so the
-   cascade resolves in their favour for all four tag styles. */
-body.dynamic-views-tag-bold .dynamic-views .card-properties .tag {
-  font-weight: calc(
-    var(--dynamic-views-font-weight) + var(--dynamic-views-bold-modifier)
+  font-weight: var(
+    --dynamic-views-subtitle-weight,
+    var(--dynamic-views-font-weight)
   );
+  font-style: var(--dynamic-views-subtitle-style, normal);
+  font-variant: var(--dynamic-views-subtitle-variant, normal);
+  text-transform: var(--dynamic-views-subtitle-case, none);
+  line-height: var(--dynamic-views-line-height-tight);
 }
 
-body.dynamic-views-tag-italic .dynamic-views .card-properties .tag {
-  font-style: italic;
-}
-
-body.dynamic-views-tag-small-caps .dynamic-views .card-properties .tag {
-  font-variant: small-caps;
-}
-
-body.dynamic-views-tag-case-lowercase .dynamic-views .card-properties .tag {
-  text-transform: lowercase;
-}
-
-body.dynamic-views-tag-case-uppercase .dynamic-views .card-properties .tag {
-  text-transform: uppercase;
-}
-
-body.dynamic-views-tag-case-title .dynamic-views .card-properties .tag {
-  text-transform: capitalize;
-}
-
-/* A tag property used as the subtitle is subtitle text, not a tag — the Tags
-   settings must not reach it. Outranks Obsidian's own a.tag styling, so the
-   native pill does not show through once the plugin rules stop applying.
-   Styling only: click and drag are JS-wired and unaffected. The pointer is
-   restored because `all: unset` drops it; _hover-and-touch.scss still gates it
-   back to `default` on non-interact cards, matching property-row tags. */
-.dynamic-views .card-subtitle .tag {
-  all: unset;
-  cursor: pointer;
+body.dynamic-views-tag-style-theme .dynamic-views .card-subtitle .tag {
+  font-family: var(--dynamic-views-subtitle-font);
+  font-size: var(
+    --dynamic-views-subtitle-size-value,
+    var(--dynamic-views-font-ui-small)
+  );
+  font-weight: var(
+    --dynamic-views-subtitle-weight,
+    var(--dynamic-views-font-weight)
+  );
+  font-style: var(--dynamic-views-subtitle-style, normal);
+  font-variant: var(--dynamic-views-subtitle-variant, normal);
+  text-transform: var(--dynamic-views-subtitle-case, none);
+  line-height: var(--dynamic-views-line-height-tight);
 }

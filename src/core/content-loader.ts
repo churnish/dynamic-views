@@ -68,7 +68,7 @@ export interface TextPreviewEntry {
  * @param file - TFile object
  * @param app - Obsidian app instance
  * @param imagePropertyValues - Array of image property values
- * @param fallbackToEmbeds - Whether to extract embedded images if no property images
+ * @param showFileImages - When images found in the file itself (self-image, in-note embeds) may be used
  * @param imageCache - Cache object to store loaded images
  * @param hasImageCache - Cache object to track image availability
  * @param embedOptions - Options for embed extraction (YouTube, cardlink)
@@ -78,12 +78,13 @@ export async function loadImageForEntry(
   file: TFile,
   app: App,
   imagePropertyValues: unknown[],
-  fallbackToEmbeds: 'always' | 'if-unavailable' | 'never',
+  showFileImages: 'always' | 'if-unavailable' | 'never',
   imageCache: Record<string, string | string[]>,
   hasImageCache: Record<string, boolean>,
   embedOptions?: {
     includeYoutube?: boolean;
     includeCardLink?: boolean;
+    youtubeTargetWidth?: number;
   }
 ): Promise<void> {
   // Skip if already in caller's cache (uses path, not composite key, because each
@@ -93,10 +94,10 @@ export async function loadImageForEntry(
   }
 
   // Image files use themselves as card image when no property images exist
-  // (gated on fallbackToEmbeds — "never" suppresses self-image as embed fallback;
+  // (gated on showFileImages — "never" suppresses self-image as embed fallback;
   // getResourcePath is synchronous so in-flight dedup is unnecessary)
   if (
-    fallbackToEmbeds !== 'never' &&
+    showFileImages !== 'never' &&
     imagePropertyValues.length === 0 &&
     VALID_IMAGE_EXTENSIONS.includes(file.extension?.toLowerCase() ?? '')
   ) {
@@ -110,13 +111,15 @@ export async function loadImageForEntry(
 
   // If another view is loading this path with same settings, await its result
   // Composite key includes all parameters that affect output:
-  // - fallbackToEmbeds: determines whether embeds are extracted
+  // - showFileImages: determines whether embeds are extracted
   // - embedOptions: determines which embed types (YouTube, CardLink) are included
   // - maxImages: determines embed count limit and final image slice
+  // - youtubeTargetWidth: selects the YouTube rung, so it changes the resolved
+  //   URL — without it two views at different card sizes share one wrong result
   const embedKey = embedOptions
-    ? `${embedOptions.includeYoutube ?? false}|${embedOptions.includeCardLink ?? false}`
-    : 'false|false';
-  const cacheKey = `${path}|${fallbackToEmbeds}|${embedKey}|${maxImages}`;
+    ? `${embedOptions.includeYoutube ?? false}|${embedOptions.includeCardLink ?? false}|${embedOptions.youtubeTargetWidth ?? 'max'}`
+    : 'false|false|max';
+  const cacheKey = `${path}|${showFileImages}|${embedKey}|${maxImages}`;
   const existing = inFlightImages.get(cacheKey);
   if (existing) {
     const result = await existing;
@@ -154,20 +157,20 @@ export async function loadImageForEntry(
         ...externalUrls,
       ];
 
-      // Handle embed images based on fallbackToEmbeds mode
-      if (fallbackToEmbeds === 'always') {
+      // Handle embed images based on showFileImages mode
+      if (showFileImages === 'always') {
         // Pull from properties first, then append in-note embeds
         // Skip parsing if property already has max images
         if (validImages.length < maxImages) {
           const embedImages = await extractImageEmbeds(file, app, embedOptions);
           validImages = [...validImages, ...embedImages];
         }
-      } else if (fallbackToEmbeds === 'if-unavailable') {
+      } else if (showFileImages === 'if-unavailable') {
         // Only use embeds if no valid property images
         if (validImages.length === 0) {
           validImages = await extractImageEmbeds(file, app, embedOptions);
         }
-      } else if (fallbackToEmbeds === 'never') {
+      } else if (showFileImages === 'never') {
         // Only use property images, never use embeds
         // No action needed - validImages already contains only property images
       }
@@ -209,7 +212,7 @@ export async function loadImageForEntry(
  * Loads images for multiple entries in parallel
  *
  * @param entries - Array of entries with path, file, and imagePropertyValues
- * @param fallbackToEmbeds - Whether to extract embedded images if no property images
+ * @param showFileImages - When images found in the file itself (self-image, in-note embeds) may be used
  * @param app - Obsidian app instance
  * @param imageCache - Cache object to store loaded images
  * @param hasImageCache - Cache object to track image availability
@@ -221,13 +224,14 @@ export async function loadImagesForEntries(
     file: TFile;
     imagePropertyValues: unknown[];
   }>,
-  fallbackToEmbeds: 'always' | 'if-unavailable' | 'never',
+  showFileImages: 'always' | 'if-unavailable' | 'never',
   app: App,
   imageCache: Record<string, string | string[]>,
   hasImageCache: Record<string, boolean>,
   embedOptions?: {
     includeYoutube?: boolean;
     includeCardLink?: boolean;
+    youtubeTargetWidth?: number;
   }
 ): Promise<void> {
   await Promise.all(
@@ -237,7 +241,7 @@ export async function loadImagesForEntries(
         entry.file,
         app,
         entry.imagePropertyValues,
-        fallbackToEmbeds,
+        showFileImages,
         imageCache,
         hasImageCache,
         embedOptions

@@ -7,12 +7,29 @@
      card gap: each of those elements cancels the gap-driven container inset with
      calc(chrome-inset - bases-view-padding), so both must be named, and a bare
      --size-4-3 at any of those sites would desync if this seed ever changed.
-     Also the floor applyViewContainerStyles() clamps the gap-driven padding to. */
+     Also the floor applyViewContainerStyles() clamps the gap-driven padding to —
+     it reads this token and resolves the floor in JS, because --bases-view-padding
+     must stay a plain length for Masonry's overflow-clip-margin. */
   --dynamic-views-chrome-inset: var(--size-4-3);
   --bases-view-padding: var(--dynamic-views-chrome-inset);
   --dynamic-views-bases-view-padding: var(--bases-view-padding);
   scroll-padding-block: var(--dynamic-views-bases-view-padding);
   container-type: inline-size;
+}
+
+/* Card gap floored at the chrome inset, for the spacings that separate cards from
+   chrome rather than from each other — header to first card, last card to divider,
+   last card to the end-of-view line. Those read as crowding well before card-to-card
+   spacing does, and the gap slider reaches 0.
+   Defined on the container rather than beside the seed above because
+   --dynamic-views-card-gap is written HERE by applyViewContainerStyles(), and custom
+   properties inherit downward only — a .bases-view-level definition would never see
+   it and would silently resolve to the fallback. */
+.dynamic-views {
+  --dynamic-views-card-gap-floored: max(
+    var(--dynamic-views-chrome-inset),
+    var(--dynamic-views-card-gap, var(--size-4-3))
+  );
 }
 
 /* Android: contain paint invalidation from CSS Grid relayout propagating
@@ -234,7 +251,7 @@ body:not(.dynamic-views-disable-sticky-group-header)
 }
 
 /* Hide group result count when toggle enabled */
-body.dynamic-views-hide-group-count .dynamic-views .bases-group-count {
+body.dynamic-views-hide-group-result-count .dynamic-views .bases-group-count {
   display: none;
 }
 

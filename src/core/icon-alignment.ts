@@ -51,7 +51,7 @@ export function applyIconOpticalOffset(container: HTMLElement): boolean {
   const iconRect = icon.getBoundingClientRect();
   const iconCenterY = iconRect.top + iconRect.height / 2;
 
-  // Get text bounding rect — Bases uses a bare text node
+  // Get text bounding rect — a bare text node normally, or the `.date-wrapper` element when date separators are dimmed
   let textRect: DOMRect;
   if (textNode.nodeType === 3) {
     const range = wrapper.ownerDocument.createRange();

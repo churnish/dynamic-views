@@ -7,7 +7,7 @@ updated: 2026-04-12
 # Grid optimization roadmap
 
 - Grid uses CSS Grid layout with virtual scroll (committed-row lock) and scroll-position-based content-visibility gating.
-- **Profiling reference**: session `39ae9fd1` (initial), session `471c8e8d` (follow-up with bail-out and batch optimizations). Latest trace: `tall.base` popout, M4 Pro, no throttling — 1,437ms total forced reflow, 38 style recalcs averaging 56ms each (3,000–6,000 elements per recalc). 90% of reflow cost is Bases internals; plugin code contributes ~7.6% (`stretchPosterCardsInMixedRows` at 109ms).
+- **Profiling reference**: session `39ae9fd1` (initial), session `471c8e8d` (follow-up with bail-out and batch optimizations). Latest trace: `tall.base` popout, M4 Pro, no throttling — 1,437ms total forced reflow, 38 style recalcs averaging 56ms each (3,000–6,000 elements per recalc). 90% of reflow cost is Bases internals; plugin code contributed ~7.6%, all of it in the poster mixed-row stretch pass — since removed in favour of a pure CSS `aspect-ratio` chain.
 - Grid fills in 120ms vs Masonry 62ms with identical 10-card budget — CSS Grid style invalidation cascades to all items on each insertion; absolute positioning (Masonry) is style-isolated.
 - Shared card views optimizations (rendering, cleanup, properties) live in [card-views-roadmap.md](card-views-roadmap.md).
 

@@ -3,7 +3,7 @@
  */
 
 import { App, Menu, Notice, Platform, TFile, setIcon } from 'obsidian';
-import { getOwnerWindow, type OwnerWindow } from '../utils/owner-window';
+import { getOwnerWindow } from '../utils/owner-window';
 
 /**
  * Show context menu for external links (URLs)
@@ -17,8 +17,7 @@ export function showExternalLinkContextMenu(
   e.stopPropagation();
   e.preventDefault();
 
-  const win: OwnerWindow =
-    (e.target as HTMLElement)?.ownerDocument?.defaultView ?? window;
+  const win = getOwnerWindow(e.target as HTMLElement);
   const menu = new Menu();
 
   menu.addItem((item) =>

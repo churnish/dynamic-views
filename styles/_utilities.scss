@@ -28,18 +28,18 @@
 }
 
 /* End of content indicator.
-   Cards-to-line spacing follows the card gap. Everything else about the line is
-   fixed: the inline and bottom margins cancel the scroll container's gap-driven
-   inset, so the line keeps a constant distance from the pane edges and from the
-   view bottom. Safe as plain margins — this is a direct child of .dynamic-views,
-   not a grid item, so no tracks shift. */
+   Cards-to-line spacing follows the card gap, floored at the chrome inset.
+   Everything else about the line is fixed: the inline and bottom margins cancel
+   the scroll container's gap-driven inset, so the line keeps a constant distance
+   from the pane edges and from the view bottom. Safe as plain margins — this is a
+   direct child of .dynamic-views, not a grid item, so no tracks shift. */
 .dynamic-views-end-indicator {
-  margin-top: var(--dynamic-views-card-gap, var(--size-4-3));
+  margin-top: var(--dynamic-views-card-gap-floored);
   margin-inline: calc(
-    var(--size-4-3) - var(--dynamic-views-bases-view-padding)
+    var(--dynamic-views-chrome-inset) - var(--dynamic-views-bases-view-padding)
   );
   margin-bottom: calc(
-    var(--size-4-3) - var(--dynamic-views-bases-view-padding)
+    var(--dynamic-views-chrome-inset) - var(--dynamic-views-bases-view-padding)
   );
   border-top: 1px solid var(--dynamic-views-background-modifier-border);
 }
@@ -50,13 +50,6 @@ body:not(.is-mobile) .dynamic-views-end-indicator {
 
 body.dynamic-views-hide-end-indicator .dynamic-views-end-indicator {
   display: none;
-}
-
-/* Measurement: suppresses CSS Grid row stretch so imageless cards report
-   natural content height, not row-inflated height. Toggled by
-   stretchPosterCardsInMixedRows during the read phase. */
-.dynamic-views-align-start {
-  align-self: start;
 }
 
 /* Programmatic utility classes */

@@ -292,6 +292,14 @@ body[class*='dynamic-views-property-color-without-names-']
     color: var(--dynamic-views-link-external-color);
   }
 
+  /* Links to notes that do not exist dim like the editor and native Bases values.
+     Outranks the .property a.internal-link rule above on class count, so it holds
+     wherever a link is rendered, not just in property rows. */
+  .internal-link.is-unresolved {
+    color: var(--dynamic-views-link-unresolved-color);
+    opacity: var(--dynamic-views-link-unresolved-opacity);
+  }
+
   /* Subtitle color application */
   .card-subtitle {
     color: var(

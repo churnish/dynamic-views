@@ -280,6 +280,13 @@
 
   /* Property name (above mode) */
   .property-name {
+    font-weight: var(
+      --dynamic-views-property-name-weight,
+      var(--dynamic-views-font-weight)
+    );
+    font-style: var(--dynamic-views-property-name-style, normal);
+    font-variant: var(--dynamic-views-property-name-variant, normal);
+    text-transform: var(--dynamic-views-property-name-case, none);
     font-size: var(
       --dynamic-views-property-name-size-value,
       var(--dynamic-views-font-ui-smaller)
@@ -293,6 +300,13 @@
 
   /* Property name inline - as sibling of property-content */
   .property-name-inline {
+    font-weight: var(
+      --dynamic-views-property-name-weight,
+      var(--dynamic-views-font-weight)
+    );
+    font-style: var(--dynamic-views-property-name-style, normal);
+    font-variant: var(--dynamic-views-property-name-variant, normal);
+    text-transform: var(--dynamic-views-property-name-case, none);
     font-size: var(
       --dynamic-views-property-name-size-value,
       var(--dynamic-views-font-ui-smaller)
@@ -327,100 +341,6 @@ body.dynamic-views-full-row-align-right
   margin-left: auto;
 }
 
-/* Property name case transformations */
-body.dynamic-views-property-name-case-lowercase .dynamic-views .property-name,
-body.dynamic-views-property-name-case-lowercase
-  .dynamic-views
-  .property-name-inline {
-  text-transform: lowercase;
-}
-
-body.dynamic-views-property-name-case-uppercase .dynamic-views .property-name,
-body.dynamic-views-property-name-case-uppercase
-  .dynamic-views
-  .property-name-inline {
-  text-transform: uppercase;
-}
-
-body.dynamic-views-property-name-case-title .dynamic-views .property-name,
-body.dynamic-views-property-name-case-title
-  .dynamic-views
-  .property-name-inline {
-  text-transform: capitalize;
-}
-
-/* Property name bold */
-body.dynamic-views-property-name-bold .dynamic-views .property-name,
-body.dynamic-views-property-name-bold .dynamic-views .property-name-inline {
-  font-weight: var(--dynamic-views-font-semibold);
-}
-
-/* Property name italic */
-body.dynamic-views-property-name-italic .dynamic-views .property-name,
-body.dynamic-views-property-name-italic .dynamic-views .property-name-inline {
-  font-style: italic;
-}
-
-/* Property name small caps */
-body.dynamic-views-property-name-small-caps .dynamic-views .property-name,
-body.dynamic-views-property-name-small-caps
-  .dynamic-views
-  .property-name-inline {
-  font-variant: small-caps;
-}
-
-/* Property value traits are scoped to the property rows. A property-driven
-   subtitle also renders .property-content, and must follow the Subtitle
-   settings rather than these. */
-
-/* Property value bold */
-body.dynamic-views-property-bold
-  .dynamic-views
-  .card-properties
-  .property-content {
-  font-weight: calc(
-    var(--dynamic-views-font-weight) + var(--dynamic-views-bold-modifier)
-  );
-}
-
-/* Property value italic */
-body.dynamic-views-property-italic
-  .dynamic-views
-  .card-properties
-  .property-content {
-  font-style: italic;
-}
-
-/* Property value small caps */
-body.dynamic-views-property-small-caps
-  .dynamic-views
-  .card-properties
-  .property-content {
-  font-variant: small-caps;
-}
-
-/* Property value case transformations */
-body.dynamic-views-property-case-lowercase
-  .dynamic-views
-  .card-properties
-  .property-content {
-  text-transform: lowercase;
-}
-
-body.dynamic-views-property-case-uppercase
-  .dynamic-views
-  .card-properties
-  .property-content {
-  text-transform: uppercase;
-}
-
-body.dynamic-views-property-case-title
-  .dynamic-views
-  .card-properties
-  .property-content {
-  text-transform: capitalize;
-}
-
 .dynamic-views {
   /* Properties container */
   .card-properties {
@@ -440,6 +360,20 @@ body.dynamic-views-property-case-title
     &.names-above {
       gap: var(--size-4-3);
     }
+  }
+
+  /* Property value traits stay scoped to the property rows: a property-driven
+     subtitle also renders .property-content and must follow the Subtitle settings
+     instead. Consuming on .card-properties would leak text-transform into
+     .property-name, which has its own settings. */
+  .card-properties .property-content {
+    font-weight: var(
+      --dynamic-views-property-weight,
+      var(--dynamic-views-font-weight)
+    );
+    font-style: var(--dynamic-views-property-style, normal);
+    font-variant: var(--dynamic-views-property-variant, normal);
+    text-transform: var(--dynamic-views-property-case, none);
   }
 
   /* Timestamp wrapper - flex container for icon positioning */
@@ -519,7 +453,7 @@ body.dynamic-views-property-case-title
 
   .path-separator {
     color: inherit;
-    margin: 0 2px;
+    padding: 0 var(--dynamic-views-separator-spacing);
     -webkit-user-select: none;
     user-select: none;
     opacity: 0.5;
@@ -530,6 +464,34 @@ body.dynamic-views-property-case-title
     color: var(--dynamic-views-text-faint);
     opacity: 1;
   }
+
+  /* Inline wrapper keeps the date one flex item: a whitespace-only separator would collapse to zero width as a child of the inline-flex timestamp wrapper */
+  .date-wrapper {
+    display: inline;
+  }
+
+  /* No user-select: none — unlike path separators, copied dates must keep their punctuation */
+  .date-separator {
+    opacity: 0.5;
+    /* Approximates the air native gets from Chromium reserving a fixed-width box per
+       date field. Padding is the only way to reproduce it — the separator pseudo in a
+       real date input is layout-inert. */
+    padding: 0 var(--dynamic-views-separator-spacing);
+  }
+
+  .date-separator-spaced {
+    padding: 0;
+  }
+}
+
+body.dynamic-views-date-separators-solid .dynamic-views .date-separator {
+  opacity: 1;
+}
+
+/* Scoped to date separators, not the shared spacing variable — path separators keep
+   their padding so the toggle cannot silently restyle file paths too. */
+body.dynamic-views-date-separators-unpadded .dynamic-views .date-separator {
+  padding: 0;
 }
 
 /* Segment underline hover: card (hover/touch intent) */

@@ -2,7 +2,7 @@
 title: ESLint configuration
 description: ESLint config structure, project overrides, and bot vs local differences.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-11
+updated: 2026-08-09
 ---
 # ESLint configuration
 
@@ -27,6 +27,19 @@ The config uses `defineConfig()` from `eslint/config` — required because the o
 
 1. **`@typescript-eslint/no-unused-vars`** — adds `varsIgnorePattern: "^_"` for intentionally unused callback parameters (`_match`, `_newIndex`, etc.).
 2. **`no-undef: "off"` for TS files** — TypeScript handles undefined variable checking natively; the ESLint rule produces false positives on the `JSX` namespace. Recommended by typescript-eslint.
+
+## tsconfig divergences from sibling plugins
+
+The parent `AGENTS.md` requires `tsconfig.json` parity across all TS plugins. `include: ["**/*.ts", "eslint.config.js"]` is the shared value — the flat ESLint config is itself type-checked. Four keys in this plugin deliberately diverge from the siblings. Each was verified by aligning it and running `npx tsc --noEmit`; the error counts below are the result.
+
+| Key | This plugin | Siblings | Errors if aligned | Reason |
+|---|---|---|---|---|
+| `noImplicitAny` | `false` | `true` | 1 | An implicit-any index expression in `tests/core/randomize.test.ts`. Left as-is rather than churning a test. |
+| `lib` | `["DOM", "DOM.Iterable", "ES2022"]` | `["DOM", "ES5", "ES6", "ES7"]` | 31 | `DOM.Iterable` is required to iterate `NodeList`, `DOMTokenList`, and `DOMRectList` with `for...of` and spread, which the card render paths do throughout. |
+| `types` | `["vitest/globals", "node"]` | absent | 3165 | `vitest/globals` supplies `describe`/`it`/`expect` (the Vitest config sets `globals: true`); `node` supplies `__dirname`, used by the alias in [vitest.config.ts](../../vitest.config.ts). Siblings have no such test suite. |
+| `exclude` | `["node_modules", "archive"]` | `["node_modules"]` | 11 | `archive/` holds deprecated code kept for reference only. It imports modules that no longer exist and uses Jest globals, so it must not be type-checked. |
+
+`skipLibCheck` sits before `lib` here and after it in the siblings — key order only, no behavioral difference.
 
 ## Bot vs local ESLint differences
 

@@ -168,7 +168,7 @@ describe('content-loader', () => {
       expect(hasImageCache['test/file.md']).toBe(true);
     });
 
-    it('should append embeds when fallbackToEmbeds is "always"', async () => {
+    it('should append embeds when showFileImages is "always"', async () => {
       const imageCache: Record<string, string | string[]> = {};
       const hasImageCache: Record<string, boolean> = {};
 
@@ -196,7 +196,7 @@ describe('content-loader', () => {
       );
     });
 
-    it('should use embeds only when unavailable with fallbackToEmbeds "if-unavailable"', async () => {
+    it('should use embeds only when unavailable with showFileImages "if-unavailable"', async () => {
       const imageCache: Record<string, string | string[]> = {};
       const hasImageCache: Record<string, boolean> = {};
 
@@ -242,7 +242,7 @@ describe('content-loader', () => {
       expect(imageCache['test/file.md']).toBe('property.png');
     });
 
-    it('should ignore embeds completely when fallbackToEmbeds is "never"', async () => {
+    it('should ignore embeds completely when showFileImages is "never"', async () => {
       const imageCache: Record<string, string | string[]> = {};
       const hasImageCache: Record<string, boolean> = {};
 
@@ -292,7 +292,7 @@ describe('content-loader', () => {
       consoleSpy.mockRestore();
     });
 
-    it('should self-assign image file when fallbackToEmbeds is not never', async () => {
+    it('should self-assign image file when showFileImages is not never', async () => {
       const imageCache: Record<string, string | string[]> = {};
       const hasImageCache: Record<string, boolean> = {};
 
@@ -322,7 +322,7 @@ describe('content-loader', () => {
       expect(mockImageUtils.processImagePaths).not.toHaveBeenCalled();
     });
 
-    it('should not self-assign image file when fallbackToEmbeds is never', async () => {
+    it('should not self-assign image file when showFileImages is never', async () => {
       const imageCache: Record<string, string | string[]> = {};
       const hasImageCache: Record<string, boolean> = {};
 
@@ -705,7 +705,7 @@ describe('content-loader', () => {
       expect(imageCache2['test/file.md']).toBe('image.png');
     });
 
-    it('should load independently for different fallbackToEmbeds values', async () => {
+    it('should load independently for different showFileImages values', async () => {
       const imageCache1: Record<string, string | string[]> = {};
       const hasImageCache1: Record<string, boolean> = {};
       const imageCache2: Record<string, string | string[]> = {};
@@ -717,7 +717,7 @@ describe('content-loader', () => {
       });
       mockImageUtils.extractImageEmbeds.mockResolvedValue(['embed.png']);
 
-      // Launch concurrent loads with same path but different fallbackToEmbeds
+      // Launch concurrent loads with same path but different showFileImages
       const promise1 = loadImageForEntry(
         'test/file.md',
         mockFile,
