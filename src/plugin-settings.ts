@@ -29,6 +29,7 @@ const CONTEXT_MENU_DESC =
   'Show commands to create new Grid or Masonry base in folder context menus.';
 
 const FEEDBACK_URL = 'https://github.com/churnish/dynamic-views/issues';
+const HELP_URL = 'https://github.com/churnish/dynamic-views/discussions';
 
 /** Marks the sentence in the smart timestamp description that is shown only while it is on */
 const SMART_TIMESTAMP_CAVEAT_CLASS = 'dynamic-views-smart-timestamp-caveat';
@@ -402,17 +403,41 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
       },
 
       {
-        // `render` rather than `action` so the button keeps its label instead of
-        // turning the whole row into a click target.
-        name: 'Send feedback',
-        desc: 'Request features or report bugs.',
-        render: (setting) => {
-          setting.addButton((button) =>
-            button.setButtonText('Open').onClick(() => {
-              getOwnerWindow(setting.settingEl).open(FEEDBACK_URL, '_blank');
-            })
-          );
-        },
+        // Both rows address the plugin itself rather than any setting, so they
+        // close out the page in their own box. Help leads because it is the
+        // self-serve option — a user who finds an existing answer never needs
+        // the row below it.
+        type: 'group',
+        heading: 'Support',
+        items: [
+          {
+            // `render` rather than `action` so the button keeps its label
+            // instead of turning the whole row into a click target.
+            name: 'Help',
+            desc: 'View discussions or ask a question.',
+            render: (setting) => {
+              setting.addButton((button) =>
+                button.setButtonText('Open').onClick(() => {
+                  getOwnerWindow(setting.settingEl).open(HELP_URL, '_blank');
+                })
+              );
+            },
+          },
+          {
+            name: 'Send feedback',
+            desc: 'Request improvements or report issues.',
+            render: (setting) => {
+              setting.addButton((button) =>
+                button.setButtonText('Open').onClick(() => {
+                  getOwnerWindow(setting.settingEl).open(
+                    FEEDBACK_URL,
+                    '_blank'
+                  );
+                })
+              );
+            },
+          },
+        ],
       },
     ];
   }
