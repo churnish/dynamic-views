@@ -1755,6 +1755,11 @@ export class SharedCardRenderer {
     if (cardEl.querySelector('.card-header')) {
       cardEl.classList.add('has-header');
     }
+    // Gates the poster header's icon containment strips — see _header.scss.
+    // Kept in sync by updateUrlButton() when the URL value comes or goes.
+    if (cardEl.querySelector('.card-title-url-icon')) {
+      cardEl.classList.add('has-url-icon');
+    }
 
     // Masonry cards don't have final dimensions at render time (width/height set later
     // by masonry positioning) — the per-card ResizeObserver handles clipping for masonry.
@@ -2553,6 +2558,13 @@ export class SharedCardRenderer {
       this.urlButtonRerenderController.delete(cardEl);
       existingIcon.remove();
     }
+
+    // Re-derived from the DOM rather than from hasValidUrl: a valid URL on a
+    // card with no header renders no icon, and the class must track the icon.
+    cardEl.classList.toggle(
+      'has-url-icon',
+      !!cardEl.querySelector('.card-title-url-icon')
+    );
   }
 
   /**

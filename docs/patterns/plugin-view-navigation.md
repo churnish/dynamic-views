@@ -126,6 +126,7 @@ leaf.view.containerEl.querySelectorAll('.dynamic-views .card').length
 | `has-card-content` | Card has text preview or thumbnail |
 | `has-properties-bottom` | Properties rendered below content |
 | `has-header` | Card has a header (title/subtitle) |
+| `has-url-icon` | Card renders a URL icon in its header |
 | `compact-mode` | Compact card layout |
 | `compact-stacked` | Compact with stacked layout |
 | `content-hidden` | Card content hidden (content-visibility) |

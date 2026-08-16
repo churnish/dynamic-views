@@ -7,21 +7,35 @@
   }
 
   /* Keep clamped title/subtitle text from inflating card-content scroll height
-     in poster mode. This clips at the padding box, so the strips below give the
+     in poster mode. clip, not hidden: both contain the overflow, but clip creates
+     no scroll box. This clips at the padding box, so the strips below give the
      URL icon's hover halo room to paint — see the matching card-content strip
      in _poster.scss. */
   .card.image-format-poster .card-header {
-    overflow: hidden;
+    overflow: clip;
     padding-block-start: 5px;
     padding-inline-end: 4px;
     margin-block-start: -5px;
     margin-inline-end: -4px;
-    /* The icon's 28px border box starts at this box's block-start edge, so a
-       header shorter than that would clip its bottom. Reserve the height rather
-       than adding a block-end strip: a negative block-end margin leaves the
-       border box overhanging the flow, which the scroll container counts as
-       scrollable overflow and poster's JS clipping then acts on. */
-    min-block-size: 28px;
+  }
+
+  /* The icon's border box is taller than a single title line, so its hover halo
+     bleeds past the header on every side. The strips above contain the bleed at
+     block-start and inline-end; this one contains it at block-end. It must be
+     real height, not a negative block-end margin — that leaves the border box
+     overhanging the flow, which the scroll container counts as scrollable
+     overflow and poster's JS clipping then acts on. The two rules below hand the
+     4px straight back, so a card with an icon is no taller than one without. */
+  .card.image-format-poster.has-url-icon .card-header {
+    padding-block-end: 4px;
+  }
+
+  .card.image-format-poster.has-url-icon:not(.has-card-content) {
+    padding-block-end: 4px;
+  }
+
+  .card.image-format-poster.has-url-icon.has-card-content .card-body {
+    margin-block-start: -4px;
   }
 
   .card-title-block {
@@ -97,10 +111,10 @@
     flex-shrink: 0;
     /* Compensate for wrapper padding: (28px wrapper - 20px icon) / 2 = 4px.
        Also shrinks the icon's margin box to 20px so the padding costs the title
-       block no width — do NOT drop these to avoid overflow. */
+       block no width — do NOT drop these to avoid overflow. The header strips in
+       poster mode are sized to this same 4px, so the halo ends up inset equally
+       from the card's top, inline-end and bottom edges. */
     margin: -4px;
-    /* Extra -1px aligns URL icon top with slideshow icon edge distance */
-    margin-top: -5px;
   }
 
   .card-title-url-icon svg {
@@ -109,7 +123,12 @@
     color: var(--dynamic-views-text-faint);
   }
 
-  .card.image-format-poster .card-title-url-icon svg {
+  /* Gated on has-poster: inherit is only right over an image, where the card
+     re-points --text-muted at the poster fade colour. Without an image the card
+     keeps the standard tokens, so inherit would resolve to Obsidian's
+     .text-icon-button colour (--text-muted) and render the icon darker than the
+     same imageless card in every other image format. */
+  .card.image-format-poster.has-poster .card-title-url-icon svg {
     color: inherit;
   }
 }
@@ -118,11 +137,6 @@
   width: 28px;
   height: 28px;
   stroke-width: 1.5;
-}
-
-/* Larger glyph here makes the icon's border box 36px — reserve to match */
-.is-mobile .dynamic-views .card.image-format-poster .card-header {
-  min-block-size: 36px;
 }
 
 @media (any-hover: hover) {

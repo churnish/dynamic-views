@@ -24,8 +24,8 @@ Both backends produce the same DOM structure with minor element-type differences
 div.card                                    ← data-path="{path}"
 │ [format classes: image-format-{cover|thumbnail|poster|backdrop}]
 │ [position classes: card-cover-{top|bottom|left|right}, card-thumbnail-{position}]
-│ [structural: has-card-content, has-header, has-properties-bottom, has-poster, has-backdrop,
-│              has-cover, has-cover-placeholder, has-cover-wrapper-placeholder]
+│ [structural: has-card-content, has-header, has-url-icon, has-properties-bottom, has-poster,
+│              has-backdrop, has-cover, has-cover-placeholder, has-cover-wrapper-placeholder]
 │ [state: clickable-card, compact-mode, thumbnail-stack]
 │ [transient: interact, poster-hover-active, poster-revealed]
 │
@@ -120,6 +120,7 @@ Render-time classes that replace `:has()` selectors (see AGENTS.md constraint). 
 | Class | Element | Selector | Set from | CSS effect |
 |---|---|---|---|---|
 | `has-header` | `.card` | `.card-header` exists | Card root querySelector | Prevents cover-only padding reset from zeroing padding on title-only cards |
+| `has-url-icon` | `.card` | `.card-title-url-icon` exists | Card root querySelector; re-toggled by `updateUrlButton()` | Gates the poster header's `padding-block-end` strip (and the card/body rules that hand the 4px back), which contain the icon's hover halo where it bleeds past the header |
 | `has-card-content` | `.card` | `VISIBLE_BODY_SELECTOR` on card descendants | Inline querySelector | Drives title divider border and cover-only padding resets |
 | `has-body-content` | `.card-body` | `VISIBLE_BODY_SELECTOR` on body children | Card-body ref querySelector | Without it, `card-body` is `display: none` (collapses to avoid gap from `card-content` flex layout) |
 
