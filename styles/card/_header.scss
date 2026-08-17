@@ -192,9 +192,9 @@
    no card background for --background-modifier-hover to sit on. Gated on
    has-poster for the same reason the glyph colour is — without an image the card
    keeps the standard tokens, so currentColor is --text-muted and the mix comes
-   out a dark smudge instead of the light halo the rule is for. An imageless card
-   has a real background, so it takes the same no-halo treatment as every other
-   image format. */
+   out a dark smudge. An imageless card falls through to Obsidian's own
+   `.text-icon-button:hover` (--background-modifier-hover), giving it the same
+   hover treatment as every other image format. */
 .dynamic-views
   .card.image-format-poster.has-poster.interact
   .card-title-url-icon:is(:hover, :active) {

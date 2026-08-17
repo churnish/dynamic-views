@@ -111,6 +111,11 @@ export async function loadImageForEntry(
 
   // If another view is loading this path with same settings, await its result
   // Composite key includes all parameters that affect output:
+  // - imagePropertyValues: the property images themselves are the primary
+  //   output, so a view that points at a different image property — or none —
+  //   must not read back the previous view's result. This cache outlives any
+  //   single render, so without it, clearing imageProperty leaves the old
+  //   images on screen until the app restarts.
   // - showFileImages: determines whether embeds are extracted
   // - embedOptions: determines which embed types (YouTube, CardLink) are included
   // - maxImages: determines embed count limit and final image slice
@@ -119,7 +124,11 @@ export async function loadImageForEntry(
   const embedKey = embedOptions
     ? `${embedOptions.includeYoutube ?? false}|${embedOptions.includeCardLink ?? false}|${embedOptions.youtubeTargetWidth ?? 'max'}`
     : 'false|false|max';
-  const cacheKey = `${path}|${showFileImages}|${embedKey}|${maxImages}`;
+  // NUL separates the values: it cannot occur in a frontmatter string, so no
+  // two distinct value lists can collapse onto one key the way they would
+  // with a space separator.
+  const propertyKey = imagePropertyValues.map((v) => String(v)).join('\x00');
+  const cacheKey = `${path}|${propertyKey}|${showFileImages}|${embedKey}|${maxImages}`;
   const existing = inFlightImages.get(cacheKey);
   if (existing) {
     const result = await existing;

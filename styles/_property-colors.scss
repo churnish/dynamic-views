@@ -113,7 +113,8 @@
 );
 
 // Derives hover color for each color preset.
-// Sets --dynamic-views-{$var-stem}-hover-color on body.
+// Sets --dynamic-views-{$var-stem}-hover-color on the card (semantic and custom
+// presets) or on body (named colors, which are literal and card-independent).
 @mixin hover-color-vars(
   $class-stem,
   $var-stem: $class-stem,
@@ -122,21 +123,22 @@
 ) {
   $colors: 'red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple', 'pink';
 
-  // Semantic: one step brighter
-  body.dynamic-views-#{$class-stem}-faint {
-    --dynamic-views-#{$var-stem}-hover-color: var(--dynamic-views-text-muted);
-  }
-  body.dynamic-views-#{$class-stem}-muted {
-    --dynamic-views-#{$var-stem}-hover-color: var(--dynamic-views-text-normal);
-  }
-  // Normal: same as non-hover (no visible change, avoids IACVT)
-  body.dynamic-views-#{$class-stem}-normal {
-    --dynamic-views-#{$var-stem}-hover-color: var(--dynamic-views-text-normal);
-  }
-  body.dynamic-views-#{$class-stem}-accent {
-    --dynamic-views-#{$var-stem}-hover-color: var(
-      --dynamic-views-text-accent-hover
-    );
+  // Semantic: one step brighter. Normal maps to itself — no visible change, but
+  // a declared value avoids IACVT on the consuming rule.
+  // Scoped to the card, NOT body: a custom property substitutes its var()
+  // references at the element that declares it, and the poster and backdrop
+  // formats re-point --dynamic-views-text-* on the card. Declared on body these
+  // resolve against the theme palette instead, so a card whose resting text is
+  // light-on-image jumps to the theme's near-black on hover (#400).
+  @each $variant,
+    $token
+      in (faint: muted, muted: normal, normal: normal, accent: accent-hover)
+  {
+    body.dynamic-views-#{$class-stem}-#{$variant} .dynamic-views .card {
+      --dynamic-views-#{$var-stem}-hover-color: var(
+        --dynamic-views-text-#{$token}
+      );
+    }
   }
 
   // Named colors: 15% white mix
@@ -164,9 +166,10 @@
     );
   }
 
-  // Custom with dedicated hover variable (property groups only)
+  // Custom with dedicated hover variable (property groups only). Card-scoped
+  // for the same reason as the semantic steps — its fallback is a text token.
   @if $custom-hover-var {
-    body.dynamic-views-#{$class-stem}-custom {
+    body.dynamic-views-#{$class-stem}-custom .dynamic-views .card {
       --dynamic-views-#{$var-stem}-hover-color: var(
         #{$custom-hover-var},
         var(#{$custom-fallback})

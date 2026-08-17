@@ -306,22 +306,26 @@ body {
 
 /* Resolve title hover color to a single variable for all presets.
    Named colors (red-pink) already set --dynamic-views-title-hover-color-value
-   via Style Settings; built-in presets and custom need explicit mapping. */
-body.dynamic-views-title-hover-color-faint {
+   via Style Settings; built-in presets and custom need explicit mapping.
+   Scoped to the card, not body: these derive from --dynamic-views-text-*, which
+   the poster and backdrop formats re-point on the card, and a custom property
+   substitutes its var() references at the element that declares it. See the
+   matching note on hover-color-vars in _property-colors.scss. */
+body.dynamic-views-title-hover-color-faint .dynamic-views .card {
   --dynamic-views-title-hover-color-value: var(--dynamic-views-text-faint);
 }
-body.dynamic-views-title-hover-color-muted {
+body.dynamic-views-title-hover-color-muted .dynamic-views .card {
   --dynamic-views-title-hover-color-value: var(--dynamic-views-text-muted);
 }
-body.dynamic-views-title-hover-color-normal {
+body.dynamic-views-title-hover-color-normal .dynamic-views .card {
   --dynamic-views-title-hover-color-value: var(--dynamic-views-text-normal);
 }
-body.dynamic-views-title-hover-color-accent {
+body.dynamic-views-title-hover-color-accent .dynamic-views .card {
   --dynamic-views-title-hover-color-value: var(
     --dynamic-views-text-accent-hover
   );
 }
-body.dynamic-views-title-hover-color-custom {
+body.dynamic-views-title-hover-color-custom .dynamic-views .card {
   --dynamic-views-title-hover-color-value: var(
     --dynamic-views-title-hover-color-custom,
     var(--dynamic-views-text-normal)

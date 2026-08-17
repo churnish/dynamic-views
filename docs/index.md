@@ -62,7 +62,7 @@ Reusable conventions and recipes — coding patterns, CSS quirks, and configurat
 
 | Doc | Read before |
 |---|---|
-| [css-variable-wrapping.md](patterns/css-variable-wrapping.md) | Adding, modifying, or locally overriding external Obsidian CSS variables — documents the plugin-namespaced wrapper pattern, resolution semantics, and the local override gotcha. |
+| [css-variable-wrapping.md](patterns/css-variable-wrapping.md) | Adding, modifying, or locally overriding external Obsidian CSS variables, or declaring a variable derived from one — documents the plugin-namespaced wrapper pattern, resolution semantics, the local override gotcha, and why card-scoped palettes require derived variables to be declared inside the card. |
 | [debug-commands.md](patterns/debug-commands.md) | Using runtime diagnostic commands (card width badges) — documents console invocations, toggle semantics, and teardown. |
 | [eslint-config.md](patterns/eslint-config.md) | Modifying [eslint.config.js](../eslint.config.js), adding eslint overrides, or troubleshooting lint errors. |
 | [hover-and-touch.md](patterns/hover-and-touch.md) | Adding, modifying, or debugging hover or touch press behavior — complete inventory of all hover and touch interactions, pointer type support (mouse/pen/touch), gating mechanisms (`canHover`, `isHoverPointer`, `isTouchPointer`, `@media (any-hover: hover)`), device behavior matrix, and touch press feedback architecture. |

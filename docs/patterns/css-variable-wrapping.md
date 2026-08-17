@@ -2,7 +2,7 @@
 title: CSS variable wrapping
 description: Plugin-namespaced CSS variable wrappers, variable catalog, JS-set variables, and resolution semantics.
 author: 🤖 Generated with Claude Code
-updated: 2026-08-09
+updated: 2026-08-17
 ---
 # CSS variable wrapping
 
@@ -57,7 +57,7 @@ These do not wrap an Obsidian variable. They compute a value from other `--dynam
 );
 ```
 
-The title hover color resolver at the bottom of `_variables.scss` also falls into this category — it maps body class presets to a single `--dynamic-views-title-hover-color-value` variable.
+The title hover color resolver at the bottom of `_variables.scss` also falls into this category — it maps body class presets to a single `--dynamic-views-title-hover-color-value` variable. Its semantic and custom arms are declared on `.dynamic-views .card` rather than `body`, for the reason given under [Second-order case](#second-order-case-variables-derived-from-wrappers).
 
 ### 3. Plugin-owned variables (SCSS string values)
 
@@ -171,6 +171,29 @@ body.dynamic-views-backdrop-color-scheme-dark .dynamic-views .card.image-format-
 }
 ```
 
+### Second-order case: variables derived from wrappers
+
+Redefining the wrappers at the override site fixes anything that reads `var(--dynamic-views-text-*)` **at an element inside the card**. It does not fix a variable that was itself derived from a wrapper somewhere else.
+
+A preset resolver declared on `body` computes its value on `body`, so it captures the theme's token and inherits that fixed color into every card — including cards whose palette was replaced:
+
+```scss
+// Declared on body — resolves to the THEME's --dynamic-views-text-normal
+body.dynamic-views-property-color-with-names-muted {
+  --dynamic-views-property-with-name-color-hover-color: var(
+    --dynamic-views-text-normal
+  );
+}
+```
+
+On a poster card the resting text is `#fafafa` (set at the card) but this hover color stays at the theme's near-black — the symptom is text that reads correctly until it is hovered, then jumps to the wrong end of the contrast range.
+
+**Rule**: a variable whose value references a `--dynamic-views-text-*` wrapper, and which is consumed inside cards, must be declared at or below `.card` — not on `body`. The semantic and custom arms of `hover-color-vars` (`_property-colors.scss`) and the title hover resolver (`_variables.scss`) are scoped to `.dynamic-views .card` for this reason.
+
+Named-color presets are exempt: they resolve to literal palette colors that are card-independent by design, so they stay on `body`. The same split already exists on the non-hover side — `color-setting` applies its semantic arm as a `color` declaration on the target element, which is why resting colors were never affected.
+
+Tag colors show the correct shape from the other direction: `--tag-text-color` is declared on `:is(.card-properties, .card-subtitle)` and every tag color, hover included, derives from it at the element.
+
 ### Override sites
 
 Six sites currently redefine both bare and wrapped variables:
@@ -184,3 +207,4 @@ Six sites currently redefine both bare and wrapped variables:
 1. Define `--dynamic-views-foo: var(--foo, <default-theme-value>)` in [_variables.scss](../../styles/_variables.scss) `body` block.
 2. Replace all bare `var(--foo)` references across SCSS with `var(--dynamic-views-foo)`.
 3. If any SCSS rule locally overrides `--foo` (e.g., text color overrides on poster/backdrop), also set `--dynamic-views-foo` at that same site.
+4. If a new variable is *derived* from `--dynamic-views-foo` and read inside cards, declare it at or below `.card` — see [Second-order case](#second-order-case-variables-derived-from-wrappers).
