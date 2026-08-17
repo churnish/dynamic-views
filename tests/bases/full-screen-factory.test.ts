@@ -148,8 +148,7 @@ describe('createFullScreenController', () => {
       marginTop: '0',
     } as unknown as CSSStyleDeclaration);
 
-    const leafContent = scrollEl.closest('.view-content')!
-      .parentElement! as HTMLElement;
+    const leafContent = scrollEl.closest('.view-content')!.parentElement!;
     const bodySpy = vi.spyOn(document.body.classList, 'add');
     const leafSpy = vi.spyOn(leafContent.classList, 'add');
 

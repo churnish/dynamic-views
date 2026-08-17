@@ -555,8 +555,6 @@ describe('masonry-layout', () => {
 
     const gap = 8;
     const columns = 3;
-    const cardWidth = 200;
-    const step = cardWidth + gap;
 
     function computeImbalance(
       stableHeights: number[],

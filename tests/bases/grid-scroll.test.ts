@@ -19,23 +19,6 @@ import {
 // Helpers mirroring getBatchSize internal logic
 // ---------------------------------------------------------------------------
 
-function mockContainer(width: number): HTMLElement {
-  const el = document.createElement('div');
-  el.getBoundingClientRect = () =>
-    ({
-      width,
-      height: 0,
-      top: 0,
-      left: 0,
-      right: width,
-      bottom: 0,
-      x: 0,
-      y: 0,
-      toJSON: () => ({}),
-    }) as DOMRect;
-  return el;
-}
-
 /** Replicates the getBatchSize logic from grid-view.ts */
 function computeBatchSize(
   containerWidth: number,

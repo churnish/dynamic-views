@@ -4,7 +4,7 @@ import {
   getCurrentFile,
   getAvailablePath,
 } from '../../src/core/file';
-import { App, TFile, Workspace, Vault } from 'obsidian';
+import { App, TFile } from 'obsidian';
 
 describe('file', () => {
   describe('getFileCtime', () => {

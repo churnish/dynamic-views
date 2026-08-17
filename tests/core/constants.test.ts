@@ -1,8 +1,4 @@
-import {
-  computeHoverScale,
-  HOVER_GROWTH_PX,
-  MAX_HOVER_SCALE,
-} from '../../src/core/constants';
+import { computeHoverScale, MAX_HOVER_SCALE } from '../../src/core/constants';
 
 describe('constants', () => {
   describe('computeHoverScale', () => {

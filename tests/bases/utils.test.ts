@@ -293,7 +293,6 @@ describe('handleTemplateToggle', () => {
       // noticeContainer is NOT in the document — isConnected will be false
 
       // Override Notice prototype to set containerEl on instances
-      const originalConstructor = Notice.prototype.constructor;
       Object.defineProperty(Notice.prototype, 'containerEl', {
         value: containerEl,
         writable: true,
@@ -605,11 +604,7 @@ describe('estimatePaneRange', () => {
   });
 
   it('reaches totalCount for bottom of scroll', () => {
-    const [start, end] = estimatePaneRange(
-      { top: 9000, height: 10000 },
-      1000,
-      1000
-    );
+    const [, end] = estimatePaneRange({ top: 9000, height: 10000 }, 1000, 1000);
     expect(end).toBe(1000);
   });
 });

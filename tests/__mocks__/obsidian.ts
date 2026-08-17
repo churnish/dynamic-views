@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Mock implementation of Obsidian API for testing
  * Based on obsidian.d.ts from obsidianmd/obsidian-api
@@ -10,18 +9,6 @@ export class App {
   workspace = new Workspace();
   metadataCache = new MetadataCache();
   fileManager = new FileManager();
-
-  loadLocalStorage(key: string): string | null {
-    return localStorage.getItem(key);
-  }
-
-  saveLocalStorage(key: string, data: string | null): void {
-    if (data === null) {
-      localStorage.removeItem(key);
-    } else {
-      localStorage.setItem(key, data);
-    }
-  }
 }
 
 export class Vault {
@@ -300,8 +287,11 @@ export const Fragment = ({ children }: { children: any }) => children;
 
 // Mock Notice
 export class Notice {
+  // Recorded rather than logged so assertions can read it without polluting test output.
+  message: string;
+
   constructor(message: string, timeout?: number) {
-    console.log(`Notice: ${message}`);
+    this.message = message;
   }
 }
 

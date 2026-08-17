@@ -1,5 +1,3 @@
-import { vi } from 'vitest';
-
 // Mock localStorage
 const localStorageMock = (() => {
   let store: Record<string, string> = {};
@@ -21,28 +19,6 @@ const localStorageMock = (() => {
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
 });
-
-// Mock canvas for image color extraction tests
-HTMLCanvasElement.prototype.getContext = vi.fn(() => {
-  return {
-    drawImage: vi.fn(),
-    getImageData: vi.fn(() => ({
-      data: new Uint8ClampedArray(50 * 50 * 4).fill(128), // Gray pixels
-    })),
-  } as any;
-}) as any;
-
-// Mock document.createElement for canvas
-const originalCreateElement = document.createElement.bind(document);
-document.createElement = vi.fn((tagName: string) => {
-  if (tagName === 'canvas') {
-    const canvas = originalCreateElement('canvas');
-    canvas.width = 50;
-    canvas.height = 50;
-    return canvas;
-  }
-  return originalCreateElement(tagName);
-}) as any;
 
 // Mock Image class for image validation tests
 (global as any).Image = class {
@@ -108,7 +84,7 @@ function createChild<K extends keyof HTMLElementTagNameMap>(
   info?: DomElementInfo | string,
   callback?: (el: HTMLElementTagNameMap[K]) => void
 ): HTMLElementTagNameMap[K] {
-  const el = document.createElement(tag) as HTMLElementTagNameMap[K];
+  const el = document.createElement(tag);
   applyElementInfo(el, info);
   parent.appendChild(el);
   callback?.(el);

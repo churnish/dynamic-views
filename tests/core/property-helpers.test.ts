@@ -305,7 +305,7 @@ describe('property-helpers', () => {
 
     async function freshModule() {
       vi.resetModules();
-      return (await import('../../src/core/property-helpers')) as typeof import('../../src/core/property-helpers');
+      return await import('../../src/core/property-helpers');
     }
 
     it('preseedCompactStackedCache prevents queueCompactStackedCheck from scheduling a rAF at the same width', async () => {

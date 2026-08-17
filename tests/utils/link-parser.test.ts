@@ -441,19 +441,13 @@ describe('link-parser', () => {
 
     it('returns the first link url correctly in multi-link string', () => {
       const segments = findLinksInText('[[Alpha]] and [[Beta]]');
-      const links = segments.filter((s) => s.type === 'link') as Extract<
-        TextSegment,
-        { type: 'link' }
-      >[];
+      const links = segments.filter((s) => s.type === 'link');
       expect(links[0].link.url).toBe('Alpha');
     });
 
     it('returns the second link url correctly in multi-link string', () => {
       const segments = findLinksInText('[[Alpha]] and [[Beta]]');
-      const links = segments.filter((s) => s.type === 'link') as Extract<
-        TextSegment,
-        { type: 'link' }
-      >[];
+      const links = segments.filter((s) => s.type === 'link');
       expect(links[1].link.url).toBe('Beta');
     });
 
@@ -467,28 +461,19 @@ describe('link-parser', () => {
 
     it('mixes wikilinks and plain URLs', () => {
       const segments = findLinksInText('[[Note]] see https://example.org');
-      const links = segments.filter((s) => s.type === 'link') as Extract<
-        TextSegment,
-        { type: 'link' }
-      >[];
+      const links = segments.filter((s) => s.type === 'link');
       expect(links).toHaveLength(2);
     });
 
     it('first link in mixed wikilink+URL is internal', () => {
       const segments = findLinksInText('[[Note]] see https://example.org');
-      const links = segments.filter((s) => s.type === 'link') as Extract<
-        TextSegment,
-        { type: 'link' }
-      >[];
+      const links = segments.filter((s) => s.type === 'link');
       expect(links[0].link.type).toBe('internal');
     });
 
     it('second link in mixed wikilink+URL is external', () => {
       const segments = findLinksInText('[[Note]] see https://example.org');
-      const links = segments.filter((s) => s.type === 'link') as Extract<
-        TextSegment,
-        { type: 'link' }
-      >[];
+      const links = segments.filter((s) => s.type === 'link');
       expect(links[1].link.type).toBe('external');
     });
   });
