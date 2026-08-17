@@ -12,27 +12,25 @@ Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases).
 
 ## Features
 
-- Show images from notes
-- Display images as thumbnails, covers, posters, or card backdrops
-- Navigate through multiple images
+- Display note images as thumbnails, covers, posters, or card backdrops
+- Slide through images
 - Open images in full screen
-- Show text previews from first few lines of notes
-- Wrap long titles to new line
+- Show text previews from note content
+- Wrap long titles
 - Scroll long properties horizontally
 - Hide menus when scrolling on phone
 
 ### Extras
 
-- Load cards while scrolling rather than all at once
 - Position card images on top, bottom, left or right of text
 - Position property names above, inline, or hide them
 - Display properties stacked or side-by-side
-- Interactive checkbox properties
 - Select and copy card text
 - Configure default view settings
 - Fold sections when grouping by property
-- Full keyboard navigation
 - Apply CSS snippets to individual views
+- Interactive checkbox properties
+- Full keyboard navigation
 - “Open URL ↗” card button
 - “Open random file” and “Shuffle view” ribbon buttons
 
