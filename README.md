@@ -15,11 +15,11 @@ Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases).
 - Show images from notes
 - Display images as thumbnails, covers, posters, or card backdrops
 - Navigate through multiple images
-- Preview images in full screen
+- Open images in full screen
 - Show text previews from first few lines of notes
 - Wrap long titles to new line
 - Scroll long properties horizontally
-- Immersive full screen scrolling on phone
+- Hide menus when scrolling on phone
 
 ### Extras
 
@@ -33,9 +33,8 @@ Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases).
 - Fold sections when grouping by property
 - Full keyboard navigation
 - Apply CSS snippets to individual views
-- **Open URL** card button (↗)
-- **Shuffle view** button
-- **Open random file** button
+- “Open URL ↗” card button
+- “Open random file” and “Shuffle view” ribbon buttons
 
 And numerous other quality‑of‑life improvements over the default Bases card view.
 
@@ -62,7 +61,7 @@ Until **Dynamic Views** appears in the plugin directory, to install it:
 
 1. Download and enable the [BRAT](https://churnish.github.io/http-protocol-redirector?r=obsidian://show-plugin?id=obsidian42-brat) plugin.
 2. [Install via BRAT](https://churnish.github.io/http-protocol-redirector?r=obsidian://brat?plugin=churnish/dynamic-views).
-3. Select **Add plugin**.
+3. Select “Add plugin”.
 
 <details><summary>Install manually</summary>
 
@@ -81,8 +80,8 @@ Note: To get updates for **Dynamic Views**, you will have to check for and insta
 
 ## Support
 
-- Found a bug or have a feature request? [Open an issue](https://github.com/churnish/dynamic-views/issues).
 - Have a question? [Start a discussion](https://github.com/churnish/dynamic-views/discussions).
+- Found a bug or have a feature request? [Open an issue](https://github.com/churnish/dynamic-views/issues).
 - [Contributors welcome](https://github.com/churnish/dynamic-views#contributing-ov-file).
 
 ## Credits
