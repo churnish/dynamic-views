@@ -39,9 +39,9 @@ And numerous other quality‑of‑life improvements over the default Bases card 
 
 ### Integrations
 
+- Reveal files, folders and tags in [Notebook Navigator](https://community.obsidian.md/plugins/notebook-navigator)
 - Show YouTube thumbnails
 - Show [Auto Card Link](https://community.obsidian.md/plugins/auto-card-link) or [Link Embed](https://community.obsidian.md/plugins/obsidian-link-embed) images
-- Reveal files, folders and tags in [Notebook Navigator](https://community.obsidian.md/plugins/notebook-navigator)
 
 ## Perfect for
 
