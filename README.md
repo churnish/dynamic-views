@@ -19,6 +19,7 @@ Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases).
 - Wrap long titles
 - Scroll long properties horizontally
 - Hide menus when scrolling on phone
+- Customize everything
 
 ### Extras
 
@@ -38,7 +39,6 @@ And numerous other quality‑of‑life improvements over the default Bases card 
 
 ### Integrations
 
-- Extensive [Style Settings](https://community.obsidian.md/plugins/obsidian-style-settings) support
 - Show YouTube thumbnails
 - Show [Auto Card Link](https://community.obsidian.md/plugins/auto-card-link) or [Link Embed](https://community.obsidian.md/plugins/obsidian-link-embed) images
 - Reveal files, folders and tags in [Notebook Navigator](https://community.obsidian.md/plugins/notebook-navigator)
@@ -53,7 +53,7 @@ And numerous other quality‑of‑life improvements over the default Bases card 
 
 ## Installation
 
-> **NOTE:** The plugin is in beta — things can break, or change drastically between releases. Please ensure your files are regularly [backed up](https://help.obsidian.md/backup).
+> **NOTE:** The plugin is in beta — things can break, or change drastically between releases. Please ensure your vault is regularly [backed up](https://help.obsidian.md/backup).
 
 Until **Dynamic Views** appears in the plugin directory, to install it:
 
@@ -79,7 +79,7 @@ Note: To get updates for **Dynamic Views**, you will have to check for and insta
 ## Support
 
 - Have a question? [Start a discussion](https://github.com/churnish/dynamic-views/discussions).
-- Found a bug or have a feature request? [Open an issue](https://github.com/churnish/dynamic-views/issues).
+- Have a feature request or found a bug? [Open an issue](https://github.com/churnish/dynamic-views/issues).
 - [Contributors welcome](https://github.com/churnish/dynamic-views#contributing-ov-file).
 
 ## Credits
