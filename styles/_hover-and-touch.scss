@@ -22,30 +22,26 @@ body.dynamic-views-open-on-card:not(
   color: var(--dynamic-views-title-hover-color-value);
 }
 
-/* Card background on hover options — override --card-bg so placeholder color derives from it. Exception: Dimmed sets background-color directly to avoid a CSS self-reference cycle. */
-/* Primary (default) */
-body:not([class*='dynamic-views-card-background-hover-'])
-  .dynamic-views
-  .card.interact {
+/* Card background on hover options — override --card-bg so placeholder color derives from it. Exception: the relative presets (Strengthen, Weaken) set background-color directly to avoid a CSS self-reference cycle. */
+body.dynamic-views-card-background-hover-flat .dynamic-views .card.interact {
   --card-bg: var(--dynamic-views-background-primary);
 }
 
-body.dynamic-views-card-background-hover-tinted .dynamic-views .card.interact {
+body.dynamic-views-card-background-hover-subtle .dynamic-views .card.interact {
   --card-bg: var(--dynamic-views-background-primary-alt);
 }
 
-body.dynamic-views-card-background-hover-primary .dynamic-views .card.interact {
-  --card-bg: var(--dynamic-views-background-primary);
+body.dynamic-views-card-background-hover-strong .dynamic-views .card.interact {
+  --card-bg: var(--dynamic-views-background-modifier-border);
 }
 
-body.dynamic-views-card-background-hover-secondary
+/* Strengthen and Weaken shift the resting --card-bg instead of replacing it, so they compose with whichever background preset is active. Both set background-color directly rather than --card-bg, because reading a variable while setting it would cycle. */
+/* Verbs, not adjectives: these sit in the same dropdown as Flat/Subtle/Strong, and comparative forms (Subtler, Stronger) read as degrees of those adjectives rather than as a different kind of option. The dropdown also lists them next to No change, away from Strong, so the two mental models — shift the colour vs set the colour — stay visually separated. */
+/* The sign flips per theme on purpose. The anchor is --background-primary (what Flat resolves to), which is the lightest surface in light themes and the darkest in dark ones, so "away from the anchor" means subtract in light and add in dark. NOT the view background — that is a separate setting and may be any colour. Naming these by direction (Dimmed/Brightened) would invert their meaning between themes — the same trap that kept Faint/Muted/Normal out of the background labels. */
+/* Placeholder offset = hover card step + initial placeholder depth (-15 light, -10 dark, both set in _grid-masonry-shared.scss). Change one and the other must follow. Magnitudes carried over from the Dimmed preset these replace: 8 light, 5 dark. */
+body.dynamic-views-card-background-hover-strengthen
   .dynamic-views
   .card.interact {
-  --card-bg: var(--dynamic-views-background-secondary);
-}
-
-/* Dimmed: darken current --card-bg without overriding it (self-reference would cycle). Set background-color and placeholder var directly from the unchanged --card-bg. Offsets = initial placeholder depth + hover card step. Light: card -8, placeholder -23 (-15 initial + -8 hover). Dark: card -5, placeholder -15 (-10 initial + -5 hover). Coupled to --dynamic-views-image-background-dimmed offsets in _grid-masonry-shared.scss — update together. */
-body.dynamic-views-card-background-hover-dimmed .dynamic-views .card.interact {
   background-color: rgb(
     from var(--card-bg) calc(r - 8) calc(g - 8) calc(b - 8)
   );
@@ -53,7 +49,36 @@ body.dynamic-views-card-background-hover-dimmed .dynamic-views .card.interact {
     from var(--card-bg) calc(r - 23) calc(g - 23) calc(b - 23)
   );
 }
-body.theme-dark.dynamic-views-card-background-hover-dimmed
+body.theme-dark.dynamic-views-card-background-hover-strengthen
+  .dynamic-views
+  .card.interact {
+  background-color: rgb(
+    from var(--card-bg) calc(r + 5) calc(g + 5) calc(b + 5)
+  );
+  --dynamic-views-image-background-dimmed: rgb(
+    from var(--card-bg) calc(r - 5) calc(g - 5) calc(b - 5)
+  );
+}
+
+/* Weaken (default) — the :is() arm carries the default when Style Settings is not installed and no body class exists. */
+/* Weaken is the default DELIBERATELY, including the consequence that on a stock setup — where the view background equals --background-primary — a hovered card blends INTO the page rather than standing out. That is the intended affordance, not an oversight: do NOT switch the default to Strengthen or Flat on the reasoning that hover should increase contrast. */
+body:is(
+    .dynamic-views-card-background-hover-weaken,
+    :not([class*='dynamic-views-card-background-hover-'])
+  )
+  .dynamic-views
+  .card.interact {
+  background-color: rgb(
+    from var(--card-bg) calc(r + 8) calc(g + 8) calc(b + 8)
+  );
+  --dynamic-views-image-background-dimmed: rgb(
+    from var(--card-bg) calc(r - 7) calc(g - 7) calc(b - 7)
+  );
+}
+body.theme-dark:is(
+    .dynamic-views-card-background-hover-weaken,
+    :not([class*='dynamic-views-card-background-hover-'])
+  )
   .dynamic-views
   .card.interact {
   background-color: rgb(
@@ -64,6 +89,32 @@ body.theme-dark.dynamic-views-card-background-hover-dimmed
   );
 }
 
+/* Flat + Weaken is a no-op: the card already sits on --background-primary, so there is no separation left to reduce. Without this the fixed step pushes the card PAST the anchor — in light it happens to clamp at #ffffff because the anchor is the top of the range, but in dark it lands 5 below and the card ends up darker than the surface it is meant to blend into. */
+/* Same specificity as the light Weaken rule above (0,5,1), so source order decides — this must stay after both Weaken rules. It intentionally also wins in dark, where the theme-dark Weaken rule ties at (0,5,1). */
+body.dynamic-views-card-background-flat:is(
+    .dynamic-views-card-background-hover-weaken,
+    :not([class*='dynamic-views-card-background-hover-'])
+  )
+  .dynamic-views
+  .card.interact {
+  background-color: var(--card-bg);
+  --dynamic-views-image-background-dimmed: rgb(
+    from var(--card-bg) calc(r - 15) calc(g - 15) calc(b - 15)
+  );
+}
+/* Placeholder depth only — the rule above already cancels the background shift for both themes. Matches the resting dark offset in _grid-masonry-shared.scss. */
+body.theme-dark.dynamic-views-card-background-flat:is(
+    .dynamic-views-card-background-hover-weaken,
+    :not([class*='dynamic-views-card-background-hover-'])
+  )
+  .dynamic-views
+  .card.interact {
+  --dynamic-views-image-background-dimmed: rgb(
+    from var(--card-bg) calc(r - 10) calc(g - 10) calc(b - 10)
+  );
+}
+
+/* Colour presets (accent, red, orange, ...) for this setting live in card/_core.scss, generated from the same $card-bg-colors list as their resting counterparts. */
 body.dynamic-views-card-background-hover-custom .dynamic-views .card.interact {
   --card-bg: var(
     --dynamic-views-card-background-color-hover-custom,

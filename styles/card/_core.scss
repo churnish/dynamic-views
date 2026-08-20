@@ -65,15 +65,16 @@ $shadow-colors:
 }
 
 /* Card background options — override --card-bg on .dynamic-views container so cards inherit. Resolved once per container, not per card. */
-body.dynamic-views-card-background-tinted .dynamic-views {
-  --card-bg: var(--dynamic-views-background-primary-alt);
-}
-body.dynamic-views-card-background-primary .dynamic-views {
+/* Labels name separation from --background-primary (the Flat rung), never direction: --background-modifier-border sits darker than it in light themes and lighter in dark ones, so any darker/lighter wording would invert between themes. The anchor is the token, NOT the view background — that is a separate setting and may be any colour. */
+body.dynamic-views-card-background-flat .dynamic-views {
   --card-bg: var(--dynamic-views-background-primary);
 }
-/* Secondary is the only preset that reads as higher-contrast in both themes — primary-alt and secondary swap rank between light and dark for secondary-alt, which is why that rung is not offered. */
-body.dynamic-views-card-background-secondary .dynamic-views {
-  --card-bg: var(--dynamic-views-background-secondary);
+body.dynamic-views-card-background-subtle .dynamic-views {
+  --card-bg: var(--dynamic-views-background-primary-alt);
+}
+/* Strong borrows a border token because no stock surface rung separates far enough from --background-primary: --background-primary-alt and --background-secondary land 5 and 9 of 255 from it in light themes, indistinguishable on a card. Obsidian fills with --background-modifier-border itself (PDF toolbar and canvas card menu dividers), so it is a real opaque colour rather than a line-only value. --background-secondary-alt is deliberately not offered — it maps to base-05 in light but base-30 in dark, so its rank flips between themes. */
+body.dynamic-views-card-background-strong .dynamic-views {
+  --card-bg: var(--dynamic-views-background-modifier-border);
 }
 
 /* Card background color presets — 7% tint over primary (matches canvas node tint) */
@@ -82,6 +83,19 @@ $card-bg-colors:
 
 @each $color in $card-bg-colors {
   body.dynamic-views-card-background-#{$color} .dynamic-views {
+    --card-bg: color-mix(
+      in srgb,
+      var(--dynamic-views-color-#{$color}) 7%,
+      var(--dynamic-views-background-primary)
+    );
+  }
+}
+
+/* Hover counterparts — same tint, applied on the card rather than the container so it wins over the inherited resting value. Kept here beside the resting loop so both share one $card-bg-colors list, matching how the shadow colour presets pair up. */
+@each $color in $card-bg-colors {
+  body.dynamic-views-card-background-hover-#{$color}
+    .dynamic-views
+    .card.interact {
     --card-bg: color-mix(
       in srgb,
       var(--dynamic-views-color-#{$color}) 7%,

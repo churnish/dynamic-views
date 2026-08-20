@@ -99,8 +99,8 @@ settings:
         format: px
     -
         id: dynamic-views-card-border-radius
-        title: Border radius
-        description: Corner roundness of cards.
+        title: Corner roundness
+        description: How round card corners should be.
         type: variable-number-slider
         default: 8
         min: 0
@@ -108,9 +108,155 @@ settings:
         step: 1
         format: px
     -
+        id: dynamic-views-card-hover-enlarge
+        title: Enlarge
+        description: Make cards slightly bigger on hover. Does not apply in embedded views.
+        type: class-toggle
+    -
+        id: dynamic-views-card-hover-disable-lift
+        title: Disable lift
+        description: Do not elevate cards on hover.
+        type: class-toggle
+    -
+        id: dynamic-views-hide-scroll-gradients
+        title: Hide scroll gradients
+        description: Do not show gradient fade on scrollable card text elements.
+        type: class-toggle
+    -
+        id: card-background-heading
+        title: Card background
+        type: heading
+        level: 3
+        collapsed: false
+    -
+        id: dynamic-views-card-background
+        title: Color
+        description: Color of the card background.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-card-background-subtle
+        options:
+            -
+                label: Flat
+                value: dynamic-views-card-background-flat
+            -
+                label: Subtle
+                value: dynamic-views-card-background-subtle
+            -
+                label: Strong
+                value: dynamic-views-card-background-strong
+            -
+                label: Accent
+                value: dynamic-views-card-background-accent
+            -
+                label: Red
+                value: dynamic-views-card-background-red
+            -
+                label: Orange
+                value: dynamic-views-card-background-orange
+            -
+                label: Yellow
+                value: dynamic-views-card-background-yellow
+            -
+                label: Green
+                value: dynamic-views-card-background-green
+            -
+                label: Cyan
+                value: dynamic-views-card-background-cyan
+            -
+                label: Blue
+                value: dynamic-views-card-background-blue
+            -
+                label: Purple
+                value: dynamic-views-card-background-purple
+            -
+                label: Pink
+                value: dynamic-views-card-background-pink
+            -
+                label: Custom
+                value: dynamic-views-card-background-custom
+    -
+        id: dynamic-views-card-background-color-custom
+        title: Custom color
+        description: Custom color for the card background.
+        type: variable-themed-color
+        format: hex
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: dynamic-views-card-background-hover
+        title: Color (hover)
+        description: Color of the card background on hover.
+        type: class-select
+        allowEmpty: false
+        default: dynamic-views-card-background-hover-weaken
+        options:
+            -
+                label: No change
+                value: dynamic-views-card-background-hover-none
+            -
+                label: Strengthen
+                value: dynamic-views-card-background-hover-strengthen
+            -
+                label: Weaken
+                value: dynamic-views-card-background-hover-weaken
+            -
+                label: Flat
+                value: dynamic-views-card-background-hover-flat
+            -
+                label: Subtle
+                value: dynamic-views-card-background-hover-subtle
+            -
+                label: Strong
+                value: dynamic-views-card-background-hover-strong
+            -
+                label: Accent
+                value: dynamic-views-card-background-hover-accent
+            -
+                label: Red
+                value: dynamic-views-card-background-hover-red
+            -
+                label: Orange
+                value: dynamic-views-card-background-hover-orange
+            -
+                label: Yellow
+                value: dynamic-views-card-background-hover-yellow
+            -
+                label: Green
+                value: dynamic-views-card-background-hover-green
+            -
+                label: Cyan
+                value: dynamic-views-card-background-hover-cyan
+            -
+                label: Blue
+                value: dynamic-views-card-background-hover-blue
+            -
+                label: Purple
+                value: dynamic-views-card-background-hover-purple
+            -
+                label: Pink
+                value: dynamic-views-card-background-hover-pink
+            -
+                label: Custom
+                value: dynamic-views-card-background-hover-custom
+    -
+        id: dynamic-views-card-background-color-hover-custom
+        title: Custom color (hover)
+        description: Custom color for the card background on hover.
+        type: variable-themed-color
+        format: hex
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: card-border-heading
+        title: Card border
+        type: heading
+        level: 3
+        collapsed: false
+    -
         id: dynamic-views-card-border-thickness
-        title: Border thickness
-        description: Thickness of card border. Set to 0 to hide.
+        title: Thickness
+        description: Thickness of the card border. Set to 0 to hide.
         type: variable-number-slider
         default: 1
         min: 0
@@ -119,8 +265,8 @@ settings:
         format: px
     -
         id: dynamic-views-card-border-thickness-hover
-        title: Border thickness (hover)
-        description: Thickness of card border on hover. Set to 0 to hide.
+        title: Thickness (hover)
+        description: Thickness of the card border on hover. Set to 0 to hide.
         type: variable-number-slider
         default: 1
         min: 0
@@ -129,8 +275,8 @@ settings:
         format: px
     -
         id: dynamic-views-card-border-color
-        title: Border color
-        description: Theme color preset for card border.
+        title: Color
+        description: Theme color preset for the card border.
         type: class-select
         allowEmpty: false
         default: dynamic-views-card-border-color-faint
@@ -176,16 +322,16 @@ settings:
                 value: dynamic-views-card-border-color-custom
     -
         id: dynamic-views-card-border-color-custom
-        title: Custom border color
-        description: Custom color for card border.
+        title: Custom color
+        description: Custom color for the card border.
         type: variable-themed-color
         format: hex
         default-light: '#'
         default-dark: '#'
     -
         id: dynamic-views-card-border-color-hover
-        title: Border color (hover)
-        description: Theme color preset for card border on hover.
+        title: Color (hover)
+        description: Theme color preset for the card border on hover.
         type: class-select
         allowEmpty: false
         default: dynamic-views-card-border-color-hover-muted
@@ -231,105 +377,22 @@ settings:
                 value: dynamic-views-card-border-color-hover-custom
     -
         id: dynamic-views-card-border-color-hover-custom
-        title: Custom border color (hover)
-        description: Custom color for card borders on hover.
+        title: Custom color (hover)
+        description: Custom color for the card border on hover.
         type: variable-themed-color
         format: hex
         default-light: '#'
         default-dark: '#'
     -
-        id: dynamic-views-card-background
-        title: Background
-        description: Card background color.
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-card-background-tinted
-        options:
-            -
-                label: Tinted
-                value: dynamic-views-card-background-tinted
-            -
-                label: Primary
-                value: dynamic-views-card-background-primary
-            -
-                label: Secondary
-                value: dynamic-views-card-background-secondary
-            -
-                label: Accent
-                value: dynamic-views-card-background-accent
-            -
-                label: Red
-                value: dynamic-views-card-background-red
-            -
-                label: Orange
-                value: dynamic-views-card-background-orange
-            -
-                label: Yellow
-                value: dynamic-views-card-background-yellow
-            -
-                label: Green
-                value: dynamic-views-card-background-green
-            -
-                label: Cyan
-                value: dynamic-views-card-background-cyan
-            -
-                label: Blue
-                value: dynamic-views-card-background-blue
-            -
-                label: Purple
-                value: dynamic-views-card-background-purple
-            -
-                label: Pink
-                value: dynamic-views-card-background-pink
-            -
-                label: Custom
-                value: dynamic-views-card-background-custom
-    -
-        id: dynamic-views-card-background-color-custom
-        title: Custom background
-        description: Custom color for card background.
-        type: variable-themed-color
-        format: hex
-        default-light: '#'
-        default-dark: '#'
-    -
-        id: dynamic-views-card-background-hover
-        title: Background (hover)
-        description: Card background color on hover.
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-card-background-hover-primary
-        options:
-            -
-                label: No change
-                value: dynamic-views-card-background-hover-none
-            -
-                label: Tinted
-                value: dynamic-views-card-background-hover-tinted
-            -
-                label: Primary
-                value: dynamic-views-card-background-hover-primary
-            -
-                label: Secondary
-                value: dynamic-views-card-background-hover-secondary
-            -
-                label: Dimmed
-                value: dynamic-views-card-background-hover-dimmed
-            -
-                label: Custom
-                value: dynamic-views-card-background-hover-custom
-    -
-        id: dynamic-views-card-background-color-hover-custom
-        title: Custom background (hover)
-        description: Custom color for card background on hover.
-        type: variable-themed-color
-        format: hex
-        default-light: '#'
-        default-dark: '#'
+        id: card-shadow-heading
+        title: Card shadow
+        type: heading
+        level: 3
+        collapsed: false
     -
         id: dynamic-views-card-shadow
-        title: Shadow
-        description: Drop shadow behind cards. Does not apply in embedded views.
+        title: Depth
+        description: Strength of the drop shadow behind cards. Does not apply in embedded views.
         type: class-select
         allowEmpty: false
         default: dynamic-views-card-shadow-none
@@ -348,8 +411,8 @@ settings:
                 value: dynamic-views-card-shadow-dramatic
     -
         id: dynamic-views-card-shadow-hover
-        title: Shadow (hover)
-        description: Drop shadow behind cards on hover. Does not apply in embedded views.
+        title: Depth (hover)
+        description: Strength of the drop shadow behind cards on hover. Does not apply in embedded views.
         type: class-select
         allowEmpty: false
         default: dynamic-views-card-shadow-hover-subtle
@@ -368,8 +431,8 @@ settings:
                 value: dynamic-views-card-shadow-hover-dramatic
     -
         id: dynamic-views-card-shadow-color
-        title: Shadow color
-        description: Theme color preset for card shadow. Does not apply in embedded views.
+        title: Color
+        description: Theme color preset for the card shadow. Does not apply in embedded views.
         type: class-select
         allowEmpty: false
         default: dynamic-views-card-shadow-color-default
@@ -409,16 +472,16 @@ settings:
                 value: dynamic-views-card-shadow-color-custom
     -
         id: dynamic-views-card-shadow-color-custom
-        title: Custom shadow color
-        description: Custom color for card shadow.
+        title: Custom color
+        description: Custom color for the card shadow.
         type: variable-themed-color
         format: hex
         default-light: '#'
         default-dark: '#'
     -
         id: dynamic-views-card-shadow-color-hover
-        title: Shadow color (hover)
-        description: Theme color preset for card shadow on hover. Does not apply in embedded views.
+        title: Color (hover)
+        description: Theme color preset for the card shadow on hover. Does not apply in embedded views.
         type: class-select
         allowEmpty: false
         default: dynamic-views-card-shadow-color-hover-default
@@ -458,27 +521,12 @@ settings:
                 value: dynamic-views-card-shadow-color-hover-custom
     -
         id: dynamic-views-card-shadow-color-hover-custom
-        title: Custom shadow color (hover)
-        description: Custom color for card shadows on hover.
+        title: Custom color (hover)
+        description: Custom color for the card shadow on hover.
         type: variable-themed-color
         format: hex
         default-light: '#'
         default-dark: '#'
-    -
-        id: dynamic-views-card-hover-enlarge
-        title: Enlarge
-        description: Make cards slightly bigger on hover. Does not apply in embedded views.
-        type: class-toggle
-    -
-        id: dynamic-views-card-hover-disable-lift
-        title: Disable lift
-        description: Do not elevate cards on hover.
-        type: class-toggle
-    -
-        id: dynamic-views-hide-scroll-gradients
-        title: Hide scroll gradients
-        description: Do not show gradient fade on scrollable card text elements.
-        type: class-toggle
     -
         id: cover-heading
         title: Cover
@@ -519,6 +567,15 @@ settings:
             -
                 label: Custom
                 value: dynamic-views-cover-bg-custom
+    -
+        id: dynamic-views-cover-background-color-custom
+        title: Custom background
+        description: Custom background color for contained cover images and placeholders.
+        type: variable-themed-color
+        format: rgb
+        opacity: false
+        default-light: '#'
+        default-dark: '#'
     -
         id: dynamic-views-fixed-cover-height
         title: Fixed height
@@ -576,8 +633,8 @@ settings:
         type: class-toggle
     -
         id: dynamic-views-cover-border-radius
-        title: Border radius
-        description: Corner roundness of covers.
+        title: Corner roundness
+        description: Rounding of cover images. No effect while Round covers is on.
         type: variable-number-slider
         default: 0
         min: 0
@@ -658,15 +715,6 @@ settings:
         max: 24
         step: 1
         format: ''
-    -
-        id: dynamic-views-cover-background-color-custom
-        title: Custom background
-        description: Custom background color for contained cover images and placeholders.
-        type: variable-themed-color
-        format: rgb
-        opacity: false
-        default-light: '#'
-        default-dark: '#'
     -
         id: dates-heading
         title: Dates
@@ -1195,6 +1243,15 @@ settings:
                 label: Custom
                 value: dynamic-views-poster-bg-custom
     -
+        id: dynamic-views-poster-background-color-custom
+        title: Custom background
+        description: Custom background color for contained poster images.
+        type: variable-themed-color
+        format: rgb
+        opacity: false
+        default-light: '#'
+        default-dark: '#'
+    -
         id: dynamic-views-poster-fade-tint
         title: Fade tint
         description: Shade of poster fade gradient.
@@ -1276,15 +1333,6 @@ settings:
             -
                 label: Disable
                 value: dynamic-views-fixed-poster-height-none
-    -
-        id: dynamic-views-poster-background-color-custom
-        title: Custom background
-        description: Custom background color for contained poster images.
-        type: variable-themed-color
-        format: rgb
-        opacity: false
-        default-light: '#'
-        default-dark: '#'
     -
         id: properties-heading
         title: Properties
@@ -2196,8 +2244,8 @@ settings:
         collapsed: true
     -
         id: dynamic-views-thumbnail-border-radius
-        title: Border radius
-        description: Corner roundness of thumbnails.
+        title: Corner roundness
+        description: Rounding of thumbnail images.
         type: variable-number-slider
         default: 4
         min: 0
