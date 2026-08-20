@@ -5,7 +5,8 @@
  * - isHoverPointer(): per-event pointer type filter (mouse/pen hover only)
  * - isTouchPointer(): per-event touch/pen-contact filter (inverse of isHoverPointer)
  * - setupHoverIntent(): requires pointermove after pointerenter to activate
- * - setupTouchPress(): activates on pointerdown, deactivates on pointerup with min duration
+ * - setupTouchPress(): activates on pointerdown, deactivates on pointerup with min duration.
+ *   Optional shouldActivate() narrows activation to part of the element.
  */
 
 import { getOwnerWindow } from '../utils/owner-window';
@@ -97,7 +98,8 @@ export function setupTouchPress(
   el: HTMLElement,
   onActivate: () => void,
   onDeactivate: () => void,
-  signal: AbortSignal
+  signal: AbortSignal,
+  shouldActivate?: (e: PointerEvent) => boolean
 ): void {
   let activatedAt = 0;
   let timer: number | null = null;
@@ -111,6 +113,8 @@ export function setupTouchPress(
         return;
       // Suppress interact from image viewer dismiss tap (cooldown set by closeImageViewer)
       if (el.dataset.viewerDismissing) return;
+      // Caller may restrict which part of the element responds to a press
+      if (shouldActivate && !shouldActivate(e)) return;
       activatedAt = Date.now();
       onActivate();
     },

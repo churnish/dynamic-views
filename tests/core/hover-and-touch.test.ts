@@ -304,6 +304,33 @@ describe('setupTouchPress', () => {
     expect(onActivate).toHaveBeenCalledOnce();
   });
 
+  it('should not activate when shouldActivate rejects the target', () => {
+    const title = document.createElement('div');
+    title.className = 'card-title';
+    const body = document.createElement('div');
+    el.append(title, body);
+    setupTouchPress(el, onActivate, onDeactivate, controller.signal, (e) =>
+      Boolean((e.target as HTMLElement)?.closest?.('.card-title'))
+    );
+    body.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' })
+    );
+    expect(onActivate).not.toHaveBeenCalled();
+  });
+
+  it('should activate when shouldActivate accepts the target', () => {
+    const title = document.createElement('div');
+    title.className = 'card-title';
+    el.append(title);
+    setupTouchPress(el, onActivate, onDeactivate, controller.signal, (e) =>
+      Boolean((e.target as HTMLElement)?.closest?.('.card-title'))
+    );
+    title.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' })
+    );
+    expect(onActivate).toHaveBeenCalledOnce();
+  });
+
   it('should not activate on mouse pointerdown', () => {
     setupTouchPress(el, onActivate, onDeactivate, controller.signal);
     el.dispatchEvent(

@@ -73,6 +73,7 @@ body.dynamic-views-card-background-subtle .dynamic-views {
   --card-bg: var(--dynamic-views-background-primary-alt);
 }
 /* Strong borrows a border token because no stock surface rung separates far enough from --background-primary: --background-primary-alt and --background-secondary land 5 and 9 of 255 from it in light themes, indistinguishable on a card. Obsidian fills with --background-modifier-border itself (PDF toolbar and canvas card menu dividers), so it is a real opaque colour rather than a line-only value. --background-secondary-alt is deliberately not offered — it maps to base-05 in light but base-30 in dark, so its rank flips between themes. */
+/* ACCEPTED COLLISION: this is the token the `Faint` border preset also uses, and Faint is the border DEFAULT — so Strong with an untouched border renders fill and stroke identical and the border disappears. Left as is by decision: Strong separates by fill (27 of 255 from the anchor in light), making the border redundant trim, and Card border sits directly below Card background for anyone who wants it back. Do NOT add a rule bumping the border when both are selected — Style Settings would still display `Faint` while rendering something else. */
 body.dynamic-views-card-background-strong .dynamic-views {
   --card-bg: var(--dynamic-views-background-modifier-border);
 }

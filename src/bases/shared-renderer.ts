@@ -1276,7 +1276,14 @@ export class SharedCardRenderer {
         cardEl.classList.remove('interact');
         deferContainerHoverDrop(cardEl);
       },
-      signal
+      signal,
+      // Open-on-title on mobile: only the title opens the file, so a tap on the
+      // rest of the card must not light the card up as if it were actionable.
+      // Matches the dead-zone click handler's target — the whole .card-title,
+      // not just the link, since that is the mobile tap region.
+      settings.openFileAction === 'title' && this.app.isMobile
+        ? (e) => Boolean((e.target as HTMLElement)?.closest?.('.card-title'))
+        : undefined
     );
 
     // Poster hover intent: require mousemove before activating (ignores scroll-triggered hovers)

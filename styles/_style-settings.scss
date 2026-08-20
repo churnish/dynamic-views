@@ -634,7 +634,7 @@ settings:
     -
         id: dynamic-views-cover-border-radius
         title: Corner roundness
-        description: Rounding of cover images. No effect while Round covers is on.
+        description: How round covers should be.
         type: variable-number-slider
         default: 0
         min: 0
@@ -2245,7 +2245,7 @@ settings:
     -
         id: dynamic-views-thumbnail-border-radius
         title: Corner roundness
-        description: Rounding of thumbnail images.
+        description: How round thumbnails should be.
         type: variable-number-slider
         default: 4
         min: 0
@@ -2837,4 +2837,12 @@ body.dynamic-views-thumbnail-disable-navigation
   .setting-item:nth-last-child(1 of .setting-item:not(.setting-item-heading)) {
   border-bottom-right-radius: var(--setting-items-radius);
   border-bottom-left-radius: var(--setting-items-radius);
+}
+
+/* The Style Settings search input sits inside a .setting-item-name, which Obsidian clips with overflow: hidden for text labels — so the input's focus ring, drawn as an outward box-shadow, is shaved on all four sides. Draw it inside the input instead, where the clip cannot reach: a plain outline would clip too, since outlines paint outside the border box, so the negative offset is load-bearing. */
+/* Matched on the placeholder because the row carries no class or attribute of its own and the input is the only hook that works in both the settings tab and the leaf view. The string is a hardcoded literal in Style Settings, not localised. */
+input[type='search'][placeholder='Search Style Settings...']:focus {
+  box-shadow: none;
+  outline: 2px solid var(--background-modifier-border-focus, #bdbdbd);
+  outline-offset: -2px;
 }
