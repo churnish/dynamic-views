@@ -29,11 +29,11 @@ Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases).
 - Select and copy card text
 - Configure default view settings
 - Fold sections when grouping by property
-- Apply CSS snippets to individual views
 - Interactive checkbox properties
 - Full keyboard navigation
 - “Open URL ↗” card button
 - “Open random file” and “Shuffle view” ribbon buttons
+- Apply [CSS snippets](https://obsidian.md/help/snippets#Writing+CSS+for+Obsidian:~:text=CSS%20classes) to individual views
 
 And numerous other quality‑of‑life improvements over the default Bases card view.
 
