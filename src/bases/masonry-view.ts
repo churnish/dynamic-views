@@ -153,20 +153,39 @@ declare module 'obsidian' {
   }
 }
 
-/** Returns true if a deferred image relayout should proceed (no conflicting operations). */
-export function canFlushImageRelayout(state: {
-  pendingImageRelayout: boolean;
-  postResizeScrollActive: boolean;
+/** Guard state snapshot for correction scheduling decisions. */
+export interface CorrectionGuardState {
+  connected: boolean;
+  batchLayoutPending: boolean;
   resizeCorrectionActive: boolean;
   inMountRemeasure: boolean;
-  batchLayoutPending: boolean;
-}): boolean {
-  if (!state.pendingImageRelayout) return false;
-  if (state.postResizeScrollActive) return false;
-  if (state.resizeCorrectionActive) return false;
-  if (state.inMountRemeasure) return false;
-  if (state.batchLayoutPending) return false;
-  return true;
+  postResizeScrollActive: boolean;
+  /** lastLayoutCardWidth > 0 && lastRenderedSettings !== null */
+  hasLayout: boolean;
+}
+
+/** Single authority for "may a height correction run now?".
+ *  postResize semantics per caller:
+ *  - 'block' (default): at-rest corrections defer during the post-resize
+ *    scroll window (Layer 1 — corrections ride scroll motion instead)
+ *  - 'require': scroll-concurrent path — runs ONLY during that window
+ *  - 'ignore': paths that must correct at rest regardless of the window —
+ *    resize-correction itself (it sets the flag), content-update relayout,
+ *    batch-settle drift catch. Deferring those would strand drift: the 2s
+ *    idle timeout clears the flag WITHOUT correcting, and cardResizeObserver
+ *    swallowed the height notification while the flag was up. */
+export function isCorrectionBlocked(
+  state: CorrectionGuardState,
+  postResize: 'block' | 'require' | 'ignore' = 'block'
+): boolean {
+  if (!state.connected) return true;
+  if (state.batchLayoutPending) return true;
+  if (state.resizeCorrectionActive) return true;
+  if (state.inMountRemeasure) return true;
+  if (!state.hasLayout) return true;
+  if (postResize === 'block' && state.postResizeScrollActive) return true;
+  if (postResize === 'require' && !state.postResizeScrollActive) return true;
+  return false;
 }
 
 /** Masonry layout dimensions derived without reading a single card's DOM */
@@ -654,16 +673,7 @@ export class DynamicViewsMasonryView extends BasesView {
       this.momentumFlushScheduled = true;
       this.win.requestAnimationFrame(() => {
         this.momentumFlushScheduled = false;
-        if (
-          !canFlushImageRelayout({
-            pendingImageRelayout: this.pendingImageRelayout,
-            postResizeScrollActive: this.postResizeScrollActive,
-            resizeCorrectionActive: this.resizeCorrectionTimeout !== null,
-            inMountRemeasure: this.inMountRemeasure,
-            batchLayoutPending: this.batchLayoutPending,
-          })
-        )
-          return;
+        if (!this.pendingImageRelayout || this.correctionBlocked()) return;
         this.pendingImageRelayout = false;
         this.remeasureAndReposition();
       });
@@ -1761,10 +1771,7 @@ export class DynamicViewsMasonryView extends BasesView {
         }
         this.initialRemeasureTimeout = setTimeout(() => {
           this.initialRemeasureTimeout = null;
-          if (!this.containerEl?.isConnected) return;
-          if (this.batchLayoutPending) return;
-          if (this.resizeCorrectionTimeout !== null) return;
-          if (this.postResizeScrollActive) return;
+          if (this.correctionBlocked()) return;
           this.remeasureAndReposition();
         }, INITIAL_REMEASURE_MS);
       }
@@ -1897,16 +1904,7 @@ export class DynamicViewsMasonryView extends BasesView {
           // During WebKit momentum, don't schedule rAF — flush at scroll idle
           if (this.isWebKitCoasting()) return;
           this.win.requestAnimationFrame(() => {
-            if (
-              !canFlushImageRelayout({
-                pendingImageRelayout: this.pendingImageRelayout,
-                postResizeScrollActive: this.postResizeScrollActive,
-                resizeCorrectionActive: this.resizeCorrectionTimeout !== null,
-                inMountRemeasure: this.inMountRemeasure,
-                batchLayoutPending: this.batchLayoutPending,
-              })
-            )
-              return;
+            if (!this.pendingImageRelayout || this.correctionBlocked()) return;
             this.pendingImageRelayout = false;
             this.remeasureAndReposition();
           });
@@ -2321,37 +2319,48 @@ export class DynamicViewsMasonryView extends BasesView {
       this.resizeCorrectionTimeout = window.setTimeout(() => {
         this.resizeCorrectionTimeout = null;
         this.masonryContainer?.classList.remove('masonry-resize-active');
-        if (!this.lastRenderedSettings || this.lastLayoutCardWidth <= 0) return;
         if (!this.masonryContainer?.isConnected) return;
         // Guard: hidden tabs have zero-width containers. Reading offsetHeight
         // on hidden cards returns 0, which corrupts baselines and positions.
         if (this.masonryContainer.getBoundingClientRect().width === 0) return;
 
-        // One-time at-rest correction: fix estimated heights on mounted cards.
-        // Trades a single position jump (200ms after resize) for accurate text
-        // rendering. Subsequent corrections guarded by scroll.
-        this.masonryContainer?.classList.add('masonry-skip-transition');
-        const didWork = this.remeasureAndReposition(true);
+        // 'ignore': this correction sets postResizeScrollActive itself.
+        // batchLayoutPending must skip the correction — running against
+        // unpositioned batch cards violates the layout invariant; the batch's
+        // own settle RAF covers the drift.
+        if (!this.correctionBlocked('ignore')) {
+          // One-time at-rest correction: fix estimated heights on mounted cards.
+          // Trades a single position jump (200ms after resize) for accurate text
+          // rendering. Subsequent corrections guarded by scroll.
+          this.masonryContainer?.classList.add('masonry-skip-transition');
+          const didWork = this.remeasureAndReposition(true);
 
-        // Only guard subsequent corrections when the at-rest correction
-        // actually repositioned cards. When no reposition was needed,
-        // async paths (cardRO, image-load) must remain unblocked.
-        if (didWork) {
-          this.postResizeScrollActive = true;
+          // Only guard subsequent corrections when the at-rest correction
+          // actually repositioned cards. When no reposition was needed,
+          // async paths (cardRO, image-load) must remain unblocked.
+          if (didWork) {
+            this.postResizeScrollActive = true;
 
-          // Safety net: clear flag if user never scrolls (2s).
-          if (this.postResizeIdleTimeout !== null) {
-            clearTimeout(this.postResizeIdleTimeout);
+            // Safety net: clear flag if user never scrolls (2s).
+            if (this.postResizeIdleTimeout !== null) {
+              clearTimeout(this.postResizeIdleTimeout);
+            }
+            this.postResizeIdleTimeout = setTimeout(() => {
+              this.postResizeIdleTimeout = null;
+              if (!this.postResizeScrollActive) return;
+              this.postResizeScrollActive = false;
+              this.masonryContainer?.classList.remove(
+                'masonry-skip-transition'
+              );
+            }, 2000);
           }
-          this.postResizeIdleTimeout = setTimeout(() => {
-            this.postResizeIdleTimeout = null;
-            if (!this.postResizeScrollActive) return;
-            this.postResizeScrollActive = false;
-            this.masonryContainer?.classList.remove('masonry-skip-transition');
-          }, 2000);
         }
 
-        // Post-correction: responsive classes + scroll gradients
+        // Post-correction: responsive classes + scroll gradients.
+        // Runs even when the correction is skipped — it is the deferred
+        // replacement for the per-frame resize passes; skipping would leave
+        // previously-mounted cards with stale compact-mode classes at the
+        // new width.
         this.resizeCorrectionRafId = this.win.requestAnimationFrame(() => {
           this.resizeCorrectionRafId = null;
           if (!this.masonryContainer?.isConnected) return;
@@ -2401,30 +2410,14 @@ export class DynamicViewsMasonryView extends BasesView {
       this.cardResizeObserver = new this.win.ResizeObserver(() => {
         // Skip during active resize, scroll remeasure, batch layout, or
         // pre-layout state
-        if (
-          this.resizeCorrectionTimeout !== null ||
-          this.inMountRemeasure ||
-          this.postResizeScrollActive ||
-          this.batchLayoutPending ||
-          this.lastLayoutCardWidth === 0 ||
-          !this.lastRenderedSettings
-        ) {
-          return;
-        }
+        if (this.correctionBlocked()) return;
         // RAF debounce — coalesce same-frame card height changes into one reflow
         if (this.cardResizeRafId !== null) {
           this.win.cancelAnimationFrame(this.cardResizeRafId);
         }
         this.cardResizeRafId = this.win.requestAnimationFrame(() => {
           this.cardResizeRafId = null;
-          if (
-            !this.containerEl.isConnected ||
-            this.batchLayoutPending ||
-            this.resizeCorrectionTimeout !== null ||
-            this.inMountRemeasure ||
-            this.postResizeScrollActive
-          )
-            return;
+          if (this.correctionBlocked()) return;
           this.remeasureAndReposition();
         });
       });
@@ -2458,6 +2451,23 @@ export class DynamicViewsMasonryView extends BasesView {
         item.fixedHeight = item.measuredHeight - item.scalableHeight;
       }
     }
+  }
+
+  private correctionBlocked(
+    postResize: 'block' | 'require' | 'ignore' = 'block'
+  ): boolean {
+    return isCorrectionBlocked(
+      {
+        connected: !!this.containerEl?.isConnected,
+        batchLayoutPending: this.batchLayoutPending,
+        resizeCorrectionActive: this.resizeCorrectionTimeout !== null,
+        inMountRemeasure: this.inMountRemeasure,
+        postResizeScrollActive: this.postResizeScrollActive,
+        hasLayout:
+          this.lastLayoutCardWidth > 0 && this.lastRenderedSettings !== null,
+      },
+      postResize
+    );
   }
 
   /** Re-measure mounted cards and reposition after correction's sync mounts
@@ -3464,14 +3474,7 @@ export class DynamicViewsMasonryView extends BasesView {
     // Synchronous mount remeasure: measure + reposition in the same frame
     // cards are mounted. Eliminates the 200ms estimation→correction gap that
     // causes visible CLS on first scroll through unmeasured cards.
-    if (
-      mountedNeverMeasured &&
-      !this.inMountRemeasure &&
-      this.resizeCorrectionTimeout === null &&
-      this.lastLayoutCardWidth > 0 &&
-      !this.batchLayoutPending &&
-      !this.postResizeScrollActive
-    ) {
+    if (mountedNeverMeasured && !this.correctionBlocked()) {
       this.inMountRemeasure = true;
       this.onMountRemeasure();
       this.inMountRemeasure = false;
@@ -3483,12 +3486,7 @@ export class DynamicViewsMasonryView extends BasesView {
     // because they correct on first scroll-through.
     // Safety net: if the user stops scrolling mid-correction, the idle
     // timeout below fires one final sync to clear postResizeScrollActive.
-    if (
-      this.postResizeScrollActive &&
-      !this.inMountRemeasure &&
-      !this.batchLayoutPending &&
-      this.resizeCorrectionTimeout === null
-    ) {
+    if (!this.correctionBlocked('require')) {
       const now = Date.now();
       if (
         now - this.lastScrollCorrectionTime >=
@@ -3521,13 +3519,9 @@ export class DynamicViewsMasonryView extends BasesView {
   }
 
   /** Correct height drift from recently mounted cards.
-   *  Called synchronously from syncVirtualScroll after new mounts. */
+   *  Called synchronously from syncVirtualScroll after new mounts, which
+   *  checks correctionBlocked() in the same tick — no internal re-checks. */
   private onMountRemeasure(): void {
-    if (!this.containerEl?.isConnected) return;
-    if (this.batchLayoutPending) return;
-    if (this.resizeCorrectionTimeout !== null) return;
-    if (this.postResizeScrollActive) return;
-
     // Batch deferred passes on scroll-mounted cards (mirrors grid onMountRemeasure)
     if (this.newlyMountedEls.length > 0) {
       const newEls = this.newlyMountedEls.filter((el) => el.isConnected);
@@ -3632,7 +3626,7 @@ export class DynamicViewsMasonryView extends BasesView {
     }
     this.initialRemeasureTimeout = setTimeout(() => {
       this.initialRemeasureTimeout = null;
-      if (!this.containerEl?.isConnected) return;
+      if (this.correctionBlocked()) return;
       this.remeasureAndReposition();
     }, INITIAL_REMEASURE_MS);
   }
@@ -3868,12 +3862,11 @@ export class DynamicViewsMasonryView extends BasesView {
       }
     }
 
-    if (
-      anyHeightChanged &&
-      !this.batchLayoutPending &&
-      this.resizeCorrectionTimeout === null &&
-      !this.inMountRemeasure
-    ) {
+    // 'ignore': content updates must correct at rest — deferring to the
+    // scroll-concurrent path would strand drift when the user never scrolls
+    // (the idle timeout clears the flag without correcting, and cardRO
+    // swallowed the height notification while the flag was up).
+    if (anyHeightChanged && !this.correctionBlocked('ignore')) {
       this.remeasureAndReposition();
     }
 
@@ -4302,9 +4295,11 @@ export class DynamicViewsMasonryView extends BasesView {
           // Catch height drift in previously-positioned cards whose image-load
           // signals were blocked by batchLayoutPending (e.g., batch 1 covers
           // shrank via --actual-aspect-ratio while batch 2 was appending).
+          // 'ignore': must correct at rest for the same no-scroll-stranding
+          // reason as updateCardsInPlace; a pending 200ms resize correction
+          // subsumes the drift catch.
           this.win.requestAnimationFrame(() => {
-            if (!this.containerEl?.isConnected) return;
-            if (this.batchLayoutPending) return;
+            if (this.correctionBlocked('ignore')) return;
             this.remeasureAndReposition();
           });
 
