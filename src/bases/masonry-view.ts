@@ -28,11 +28,14 @@ import {
   getStyleSettingsLayoutHash,
   isFixedHeightForMasonry,
 } from '../utils/style-settings';
+import { PLUGIN_SETTINGS_CHANGE } from '../constants';
 import {
-  CSS_ONLY_SETTINGS_KEYS,
-  ORDER_DERIVED_SETTINGS_KEYS,
-  PLUGIN_SETTINGS_CHANGE,
-} from '../constants';
+  computeRenderHashes,
+  detectEntryChanges,
+  commitMtimes,
+  scheduleLateConfigRechecks,
+  applyCustomClasses,
+} from './change-detection';
 import {
   FullScreenController,
   createFullScreenController,
@@ -1082,71 +1085,18 @@ export class DynamicViewsMasonryView extends BasesView {
       applyViewContainerStyles(this.containerEl, settings);
 
       // Apply custom CSS classes from settings (mimics cssclasses frontmatter)
-      const customClasses = settings.cssclasses
-        .split(',')
-        .map((cls) => cls.trim())
-        .filter(Boolean);
-
-      // Only update if classes changed (prevents unnecessary DOM mutations)
-      const classesChanged =
-        this._previousCustomClasses.length === 0 ||
-        this._previousCustomClasses.length !== customClasses.length ||
-        !this._previousCustomClasses.every(
-          (cls, i) => cls === customClasses[i]
-        );
-
-      if (classesChanged) {
-        // Clear previous custom classes
-        if (this._previousCustomClasses.length > 0) {
-          this._previousCustomClasses.forEach((cls: string) => {
-            this.scrollEl.removeClass(cls);
-          });
-        }
-
-        // Apply new custom classes
-        customClasses.forEach((cls) => {
-          this.scrollEl.addClass(cls);
-        });
-
-        // Store for next update
-        this._previousCustomClasses = customClasses;
-      }
+      this._previousCustomClasses = applyCustomClasses(
+        this.scrollEl,
+        this._previousCustomClasses,
+        settings.cssclasses
+      );
 
       // Check if data or settings changed - skip re-render if not (prevents tab switch flash)
-      // Use null byte delimiter (cannot appear in file paths) to avoid hash collisions
       const groupByProperty = hasGroupBy(this.config)
         ? this.config.groupBy?.property
         : undefined;
       const sortMethod = getSortMethod(this.config);
       const visibleProperties = this.config.getOrder();
-      // Exclude CSS-only settings from hash — they're applied instantly via
-      // applyCssOnlySettings() and don't need a full DOM rebuild
-      const hashableSettings = Object.fromEntries(
-        Object.entries(settings).filter(([k]) => !CSS_ONLY_SETTINGS_KEYS.has(k))
-      );
-      const settingsHash =
-        JSON.stringify(hashableSettings) +
-        '\0\0' +
-        JSON.stringify(visibleProperties) +
-        '\0\0' +
-        sortMethod +
-        '\0\0' +
-        (groupByProperty ?? '');
-      const propertySetHash = [...visibleProperties].sort().join('\0');
-      // Further exclude order-derived settings for reorder detection
-      // (titleProperty, subtitleProperty, _skipLeadingProperties change when
-      // displayFirstAsTitle derives them from property order positions)
-      const orderIndependentSettings = Object.fromEntries(
-        Object.entries(hashableSettings).filter(
-          ([k]) => !ORDER_DERIVED_SETTINGS_KEYS.has(k)
-        )
-      );
-      const settingsHashExcludingOrder =
-        JSON.stringify(orderIndependentSettings) +
-        '\0\0' +
-        sortMethod +
-        '\0\0' +
-        (groupByProperty ?? '');
       const styleSettingsHash = getStyleSettingsHash();
 
       // Clear text preview cache when style settings change (e.g., keep headings/newlines toggled)
@@ -1160,87 +1110,43 @@ export class DynamicViewsMasonryView extends BasesView {
       }
       this.renderState.lastStyleSettingsHash = styleSettingsHash;
 
-      // Include mtime, sortMethod, and group order in hash so content/sort/group changes trigger updates
-      const collapsedHash = Array.from(this.collapsedGroups).sort().join('\0');
-      const groupOrderHash = groupedData
-        .map((g) => (g.hasKey() ? (serializeGroupKey(g.key) ?? '') : ''))
-        .join('\0');
-      const renderHash =
-        allEntries
-          .map((e: BasesEntry) => `${e.file.path}:${e.file.stat.mtime}`)
-          .join('\0') +
-        '\0\0' +
-        settingsHash +
-        '\0\0' +
-        (groupByProperty ?? '') +
-        '\0\0' +
-        sortMethod +
-        '\0\0' +
-        groupOrderHash +
-        '\0\0' +
-        styleSettingsHash +
-        '\0\0' +
-        getStyleSettingsLayoutHash() +
-        '\0\0' +
-        collapsedHash +
-        '\0\0' +
-        String(this.sortState.isShuffled) +
-        '\0\0' +
-        this.sortState.order.join('\0') +
-        '\0\0' +
-        JSON.stringify(visibleProperties);
+      const {
+        settingsHash,
+        propertySetHash,
+        settingsHashExcludingOrder,
+        renderHash,
+      } = computeRenderHashes({
+        settings,
+        visibleProperties,
+        sortMethod,
+        groupByProperty,
+        groupedData,
+        collapsedGroups: this.collapsedGroups,
+        allEntries,
+        isShuffled: this.sortState.isShuffled,
+        shuffleOrder: this.sortState.order,
+        styleSettingsHash,
+        styleSettingsLayoutHash: getStyleSettingsLayoutHash(),
+      });
 
-      // Detect files with changed content (mtime changed but paths unchanged)
-      const changedPaths = new Set<string>();
-      const currentPaths = allEntries.map((e) => e.file.path);
-      const lastKeys = Array.from(this.renderState.lastMtimes.keys());
-      const pathsUnchanged =
-        currentPaths.length === lastKeys.length &&
-        currentPaths.every((p) => this.renderState.lastMtimes.has(p));
-      // Detect sort-order changes: when a sort-relevant property is edited,
-      // Bases re-sorts allEntries AND updates mtime, so changedPaths is
-      // non-empty and the renderHash early-exit is bypassed. This check is
-      // the only gate that prevents the in-place path from preserving stale
-      // DOM positions when the sort order has actually changed.
-      const orderUnchanged =
-        lastKeys.length === currentPaths.length &&
-        currentPaths.every((p, i) => p === lastKeys[i]);
-
-      for (const entry of allEntries) {
-        const path = entry.file.path;
-        const mtime = entry.file.stat.mtime;
-        const lastMtime = this.renderState.lastMtimes.get(path);
-        if (lastMtime !== undefined && lastMtime !== mtime) {
-          changedPaths.add(path);
-        }
-      }
-
-      // Update mtime tracking — insertion order must match allEntries (Bases
-      // sort order) so the next render's orderUnchanged check works correctly.
-      this.renderState.lastMtimes.clear();
-      for (const entry of allEntries) {
-        this.renderState.lastMtimes.set(entry.file.path, entry.file.stat.mtime);
-      }
+      const { changedPaths, pathsUnchanged, orderUnchanged } =
+        detectEntryChanges(allEntries, this.renderState.lastMtimes);
+      commitMtimes(allEntries, this.renderState.lastMtimes);
 
       if (
         renderHash === this.renderState.lastRenderHash &&
         this.masonryContainer?.children.length &&
         changedPaths.size === 0
       ) {
-        // Obsidian may fire onDataUpdated before config.getOrder() is updated.
-        // Schedule delayed re-checks at increasing intervals to catch late config updates.
         const propsSnapshot = JSON.stringify(visibleProperties);
-        const recheckDelays = [100, 250, 500];
-        for (const delay of recheckDelays) {
-          setTimeout(() => {
-            const currentProps = this.config?.getOrder?.() ?? [];
-            const currentPropsStr = JSON.stringify(currentProps);
-            if (currentPropsStr !== propsSnapshot) {
-              this.lastDataUpdateTime.value = 0;
-              this.processDataUpdate();
-            }
-          }, delay);
-        }
+        scheduleLateConfigRechecks(
+          () => this.config?.getOrder?.() ?? [],
+          propsSnapshot,
+          () => {
+            this.lastDataUpdateTime.value = 0;
+            this.processDataUpdate();
+          }
+        );
         if (!this.restoreEphemeralScroll()) {
           this.scrollPreservation?.restoreAfterRender();
         }
