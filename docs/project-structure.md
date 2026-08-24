@@ -16,6 +16,7 @@ dynamic-views/
 │   └── ...
 ├── src/
 │   ├── bases/                        # Bases backend (Obsidian native API)
+│   │   ├── change-detection.ts       # Shared render-pipeline change detection: hashes, entry diffing, custom classes, config rechecks
 │   │   ├── grid-view.ts              # Grid layout view
 │   │   ├── full-screen.ts              # Full screen mobile scrolling + createFullScreenController() factory
 │   │   ├── masonry-view.ts           # Masonry layout view
@@ -113,8 +114,9 @@ dynamic-views/
 │   ├── __mocks__/
 │   │   └── obsidian.ts
 │   ├── bases/
-│   │   ├── can-flush-image-relayout.test.ts
+│   │   ├── change-detection.test.ts
 │   │   ├── cleanup.test.ts
+│   │   ├── correction-guards.test.ts
 │   │   ├── full-screen-factory.test.ts
 │   │   ├── grid-equalize.test.ts
 │   │   ├── grid-scroll.test.ts

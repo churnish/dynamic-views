@@ -2,13 +2,13 @@
 title: Config reactivity
 description: How config changes propagate from onDataUpdated through dirty-checking, render hash comparison, and the CSS fast-path to re-render decisions — covers all hash inputs, stale config guards, incremental update paths, and Style Settings reactivity.
 author: 🤖 Generated with Claude Code
-updated: 2026-08-14
+updated: 2026-08-24
 ---
 # Config reactivity
 
 See also: [`odkb/electron-popout-quirks.md`](https://github.com/churnish/odkb/blob/main/electron-popout-quirks.md)
 
-The plugin's reactivity pipeline decides what to re-render when a config value, file content, or Style Settings option changes. It separates instant CSS updates from expensive DOM rebuilds and uses a composite render hash to skip redundant work. Both Grid and Masonry views share the same pipeline structure — file paths below reference `grid-view.ts` but the Masonry equivalents are structurally identical.
+The plugin's reactivity pipeline decides what to re-render when a config value, file content, or Style Settings option changes. It separates instant CSS updates from expensive DOM rebuilds and uses a composite render hash to skip redundant work. Both Grid and Masonry views share the same pipeline structure — file paths below reference `grid-view.ts` but the Masonry equivalents are structurally identical. The pure computation steps (render hashes, entry mtime diffing, custom-class application, late-config rechecks) live in `change-detection.ts`; dispatch decisions stay in the views.
 
 ## Pipeline overview
 
@@ -52,7 +52,7 @@ Obsidian calls `onDataUpdated()` on the view instance whenever the `.base` file 
 | `PLUGIN_SETTINGS_CHANGE` event | Plugin settings tab save |
 | `foldAllGroups()` / `unfoldAllGroups()` | Manual group collapse toggle |
 
-**Why `queueMicrotask`**: Obsidian may fire `onDataUpdated()` before `config.getOrder()` reflects the new property order. The microtask delay gives Obsidian time to finish updating config state. The early-return guard also schedules delayed re-checks at 100/250/500ms as a safety net for late config updates.
+**Why `queueMicrotask`**: Obsidian may fire `onDataUpdated()` before `config.getOrder()` reflects the new property order. The microtask delay gives Obsidian time to finish updating config state. The early-return guard also schedules delayed re-checks at 100/250/500ms (`scheduleLateConfigRechecks()` in `change-detection.ts`) as a safety net for late config updates.
 
 ## CSS fast-path
 
@@ -93,7 +93,7 @@ The caller passes `this.lastRenderedSettings` as the fallback source, which stor
 
 ## Render hash
 
-The render hash is a 10-component string built from all inputs that affect card DOM structure. If the hash is unchanged AND cards are already rendered AND no file content changed, the view skips re-rendering entirely.
+The render hash is a 10-component string built from all inputs that affect card DOM structure, computed by `computeRenderHashes()` in `change-detection.ts` (which also returns `settingsHash`, `propertySetHash`, and `settingsHashExcludingOrder`). If the hash is unchanged AND cards are already rendered AND no file content changed, the view skips re-rendering entirely.
 
 ### Hash components
 
@@ -147,7 +147,7 @@ When skipped, the view still:
 
 ## Content-change detection
 
-The `lastMtimes` map (`Map<string, number>`) tracks `file.path → file.stat.mtime` from the last render. On each update cycle:
+The `lastMtimes` map (`Map<string, number>`) tracks `file.path → file.stat.mtime` from the last render. On each update cycle (`detectEntryChanges()` + `commitMtimes()` in `change-detection.ts`):
 
 1. Compare current mtimes against stored values
 2. Files with changed mtimes → `changedPaths` set

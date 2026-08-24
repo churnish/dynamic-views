@@ -2,7 +2,7 @@
 title: Grid layout system
 description: CSS Grid column layout for card views. Render pipeline, guard system, virtual scrolling, and committed-row lock mount ordering.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-10
+updated: 2026-08-24
 ---
 # Grid layout system
 
@@ -17,6 +17,7 @@ The grid layout system renders cards in a CSS Grid-based equal-height column lay
 | File                               | Role                                                                    |
 | ---------------------------------- | ----------------------------------------------------------------------- |
 | `src/bases/shared-renderer.ts`   | Shared card rendering (normalized `CardData`), used by both backends.                                        |
+| `src/bases/change-detection.ts`  | Shared render-pipeline change detection (`computeRenderHashes`, `detectEntryChanges`, `commitMtimes`, `scheduleLateConfigRechecks`, `applyCustomClasses`). |
 | `src/core/constants.ts`        | Tuning constants (`MAX_BATCH_SIZE`, `PANE_MULTIPLIER`, `ROWS_PER_COLUMN`, throttle intervals).               |
 | `src/core/keyboard-nav.ts`     | DOM-based arrow navigation and hover-to-keyboard focus transfer.                                             |
 | `src/core/scroll-gradient.ts`  | Horizontal scroll gradients for property rows.                                                               |
@@ -144,8 +145,8 @@ Tracks render versioning and change detection hashes to skip no-op re-renders.
 1. `applyCssOnlySettings()` — set CSS variables (`textPreviewLines`, `titleLines`, `imageRatio`, `thumbnailSize`) and CSS classes (`posterDisplayMode`, `imageFit`) directly on container. Bypasses throttle for instant feedback.
 2. Read settings with stale-config fallback (`lastRenderedSettings`), normalize property names. (For the full resolution chain, stale config guards, and sparse storage, see [settings-resolution.md](settings-resolution.md).)
 3. Apply per-view CSS classes and variables (`applyViewContainerStyles`).
-4. Compute `renderHash` (data paths + mtimes + settings + style settings + sort + shuffle + collapse + properties).
-5. **Skip if hash unchanged** — restore column CSS variable (may be lost on tab switch), restore scroll position, return early. Schedule delayed re-checks at 100/250/500ms to catch late Obsidian config updates.
+4. Compute `renderHash` via `computeRenderHashes()` (`change-detection.ts`) — data paths + mtimes + settings + style settings + sort + shuffle + collapse + properties. Entry mtime diffing runs through `detectEntryChanges()` + `commitMtimes()` in the same module.
+5. **Skip if hash unchanged** — restore column CSS variable (may be lost on tab switch), restore scroll position, return early. Schedule delayed re-checks at 100/250/500ms (`scheduleLateConfigRechecks()`) to catch late Obsidian config updates.
 6. Check fast paths (see §2, §3 below).
 7. **Full render**:
    - Clear content cache if settings changed. Reset `virtualItemCount` if batches were appended.
