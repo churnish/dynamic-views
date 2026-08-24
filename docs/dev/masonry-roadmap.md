@@ -2,7 +2,7 @@
 title: Masonry optimization roadmap
 description: Masonry performance optimization tracking — per-system optimizations, priority table from profiling, and status.
 author: 🤖 Generated with Claude Code
-updated: 2026-03-30
+updated: 2026-08-24
 ---
 # Masonry optimization roadmap
 
@@ -34,7 +34,7 @@ Recalibrated from T1-T12 profiling battery. Ordered by expected impact x confide
 |---|---|---|---|---|
 | P0 | Resize frame cost investigation | 93ms→43ms avg (54% reduction) | T6: Style recalc dominated (41-189ms). Deferred `syncResponsiveClasses` + scroll gradients to post-resize. ~42ms architectural floor remains (Blink style recalc). | Done |
 | P1 | Cold-start forced reflow reduction | 325ms → ~56ms | T1: 3 reflow paths. Batched reads/writes + synthetic group offsets + deferred checkAndLoadMore. | Done |
-| P1 | Transform-based positioning | Eliminates ~42ms/frame architectural floor | T6 confirmed: style recalc from `top/left/width/height` writes is the remaining cost. `translate3d` is compositor-only. | **Done** |
+| P1 | Transform-based positioning | Eliminates ~42ms/frame architectural floor | T6 confirmed style recalc from top/left/width/height writes as the remaining cost. Implemented as translate3d and reverted — zero CLS improvement ([cls-elimination.md](cls-elimination.md) Phase 3); positions remain inline top/left. | Reverted |
 | — | Pre-cached image dimensions | Marginal for vault-local images | T2: 2ms load span. T3: deferred remeasure catches drift at 95ms. | Deprioritized |
 | — | Single-column reflow | Marginal with current coalescing | T2: 1 relayout/frame. O(n) where n=23 mounted, not 300 total. | Deprioritized |
 | — | Staggered mounting | No scenario requires it | T5: 23-42 mounted, no storms, change every ~7.5 frames. | Eliminated |
@@ -91,7 +91,7 @@ Sections below are ordered by **system/concern area**, not by priority or chrono
 | `for` loops replacing `forEach` | Done | In `calculateMasonryLayout` and `calculateIncrementalMasonryLayout`. Eliminates closure allocation per card. | | |
 | `contain: layout style paint` | Done | On `.masonry-positioned` cards. Limits paint boundaries without full layer promotion. | | |
 | Batch `offsetHeight` reads + writes | Done | `remeasureAndReposition` split into read-all → calculate+write-all phases. `updateGroupOffsetsSynthetic` replaces `getBoundingClientRect` after position writes (cumulative height delta, atomic commit, zero DOM reads). `computeSyntheticGroupOffsets` extracted as pure function with unit tests. | | |
-| Transform-based positioning | Planned | `transform: translate3d(x, y, 0)` is compositor-only (skips layout+paint). Current `top`/`left` triggers layout recalc. **T6 confirmed: ~42ms/frame architectural floor is Blink style recalc from inline `top/left/width/height` writes.** Transforms would eliminate position-change recalc (compositor-only). Trade-off: significant per-card VRAM cost from compositor layer promotion at high DPR. `contain: layout style paint` already limits scope but does NOT prevent style recalc. | 5 | 2 |
+| Transform-based positioning | Reverted | `transform: translate3d(x, y, 0)` is compositor-only (skips layout+paint). Current `top`/`left` triggers layout recalc. **T6 confirmed: ~42ms/frame architectural floor is Blink style recalc from inline `top/left/width/height` writes.** Transforms would eliminate position-change recalc (compositor-only). Trade-off: significant per-card VRAM cost from compositor layer promotion at high DPR. `contain: layout style paint` already limits scope but does NOT prevent style recalc. Tried as CLS Phase 3 — compositor-only positioning gave zero CLS improvement; reverted with the experimental branch. | 5 | 2 |
 | Cold-start forced reflow reduction | Done | **325ms → ~56ms total.** Batched reads/writes in `remeasureAndReposition` (78ms saved), `updateGroupOffsetsSynthetic` replaces `getBoundingClientRect` after writes (135ms saved), deferred `checkAndLoadMore` to RAF (56ms saved). Also fixed pre-existing grouped masonry blank-on-resize: proportional resize branch never updated `cachedGroupOffsets` before `syncVirtualScroll`. Remaining: image-coalesced fast path still has per-group interleaved reads/writes (triaged — fires infrequently). | | |
 
 ## 5. Virtual scroll refinements
