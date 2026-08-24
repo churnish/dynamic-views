@@ -2117,51 +2117,19 @@ export class DynamicViewsMasonryView extends BasesView {
                   return estimateUnmountedHeight(item, cardWidth);
                 });
 
-                const existingResult = this.groupLayoutResults.get(groupKey);
-
-                const result = existingResult
-                  ? this.resolveStableOrGreedy(
-                      existingResult,
-                      heights,
-                      groupItems.length,
-                      columns,
-                      cardWidth,
-                      gap,
-                      containerWidth,
-                      settings.cardSize,
-                      minColumns,
-                      isGrouped
-                    )
-                  : calculateMasonryLayout({
-                      cards: Array.from<HTMLElement>({
-                        length: groupItems.length,
-                      }),
-                      containerWidth,
-                      cardSize: settings.cardSize,
-                      minColumns,
-                      gap,
-                      heights,
-                    });
-
-                this.applyCardPositions(
+                this.layoutGroupAndApply({
+                  groupKey,
                   groupItems,
-                  result.positions,
-                  cardWidth,
                   heights,
-                  false
-                );
-
-                const container = isGrouped
-                  ? this.groupContainers.get(groupKey)
-                  : this.masonryContainer;
-                container?.style.setProperty(
-                  '--masonry-height',
-                  `${result.containerHeight}px`
-                );
-
-                result.measuredAtCardWidth = cardWidth;
-                this.groupLayoutResults.set(groupKey, result);
-                this.updateVirtualItemPositions(groupKey, result);
+                  containerWidth,
+                  cardWidth,
+                  columns,
+                  gap,
+                  cardSize: settings.cardSize,
+                  minColumns,
+                  checkImbalance: isGrouped,
+                  addPositionedClass: false,
+                });
               }
 
               this.masonryContainer.classList.remove('masonry-measuring');
@@ -2241,51 +2209,21 @@ export class DynamicViewsMasonryView extends BasesView {
               return estimateUnmountedHeight(item, cardWidth);
             });
 
-            const existingResult = this.groupLayoutResults.get(groupKey);
-
             // Skip imbalance check during resize — visual stability matters more.
             // Only check for non-resize sources (batch appends, group expand).
-            const isResizeSource = source === 'resize-observer';
-            const result = existingResult
-              ? this.resolveStableOrGreedy(
-                  existingResult,
-                  groupHeights,
-                  groupItems.length,
-                  columns,
-                  cardWidth,
-                  gap,
-                  containerWidth,
-                  settings.cardSize,
-                  minColumns,
-                  !isResizeSource
-                )
-              : calculateMasonryLayout({
-                  cards: Array.from<HTMLElement>({ length: groupItems.length }),
-                  containerWidth,
-                  cardSize: settings.cardSize,
-                  minColumns,
-                  gap,
-                  heights: groupHeights,
-                });
-
-            // Apply positions to mounted cards only (single pass)
-            this.applyCardPositions(
+            this.layoutGroupAndApply({
+              groupKey,
               groupItems,
-              result.positions,
+              heights: groupHeights,
+              containerWidth,
               cardWidth,
-              groupHeights,
-              true
-            );
-
-            groupEl.classList.add('masonry-container');
-            groupEl.style.setProperty(
-              '--masonry-height',
-              `${result.containerHeight}px`
-            );
-
-            result.measuredAtCardWidth = cardWidth;
-            this.groupLayoutResults.set(groupKey, result);
-            this.updateVirtualItemPositions(groupKey, result);
+              columns,
+              gap,
+              cardSize: settings.cardSize,
+              minColumns,
+              checkImbalance: source !== 'resize-observer',
+              addPositionedClass: true,
+            });
           }
         } else {
           // Ungrouped mode
@@ -2295,49 +2233,19 @@ export class DynamicViewsMasonryView extends BasesView {
             }
             return estimateUnmountedHeight(item, cardWidth);
           });
-          const existingResult = this.groupLayoutResults.get(undefined);
-          const result = existingResult
-            ? this.resolveStableOrGreedy(
-                existingResult,
-                heights,
-                this.virtualItems.length,
-                columns,
-                cardWidth,
-                gap,
-                containerWidth,
-                settings.cardSize,
-                minColumns,
-                false
-              )
-            : calculateMasonryLayout({
-                cards: Array.from<HTMLElement>({
-                  length: this.virtualItems.length,
-                }),
-                containerWidth,
-                cardSize: settings.cardSize,
-                minColumns,
-                gap,
-                heights,
-              });
-
-          // Apply positions to mounted cards only (single pass)
-          this.applyCardPositions(
-            this.virtualItems,
-            result.positions,
-            cardWidth,
+          this.layoutGroupAndApply({
+            groupKey: undefined,
+            groupItems: this.virtualItems,
             heights,
-            true
-          );
-
-          this.masonryContainer.style.setProperty(
-            '--masonry-height',
-            `${result.containerHeight}px`
-          );
-
-          result.measuredAtCardWidth = cardWidth;
-
-          this.groupLayoutResults.set(undefined, result);
-          this.updateVirtualItemPositions(undefined, result);
+            containerWidth,
+            cardWidth,
+            columns,
+            gap,
+            cardSize: settings.cardSize,
+            minColumns,
+            checkImbalance: false,
+            addPositionedClass: true,
+          });
         }
 
         this.lastLayoutWidth = containerWidth;
@@ -2693,50 +2601,21 @@ export class DynamicViewsMasonryView extends BasesView {
     for (const [groupKey, heights] of groupHeightsMap) {
       const groupItems = this.virtualItemsByGroup.get(groupKey)!;
 
-      const existingResult = this.groupLayoutResults.get(groupKey);
-
       // Stable column reposition when prior layout exists — prevents
       // cascading column switching from small height changes.
-      const result = existingResult
-        ? this.resolveStableOrGreedy(
-            existingResult,
-            heights,
-            groupItems.length,
-            columns,
-            cardWidth,
-            gap,
-            containerWidth,
-            settings.cardSize,
-            minColumns,
-            isGrouped
-          )
-        : calculateMasonryLayout({
-            cards: Array.from<HTMLElement>({ length: groupItems.length }),
-            containerWidth,
-            cardSize: settings.cardSize,
-            minColumns,
-            gap,
-            heights,
-          });
-
-      this.applyCardPositions(
+      this.layoutGroupAndApply({
+        groupKey,
         groupItems,
-        result.positions,
-        cardWidth,
         heights,
-        false
-      );
-      const container = isGrouped
-        ? this.groupContainers.get(groupKey)
-        : this.masonryContainer;
-      container?.style.setProperty(
-        '--masonry-height',
-        `${result.containerHeight}px`
-      );
-
-      result.measuredAtCardWidth = cardWidth;
-      this.groupLayoutResults.set(groupKey, result);
-      this.updateVirtualItemPositions(groupKey, result);
+        containerWidth,
+        cardWidth,
+        columns,
+        gap,
+        cardSize: settings.cardSize,
+        minColumns,
+        checkImbalance: isGrouped,
+        addPositionedClass: false,
+      });
     }
     this.masonryContainer?.classList.remove('masonry-measuring');
     this.refreshGroupOffsets(oldContainerHeights);
@@ -2843,44 +2722,35 @@ export class DynamicViewsMasonryView extends BasesView {
         if (groupItems.length === 0) continue;
 
         const groupHeights = groupItems.map((item) => item.height);
-        const result = calculateMasonryLayout({
-          cards: Array.from<HTMLElement>({ length: groupItems.length }),
+        this.layoutGroupAndApply({
+          groupKey,
+          groupItems,
+          heights: groupHeights,
           containerWidth,
+          cardWidth,
+          columns,
+          gap,
           cardSize: settings.cardSize,
           minColumns,
-          gap,
-          heights: groupHeights,
+          checkImbalance: false,
+          addPositionedClass: false,
         });
-
-        groupEl.classList.add('masonry-container');
-        groupEl.style.setProperty(
-          '--masonry-height',
-          `${result.containerHeight}px`
-        );
-
-        result.measuredAtCardWidth = cardWidth;
-        this.groupLayoutResults.set(groupKey, result);
-        this.updateVirtualItemPositions(groupKey, result);
       }
     } else {
       const heights = this.virtualItems.map((item) => item.height);
-      const result = calculateMasonryLayout({
-        cards: Array.from<HTMLElement>({ length: this.virtualItems.length }),
+      this.layoutGroupAndApply({
+        groupKey: undefined,
+        groupItems: this.virtualItems,
+        heights,
         containerWidth,
+        cardWidth,
+        columns,
+        gap,
         cardSize: settings.cardSize,
         minColumns,
-        gap,
-        heights,
+        checkImbalance: false,
+        addPositionedClass: false,
       });
-
-      this.masonryContainer.style.setProperty(
-        '--masonry-height',
-        `${result.containerHeight}px`
-      );
-
-      result.measuredAtCardWidth = cardWidth;
-      this.groupLayoutResults.set(undefined, result);
-      this.updateVirtualItemPositions(undefined, result);
     }
   }
   // #endregion Layout engine
@@ -3011,6 +2881,67 @@ export class DynamicViewsMasonryView extends BasesView {
       gap,
       heights,
     });
+  }
+
+  /** Shared per-group layout pipeline: stable-or-greedy calculation, position
+   *  application, container height write, result storage, VirtualItem update.
+   *  Callers own the height read phase. */
+  private layoutGroupAndApply(opts: {
+    groupKey: string | undefined;
+    groupItems: VirtualItem[];
+    heights: number[];
+    containerWidth: number;
+    cardWidth: number;
+    columns: number;
+    gap: number;
+    cardSize: number;
+    minColumns: number;
+    checkImbalance: boolean;
+    addPositionedClass: boolean;
+  }): void {
+    const existingResult = this.groupLayoutResults.get(opts.groupKey);
+    const result = existingResult
+      ? this.resolveStableOrGreedy(
+          existingResult,
+          opts.heights,
+          opts.groupItems.length,
+          opts.columns,
+          opts.cardWidth,
+          opts.gap,
+          opts.containerWidth,
+          opts.cardSize,
+          opts.minColumns,
+          opts.checkImbalance
+        )
+      : calculateMasonryLayout({
+          cards: Array.from<HTMLElement>({ length: opts.groupItems.length }),
+          containerWidth: opts.containerWidth,
+          cardSize: opts.cardSize,
+          minColumns: opts.minColumns,
+          gap: opts.gap,
+          heights: opts.heights,
+        });
+    this.applyCardPositions(
+      opts.groupItems,
+      result.positions,
+      opts.cardWidth,
+      opts.heights,
+      opts.addPositionedClass
+    );
+    // Ungrouped mode: groupContainers maps undefined → masonryContainer, so one
+    // lookup covers both modes. classList.add is idempotent.
+    const container =
+      this.groupContainers.get(opts.groupKey) ?? this.masonryContainer;
+    if (container) {
+      container.classList.add('masonry-container');
+      container.style.setProperty(
+        '--masonry-height',
+        `${result.containerHeight}px`
+      );
+    }
+    result.measuredAtCardWidth = opts.cardWidth;
+    this.groupLayoutResults.set(opts.groupKey, result);
+    this.updateVirtualItemPositions(opts.groupKey, result);
   }
 
   /** Proportional resize: single-pass layout with zero intermediate allocations.
