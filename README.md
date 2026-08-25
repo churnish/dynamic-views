@@ -69,7 +69,7 @@ Note: To get updates for **Dynamic Views**, you will have to check for and insta
 2. Open the vault folder in the system file manager.
 3. Navigate to your Obsidian config folder (`.obsidian` by default, hidden on most OSes).
 4. Navigate to the `plugins` folder.
-5. Create a new folder titled `dynamic-views`.
+5. Create a folder titled `dynamic-views`.
 6. Place the three files you downloaded in the new folder.
 7. Reload plugins or app.
 8. Enable **Dynamic Views** in Obsidian settings → Community plugins → Installed plugins.
