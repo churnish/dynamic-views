@@ -201,10 +201,16 @@ body:is(
   }
 
   /* Text cursor: higher specificity needed (default rule uses body.dynamic-views-open-on-title) */
+  /* Every element _text-selection.scss gives `cursor: auto` has to be named here in its own right: `cursor` set directly on a child beats the value it would inherit from a gated ancestor, so gating the `.card-text-preview` wrapper alone left the I-beam on the inner span and paragraphs that actually carry the text. Add to both lists together. */
   body.dynamic-views-open-on-title .dynamic-views .card:not(.interact) {
     .card-text-preview,
+    .card-text-preview-text,
+    .card-text-preview p,
     .card-title,
-    .card-subtitle {
+    .card-subtitle,
+    .property-name,
+    .property-name-inline,
+    .property-content {
       cursor: default;
     }
   }
