@@ -93,11 +93,14 @@ try {
   try {
     info = JSON.parse(err.stdout)['eslint-plugin-obsidianmd'];
   } catch {}
-  if (info) {
+  if (info && info.current !== info.latest) {
     console.log(
       `\nUpdating eslint-plugin-obsidianmd: ${info.current} → ${info.latest}`
     );
-    execSync('npm update eslint-plugin-obsidianmd', { stdio: 'inherit' });
+    // Not `npm update`: it is capped by the declared range, and a caret on a 0.x version admits patch bumps only — so it can never cross the minor bumps that are this package's release cadence.
+    execSync('npm install --save-dev eslint-plugin-obsidianmd@latest', {
+      stdio: 'inherit',
+    });
     execSync('git add package.json', { stdio: 'inherit' });
 
     // The preflight lint ran against the previous plugin version, so its result no longer stands.
