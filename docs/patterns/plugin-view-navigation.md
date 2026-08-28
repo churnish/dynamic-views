@@ -284,6 +284,7 @@ Several interactions cannot be driven from `eval`, and each fails by doing nothi
 | Hover-to-start keyboard nav | No | `mouseover`/`mouseenter` do not arm it; focus stays off the cards. |
 | Multi-image scrub and swipe | Yes, **as `PointerEvent`s** | A `pointermove` carrying `pointerType: 'mouse'` advances the hover scrub, and a `pointerdown`/`pointermove`/`pointerup` sequence carrying `pointerType: 'touch'` advances the swipe. `mousemove` does nothing: the handlers listen for `pointermove` and filter on `pointerType`, so a mouse event never reaches them. |
 | Long-press image drag | No | A WebKit affordance with no synthetic equivalent, and absent under desktop mobile emulation. Device only. |
+| Card context menu | No | A `contextmenu` MouseEvent dispatched on `.card` leaves `defaultPrevented` false and opens no `.menu` in any document, even with `view`, `button: 2` and `buttons: 2` set. Obsidian wants a trusted event. Verify by hand. |
 | Pointer capture / drag panning | No | Synthetic `PointerEvent`s create no active pointer, so `setPointerCapture` throws. Use a trusted-input driver. |
 
 Two rules follow. **Put each key in its own tick** — two synthetic key events dispatched in the same tick do not both take effect, so a modal-then-viewer Escape sequence must be split across calls. And **run a control before believing a negative result**: reproduce the same probe against a known-good state, since a null result is equally consistent with a broken probe and a broken feature.

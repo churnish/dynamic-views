@@ -22,17 +22,15 @@
 // them any production path that builds DOM through createEl/createDiv/createSpan
 // throws, which is why renderer code was previously untestable.
 //
-// src/core/text-preview-dom.ts documents the opposite choice — plain
-// document.createElement, precisely so it runs under jsdom unaided. The two are
-// not accidentally inconsistent: this polyfill exists so the rest of the
-// renderer can keep using the helpers the eslint plugin prefers, without each
-// module having to opt out.
+// src/core/text-preview-dom.ts keeps createElement for two wrappers only, and
+// for a DOM-mutation reason rather than a testability one — see the note there.
+// Every other renderer path, that file included, uses the helpers.
 //
 // Declared on Node.prototype because that is where obsidian.d.ts declares them
 // (DocumentFragment gets them too, and HTMLElement inherits).
 //
-// Deliberately partial: cls, text, href, attr, addClass and removeClass only.
-// empty() is not here — nothing under test reaches it yet.
+// Deliberately partial: cls, text, href, attr, prepend, addClass and
+// removeClass only. empty() is not here — nothing under test reaches it yet.
 
 // addClass/removeClass mirror Obsidian's Element extensions (variadic, class-list based)
 Element.prototype.addClass = function (
@@ -80,8 +78,15 @@ function createChild<K extends keyof HTMLElementTagNameMap>(
 ): HTMLElementTagNameMap[K] {
   const el = document.createElement(tag);
   applyElementInfo(el, info);
-  parent.appendChild(el);
+  // Obsidian runs the callback before parenting the element, so a subtree built
+  // inside it reaches the document in a single mutation. Mirror that ordering —
+  // appending first would make the mock disagree with production timing.
   callback?.(el);
+  if (typeof info === 'object' && info.prepend) {
+    parent.insertBefore(el, parent.firstChild);
+  } else {
+    parent.appendChild(el);
+  }
   return el;
 }
 

@@ -26,14 +26,14 @@ Two patterns cover all cases:
 Defined in `src/utils/owner-window.ts`:
 
 ```ts
-export type OwnerWindow = Window & typeof globalThis;
+export type OwnerWindow = Window & typeof window;
 
 export function getOwnerWindow(el: Element | null | undefined): OwnerWindow {
   return el?.ownerDocument?.defaultView ?? window;
 }
 ```
 
-The exported `OwnerWindow` alias is the single place `typeof globalThis` appears — annotate local window bindings with it (`const win: OwnerWindow = doc.defaultView ?? window;`) rather than repeating the intersection, which trips `obsidianmd/no-global-this`.
+The exported `OwnerWindow` alias is the single definition of this intersection — annotate local window bindings and class fields with it (`const win: OwnerWindow = doc.defaultView ?? window;`) rather than spelling out `Window & typeof globalThis`, which trips `obsidianmd/no-global-this`.
 
 Walks `el.ownerDocument.defaultView` to get the window that owns the element. Falls back to the main `window` when the element is null or its window has been closed (`defaultView` returns null after a popout closes).
 

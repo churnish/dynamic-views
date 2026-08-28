@@ -166,7 +166,7 @@ export function scheduleLateConfigRechecks(
 ): void {
   const recheckDelays = [100, 250, 500];
   for (const delay of recheckDelays) {
-    setTimeout(() => {
+    window.setTimeout(() => {
       const currentProps = getProps();
       const currentPropsStr = JSON.stringify(currentProps);
       if (currentPropsStr !== propsSnapshot) {

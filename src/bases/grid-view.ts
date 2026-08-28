@@ -13,7 +13,7 @@ import {
   TFile,
 } from 'obsidian';
 import { CardData } from '../core/card-data';
-import { getOwnerWindow } from '../utils/owner-window';
+import { getOwnerWindow, type OwnerWindow } from '../utils/owner-window';
 import {
   basesEntryToCardData,
   transformBasesEntries,
@@ -260,8 +260,8 @@ export class DynamicViewsGridView extends BasesView {
   private virtualItemCount: number = 50;
   private isLoading: boolean = false;
   private resizeObserver: ResizeObserver | null = null;
-  private observerWindow: (Window & typeof globalThis) | null = null;
-  private get win(): Window & typeof globalThis {
+  private observerWindow: OwnerWindow | null = null;
+  private get win(): OwnerWindow {
     return this.observerWindow ?? window;
   }
   private currentCardSize: number = 400;
@@ -331,7 +331,7 @@ export class DynamicViewsGridView extends BasesView {
   private cardResizeObserver: ResizeObserver | null = null;
   private cardResizeRafId: number | null = null;
   private cardResizeDirty = false;
-  private mountRemeasureTimeout: ReturnType<typeof setTimeout> | null = null;
+  private mountRemeasureTimeout: number | null = null;
   private isMountRemeasuring = false;
   private frameMountCount: number = 0;
   private newlyMountedEls: HTMLElement[] = [];
@@ -342,8 +342,8 @@ export class DynamicViewsGridView extends BasesView {
   /** Estimated card height from ephemeral scroll state — used for deferred mount layout */
   private ephemeralEstimatedHeight: number | null = null;
   private scrollMountLockedEls = new Set<HTMLElement>();
-  private scrollIdleTimeout: ReturnType<typeof setTimeout> | null = null;
-  private scrollIdleSyncId: ReturnType<typeof setTimeout> | null = null;
+  private scrollIdleTimeout: number | null = null;
+  private scrollIdleSyncId: number | null = null;
   private touchActive = true;
   private lastTouchEndTime = 0;
   private touchAbort: AbortController | null = null;
@@ -869,7 +869,7 @@ export class DynamicViewsGridView extends BasesView {
     this.cardResizeObserver?.disconnect();
     this.cardResizeObserver = null;
     if (this.mountRemeasureTimeout !== null) {
-      clearTimeout(this.mountRemeasureTimeout);
+      window.clearTimeout(this.mountRemeasureTimeout);
       this.mountRemeasureTimeout = null;
     }
     this.observerWindow = null;
@@ -965,11 +965,11 @@ export class DynamicViewsGridView extends BasesView {
     this.newlyMountedEls = [];
     this.scrollMountLockedEls.clear();
     if (this.scrollIdleTimeout !== null) {
-      clearTimeout(this.scrollIdleTimeout);
+      window.clearTimeout(this.scrollIdleTimeout);
       this.scrollIdleTimeout = null;
     }
     if (this.scrollIdleSyncId !== null) {
-      clearTimeout(this.scrollIdleSyncId);
+      window.clearTimeout(this.scrollIdleSyncId);
       this.scrollIdleSyncId = null;
     }
     if (this.virtualScrollRafId !== null) {
@@ -977,7 +977,7 @@ export class DynamicViewsGridView extends BasesView {
       this.virtualScrollRafId = null;
     }
     if (this.mountRemeasureTimeout !== null) {
-      clearTimeout(this.mountRemeasureTimeout);
+      window.clearTimeout(this.mountRemeasureTimeout);
       this.mountRemeasureTimeout = null;
     }
     if (this.cardResizeRafId !== null) {
@@ -1585,11 +1585,11 @@ export class DynamicViewsGridView extends BasesView {
           this.cardDataByPath.set(card.path, { cardData: card, entry });
 
           if (useDeferredMount) {
-            const placeholder = groupEl.ownerDocument.createElement('div');
-            placeholder.className = 'dynamic-views-grid-placeholder';
+            const placeholder = groupEl.createDiv({
+              cls: 'dynamic-views-grid-placeholder',
+            });
             placeholder.style.height = `${this.ephemeralEstimatedHeight}px`;
             placeholder.style.minHeight = `${this.ephemeralEstimatedHeight}px`;
-            groupEl.appendChild(placeholder);
             const item: VirtualItem = {
               index: displayedSoFar + i,
               x: 0,
@@ -2584,8 +2584,9 @@ export class DynamicViewsGridView extends BasesView {
       // Scroll-idle fallback: velocity gate suppresses budgetExhausted reschedule
       // during fast scroll. When scroll stops, no more events fire — this timeout
       // guarantees a final sync to mount remaining cards in the mount zone.
-      if (this.scrollIdleSyncId !== null) clearTimeout(this.scrollIdleSyncId);
-      this.scrollIdleSyncId = setTimeout(() => {
+      if (this.scrollIdleSyncId !== null)
+        window.clearTimeout(this.scrollIdleSyncId);
+      this.scrollIdleSyncId = window.setTimeout(() => {
         this.scrollIdleSyncId = null;
         this.scheduleVirtualScrollSync();
       }, SCROLL_IDLE_SYNC_MS);
@@ -2595,9 +2596,9 @@ export class DynamicViewsGridView extends BasesView {
       // prevent CSS Grid row reflows. Release once scrolling stops.
       if (this.measureLane) {
         if (this.scrollIdleTimeout !== null) {
-          clearTimeout(this.scrollIdleTimeout);
+          window.clearTimeout(this.scrollIdleTimeout);
         }
-        this.scrollIdleTimeout = setTimeout(() => {
+        this.scrollIdleTimeout = window.setTimeout(() => {
           this.scrollIdleTimeout = null;
           this.releaseScrollMountLocks();
         }, MOUNT_REMEASURE_MS);
@@ -2631,13 +2632,13 @@ export class DynamicViewsGridView extends BasesView {
           this.touchActive = true;
           // Flush deferred remeasure from updateCardsInPlace image-change path
           if (this.mountRemeasureTimeout !== null) {
-            clearTimeout(this.mountRemeasureTimeout);
+            window.clearTimeout(this.mountRemeasureTimeout);
             this.mountRemeasureTimeout = null;
             this.onMountRemeasure();
           }
           // User touch cancels momentum — flush all deferred work
           if (this.scrollIdleTimeout !== null) {
-            clearTimeout(this.scrollIdleTimeout);
+            window.clearTimeout(this.scrollIdleTimeout);
             this.scrollIdleTimeout = null;
           }
           this.releaseScrollMountLocks();
@@ -2792,6 +2793,9 @@ export class DynamicViewsGridView extends BasesView {
       this.focusState.hoveredEl = null;
     }
 
+    // Detached creation — the placeholder takes the card's place via
+    // replaceWith rather than being appended, so createDiv() (which always
+    // appends) cannot be used.
     const placeholder = item.el.ownerDocument.createElement('div');
     placeholder.className = 'dynamic-views-grid-placeholder';
     placeholder.style.height = `${item.height}px`;
@@ -3265,7 +3269,7 @@ export class DynamicViewsGridView extends BasesView {
   private scheduleMountRemeasure(): void {
     if (this.mountRemeasureTimeout !== null) return;
     if (this.isLayoutBusy) return;
-    this.mountRemeasureTimeout = setTimeout(() => {
+    this.mountRemeasureTimeout = window.setTimeout(() => {
       this.mountRemeasureTimeout = null;
       this.onMountRemeasure();
     }, MOUNT_REMEASURE_MS);
@@ -3397,7 +3401,7 @@ export class DynamicViewsGridView extends BasesView {
     ) {
       const remaining =
         MOMENTUM_GUARD_MS - (performance.now() - this.lastTouchEndTime) + 50;
-      this.scrollIdleTimeout = setTimeout(() => {
+      this.scrollIdleTimeout = window.setTimeout(() => {
         this.scrollIdleTimeout = null;
         this.releaseScrollMountLocks();
       }, remaining);
@@ -3780,7 +3784,7 @@ export class DynamicViewsGridView extends BasesView {
       window.clearTimeout(this.trailingUpdate.timeoutId);
     }
     if (this.templateCooldownRef.value !== null) {
-      clearTimeout(this.templateCooldownRef.value);
+      window.clearTimeout(this.templateCooldownRef.value);
     }
     // Clean up scroll-related resources
     if (this.scrollThrottle.listener) {
@@ -3794,11 +3798,11 @@ export class DynamicViewsGridView extends BasesView {
     this.measureLane = null;
     this.scrollMountLockedEls.clear();
     if (this.scrollIdleTimeout !== null) {
-      clearTimeout(this.scrollIdleTimeout);
+      window.clearTimeout(this.scrollIdleTimeout);
       this.scrollIdleTimeout = null;
     }
     if (this.scrollIdleSyncId !== null) {
-      clearTimeout(this.scrollIdleSyncId);
+      window.clearTimeout(this.scrollIdleSyncId);
       this.scrollIdleSyncId = null;
     }
     this.containerEl

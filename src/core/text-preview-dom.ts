@@ -22,8 +22,13 @@ import { getOwnerWindow } from '../utils/owner-window';
  *  4. Empty text + .card-previews with thumbnail → remove only the text wrapper
  *  5. Empty text + .card-previews with no thumbnail → remove the whole wrapper
  *
- * Uses plain DOM APIs (no Obsidian-specific createDiv) so it works in both
- * the Obsidian runtime and the jsdom test environment.
+ * Element creation goes through Obsidian's createEl/createDiv/createSpan, which
+ * apply cls/text and run their callback before appending — so a subtree built
+ * inside the callback still enters the live DOM as a single mutation.
+ *
+ * Case 3's wrapper is the one exception and stays on createElement: its
+ * insertion point is a named sibling (.card-properties-bottom) or a plain
+ * append, and createEl can express only append or index 0.
  */
 
 /**
@@ -39,9 +44,7 @@ export function setTextPreviewContent(el: HTMLElement, text: string): void {
     el.classList.add('has-paragraphs');
     const paragraphs = text.split(/\n\n+/);
     for (const paraText of paragraphs) {
-      const p = el.ownerDocument.createElement('p');
-      p.textContent = paraText;
-      el.appendChild(p);
+      el.createEl('p', { text: paraText });
     }
   } else {
     // Wrap in a span rather than setting textContent directly: _text-selection.scss
@@ -55,10 +58,7 @@ export function setTextPreviewContent(el: HTMLElement, text: string): void {
     // Empty text gets no span — nothing to make selectable, and the caller
     // removes the wrapper outright in that case.
     if (text) {
-      const span = el.ownerDocument.createElement('span');
-      span.className = 'card-text-preview-text';
-      span.textContent = text;
-      el.appendChild(span);
+      el.createSpan({ cls: 'card-text-preview-text', text });
     }
   }
 }
@@ -75,15 +75,18 @@ export function updateTextPreviewDOM(
       // Case 1: update existing text node
       setTextPreviewContent(previewEl, newText);
     } else if (previewsEl) {
-      // Case 2: wrapper exists (thumbnail present) — prepend text wrapper
-      const doc = cardEl.ownerDocument;
-      const textWrapper = doc.createElement('div');
-      textWrapper.className = 'card-text-preview-wrapper';
-      const textEl = doc.createElement('div');
-      textEl.className = 'card-text-preview';
-      setTextPreviewContent(textEl, newText);
-      textWrapper.appendChild(textEl);
-      previewsEl.insertBefore(textWrapper, previewsEl.firstChild);
+      // Case 2: wrapper exists (thumbnail present) — prepend text wrapper.
+      // prepend is exactly insertBefore(…, firstChild), and the callback runs
+      // before the append, so the filled subtree lands in one mutation.
+      previewsEl.createDiv(
+        { cls: 'card-text-preview-wrapper', prepend: true },
+        (wrapperEl) => {
+          setTextPreviewContent(
+            wrapperEl.createDiv({ cls: 'card-text-preview' }),
+            newText
+          );
+        }
+      );
     } else {
       // Case 3: no previews wrapper at all — build from scratch
       const bodyEl = cardEl.querySelector<HTMLElement>('.card-body');
@@ -91,13 +94,11 @@ export function updateTextPreviewDOM(
         const doc = cardEl.ownerDocument;
         const wrapper = doc.createElement('div');
         wrapper.className = 'card-previews';
-        const textWrapper = doc.createElement('div');
-        textWrapper.className = 'card-text-preview-wrapper';
-        const textEl = doc.createElement('div');
-        textEl.className = 'card-text-preview';
+        const textWrapper = wrapper.createDiv({
+          cls: 'card-text-preview-wrapper',
+        });
+        const textEl = textWrapper.createDiv({ cls: 'card-text-preview' });
         setTextPreviewContent(textEl, newText);
-        textWrapper.appendChild(textEl);
-        wrapper.appendChild(textWrapper);
         const bottomProps = bodyEl.querySelector('.card-properties-bottom');
         if (bottomProps) {
           bodyEl.insertBefore(wrapper, bottomProps);
@@ -154,10 +155,7 @@ function clearParagraphStyles(p: HTMLElement): void {
 function forceEllipsisOnLastVisible(p: HTMLElement, textLines: number): void {
   p.classList.add(PARA_CLAMPED_CLASS);
   p.style.setProperty('-webkit-line-clamp', String(textLines));
-  const indicator = p.ownerDocument.createElement('span');
-  indicator.className = TRUNCATION_INDICATOR_CLASS;
-  indicator.textContent = '\u2026';
-  p.appendChild(indicator);
+  p.createSpan({ cls: TRUNCATION_INDICATOR_CLASS, text: '\u2026' });
 }
 
 /**

@@ -150,7 +150,7 @@ import {
   isMountEstimateProfile,
   type ScrollAnchor,
 } from '../core/virtual-scroll';
-import { getOwnerWindow } from '../utils/owner-window';
+import { getOwnerWindow, type OwnerWindow } from '../utils/owner-window';
 
 // Extend Obsidian types
 declare module 'obsidian' {
@@ -318,8 +318,8 @@ export class DynamicViewsMasonryView extends BasesView {
   private previousVirtualItemCount: number = 0;
   private layoutResizeObserver: ResizeObserver | null = null;
   private cardResizeObserver: ResizeObserver | null = null;
-  private observerWindow: (Window & typeof globalThis) | null = null;
-  private get win(): Window & typeof globalThis {
+  private observerWindow: OwnerWindow | null = null;
+  private get win(): OwnerWindow {
     return this.observerWindow ?? window;
   }
   private cardResizeRafId: number | null = null;
@@ -330,7 +330,7 @@ export class DynamicViewsMasonryView extends BasesView {
   private groupContainers: Map<string | undefined, HTMLElement> = new Map();
   private virtualScrollRafId: number | null = null;
   private inMountRemeasure = false;
-  private initialRemeasureTimeout: ReturnType<typeof setTimeout> | null = null;
+  private initialRemeasureTimeout: number | null = null;
   private hasExplicitScrollHeights = false;
   private compensatingScrollCount = 0;
   private lastMountedCenterY: number | null = null;
@@ -339,7 +339,7 @@ export class DynamicViewsMasonryView extends BasesView {
   private resizeCorrectionRafId: number | null = null;
   private hasUserScrolled = false;
   private lastScrollCorrectionTime = 0;
-  private postResizeIdleTimeout: ReturnType<typeof setTimeout> | null = null;
+  private postResizeIdleTimeout: number | null = null;
   private expectedIncrementalHeight: number | null = null;
   /** Estimated card height from ephemeral scroll state — used for deferred mount layout */
   private ephemeralEstimatedHeight: number | null = null;
@@ -391,7 +391,7 @@ export class DynamicViewsMasonryView extends BasesView {
   // WebKit momentum guard — defer heavy work while compositor coasts
   private touchActive = true;
   private lastTouchEndTime = 0;
-  private momentumIdleTimer: ReturnType<typeof setTimeout> | null = null;
+  private momentumIdleTimer: number | null = null;
   private touchAbort: AbortController | null = null;
   private momentumFlushScheduled = false;
   // #endregion State & field declarations
@@ -670,7 +670,7 @@ export class DynamicViewsMasonryView extends BasesView {
 
   private clearMomentumIdleTimer(): void {
     if (this.momentumIdleTimer !== null) {
-      clearTimeout(this.momentumIdleTimer);
+      window.clearTimeout(this.momentumIdleTimer);
       this.momentumIdleTimer = null;
     }
   }
@@ -1702,9 +1702,9 @@ export class DynamicViewsMasonryView extends BasesView {
         // (uncached images, text layout) that the double-rAF deferred remeasure misses.
         // Cancelled if remeasureAndReposition runs from RO or image-load before this fires.
         if (this.initialRemeasureTimeout !== null) {
-          clearTimeout(this.initialRemeasureTimeout);
+          window.clearTimeout(this.initialRemeasureTimeout);
         }
-        this.initialRemeasureTimeout = setTimeout(() => {
+        this.initialRemeasureTimeout = window.setTimeout(() => {
           this.initialRemeasureTimeout = null;
           if (this.correctionBlocked()) return;
           this.remeasureAndReposition();
@@ -2265,7 +2265,7 @@ export class DynamicViewsMasonryView extends BasesView {
       // reposition instantly instead of lagging 140ms behind each frame
       this.masonryContainer?.classList.add('masonry-resize-active');
       if (this.resizeCorrectionTimeout !== null) {
-        clearTimeout(this.resizeCorrectionTimeout);
+        window.clearTimeout(this.resizeCorrectionTimeout);
       }
       this.resizeCorrectionTimeout = window.setTimeout(() => {
         this.resizeCorrectionTimeout = null;
@@ -2294,9 +2294,9 @@ export class DynamicViewsMasonryView extends BasesView {
 
             // Safety net: clear flag if user never scrolls (2s).
             if (this.postResizeIdleTimeout !== null) {
-              clearTimeout(this.postResizeIdleTimeout);
+              window.clearTimeout(this.postResizeIdleTimeout);
             }
-            this.postResizeIdleTimeout = setTimeout(() => {
+            this.postResizeIdleTimeout = window.setTimeout(() => {
               this.postResizeIdleTimeout = null;
               if (!this.postResizeScrollActive) return;
               this.postResizeScrollActive = false;
@@ -2486,7 +2486,7 @@ export class DynamicViewsMasonryView extends BasesView {
     // Placed after the needsReposition check so the safety net survives when the
     // deferred remeasure (~32ms) finds no drift — images may still load later (~350ms).
     if (this.initialRemeasureTimeout !== null) {
-      clearTimeout(this.initialRemeasureTimeout);
+      window.clearTimeout(this.initialRemeasureTimeout);
       this.initialRemeasureTimeout = null;
     }
 
@@ -3046,11 +3046,11 @@ export class DynamicViewsMasonryView extends BasesView {
     this.hasExplicitScrollHeights = false;
     this.postResizeScrollActive = false;
     if (this.postResizeIdleTimeout !== null) {
-      clearTimeout(this.postResizeIdleTimeout);
+      window.clearTimeout(this.postResizeIdleTimeout);
       this.postResizeIdleTimeout = null;
     }
     if (this.initialRemeasureTimeout !== null) {
-      clearTimeout(this.initialRemeasureTimeout);
+      window.clearTimeout(this.initialRemeasureTimeout);
       this.initialRemeasureTimeout = null;
     }
     this.virtualItemsByGroup.clear();
@@ -3410,11 +3410,11 @@ export class DynamicViewsMasonryView extends BasesView {
     // user stops scrolling, the timeout clears the flag only — no correction.
     if (this.postResizeScrollActive) {
       if (this.postResizeIdleTimeout !== null) {
-        clearTimeout(this.postResizeIdleTimeout);
+        window.clearTimeout(this.postResizeIdleTimeout);
       }
       // Clear flag only — no correction. Cards keep estimated heights
       // until next scroll-through.
-      this.postResizeIdleTimeout = setTimeout(() => {
+      this.postResizeIdleTimeout = window.setTimeout(() => {
         this.postResizeIdleTimeout = null;
         if (!this.postResizeScrollActive) return;
         this.postResizeScrollActive = false;
@@ -3455,7 +3455,7 @@ export class DynamicViewsMasonryView extends BasesView {
         } else {
           this.postResizeScrollActive = false;
           if (this.postResizeIdleTimeout !== null) {
-            clearTimeout(this.postResizeIdleTimeout);
+            window.clearTimeout(this.postResizeIdleTimeout);
             this.postResizeIdleTimeout = null;
           }
           this.masonryContainer?.classList.remove('masonry-skip-transition');
@@ -3573,9 +3573,9 @@ export class DynamicViewsMasonryView extends BasesView {
 
     // Deferred remeasure corrects estimated heights after mount
     if (this.initialRemeasureTimeout !== null) {
-      clearTimeout(this.initialRemeasureTimeout);
+      window.clearTimeout(this.initialRemeasureTimeout);
     }
-    this.initialRemeasureTimeout = setTimeout(() => {
+    this.initialRemeasureTimeout = window.setTimeout(() => {
       this.initialRemeasureTimeout = null;
       if (this.correctionBlocked()) return;
       this.remeasureAndReposition();
@@ -3772,6 +3772,10 @@ export class DynamicViewsMasonryView extends BasesView {
             const nextSibling = item.el.nextSibling;
             item.el.remove();
 
+            // Detached scratch parent — renderCard() needs something to build
+            // into, but only handle.el is inserted (via insertBefore, to restore
+            // the card's original sibling position). tempContainer itself is
+            // never attached, so createDiv() cannot be used.
             const tempContainer = item.el.ownerDocument.createElement('div');
             const handle = this.renderCard(
               tempContainer,
@@ -4444,7 +4448,7 @@ export class DynamicViewsMasonryView extends BasesView {
       // During WebKit momentum, arm idle timer to flush deferred work
       if (this.isWebKitCoasting()) {
         this.clearMomentumIdleTimer();
-        this.momentumIdleTimer = setTimeout(() => {
+        this.momentumIdleTimer = window.setTimeout(() => {
           this.momentumIdleTimer = null;
           this.flushMomentumDeferred();
         }, SCROLL_IDLE_SYNC_MS);
@@ -4570,10 +4574,10 @@ export class DynamicViewsMasonryView extends BasesView {
     this.scrollPreservation?.cleanup();
     this.renderState.abortController?.abort();
     if (this.resizeCorrectionTimeout !== null) {
-      clearTimeout(this.resizeCorrectionTimeout);
+      window.clearTimeout(this.resizeCorrectionTimeout);
     }
     if (this.postResizeIdleTimeout !== null) {
-      clearTimeout(this.postResizeIdleTimeout);
+      window.clearTimeout(this.postResizeIdleTimeout);
     }
     this.clearMomentumIdleTimer();
     this.touchAbort?.abort();
@@ -4583,7 +4587,7 @@ export class DynamicViewsMasonryView extends BasesView {
       window.clearTimeout(this.trailingUpdate.timeoutId);
     }
     if (this.templateCooldownRef.value !== null) {
-      clearTimeout(this.templateCooldownRef.value);
+      window.clearTimeout(this.templateCooldownRef.value);
     }
     // Clean up scroll-related resources
     if (this.scrollThrottle.listener) {
@@ -4596,7 +4600,7 @@ export class DynamicViewsMasonryView extends BasesView {
       this.scrollResizeObserver.disconnect();
     }
     if (this.initialRemeasureTimeout !== null) {
-      clearTimeout(this.initialRemeasureTimeout);
+      window.clearTimeout(this.initialRemeasureTimeout);
     }
     this.containerEl
       .closest('.workspace-leaf-content')

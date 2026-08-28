@@ -202,7 +202,7 @@ function closeImageViewer(
   const sourceCard = cloneEl.__originalEmbed?.closest<HTMLElement>('.card');
   if (sourceCard) {
     sourceCard.dataset.viewerDismissing = '1';
-    setTimeout(
+    window.setTimeout(
       () => delete sourceCard.dataset.viewerDismissing,
       VIEWER_DISMISS_SUPPRESS_MS
     );
@@ -1195,11 +1195,11 @@ function openImageViewer(
 
     // Track multi-touch gesture state to prevent pinch from triggering close
     let gestureInProgress = false;
-    let gestureTimeoutId: ReturnType<typeof setTimeout> | null = null;
+    let gestureTimeoutId: number | null = null;
 
     const clearGestureTimeout = () => {
       if (gestureTimeoutId !== null) {
-        clearTimeout(gestureTimeoutId);
+        window.clearTimeout(gestureTimeoutId);
         gestureTimeoutId = null;
       }
     };
@@ -1217,7 +1217,7 @@ function openImageViewer(
         // Clear any existing timeout to prevent double-fire
         clearGestureTimeout();
         // Short delay to ensure click event doesn't fire during gesture completion
-        gestureTimeoutId = setTimeout(() => {
+        gestureTimeoutId = window.setTimeout(() => {
           gestureInProgress = false;
           gestureTimeoutId = null;
         }, GESTURE_TIMEOUT_MS);
@@ -1231,7 +1231,7 @@ function openImageViewer(
 
     // Flag to prevent opening click from immediately closing viewer
     let isOpening = true;
-    setTimeout(() => {
+    window.setTimeout(() => {
       isOpening = false;
     }, 0);
 
@@ -1436,7 +1436,7 @@ function openImageViewer(
       }
       // Clear pending gesture timeout to prevent dangling callbacks
       if (gestureTimeoutId !== null) {
-        clearTimeout(gestureTimeoutId);
+        window.clearTimeout(gestureTimeoutId);
       }
       if (resizeObserver) {
         resizeObserver.disconnect();
