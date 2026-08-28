@@ -1,0 +1,229 @@
+// Dynamic Views — URL button styles.
+// Everything that paints or positions .card-title-url-icon: the in-header icon,
+// its glyph, and the absolutely positioned variants that leave the header for a
+// cover's top-right corner. Header and body layout that exists because of the
+// URL button — the header's icon strip and the .card-body give-backs — stays in
+// card/_header.scss.
+// Loaded immediately after card/header so the cascade order is unchanged.
+
+// Copies, not moves: card/_header.scss still interpolates all five for the
+// header/body rules it keeps, and SCSS variables do not cross partials here.
+// See card/_header.scss for what each one enumerates and why.
+$url-button-over-cover: '.card.image-format-cover:is(.card-cover-top, .card-cover-bottom).has-cover.has-url-icon:not(.has-card-content, .has-title-block)';
+$ph-body-grid: "body:is(.dynamic-views-show-cover-placeholder-grid, .dynamic-views-show-cover-placeholder-both, :not([class*='dynamic-views-show-cover-placeholder-']))";
+$ph-body-masonry: 'body:is(.dynamic-views-show-cover-placeholder-masonry, .dynamic-views-show-cover-placeholder-both)';
+$url-button-tr-image: '.card.image-format-cover.has-cover.has-url-icon:is(.card-cover-right, .card-cover-top:is(.has-card-content, .has-title-block))';
+$url-button-tr-ph: '.card.image-format-cover.has-cover-placeholder.has-url-icon:is(.card-cover-right, .card-cover-top)';
+
+.dynamic-views {
+  .card-title-url-icon {
+    flex-shrink: 0;
+    /* Cancels .text-icon-button's padding: var(--size-2-2) per side, so the
+       icon's margin box stays glyph-sized (20px desktop, 28px mobile) and the
+       padding costs the title block no width — do NOT drop these to avoid
+       overflow. Its border box then bleeds one --size-2-2 past the header on
+       every side, which is what the strips above are sized to contain. */
+    margin: calc(-1 * var(--size-2-2));
+  }
+
+  .card-title-url-icon svg {
+    width: 20px;
+    height: 20px;
+    color: var(--dynamic-views-text-faint);
+  }
+
+  /* Gated on has-poster: inherit is only right over an image, where the card
+     re-points --text-muted at the poster fade colour. Without an image the card
+     keeps the standard tokens, so inherit would resolve to Obsidian's
+     .text-icon-button colour (--text-muted) and render the icon darker than the
+     same imageless card in every other image format. */
+  .card.image-format-poster.has-poster .card-title-url-icon svg {
+    color: inherit;
+  }
+}
+
+.dynamic-views {
+  #{$url-button-over-cover} .card-title-url-icon {
+    /* Cancels the base rule's negative margin and re-insets the glyph to exactly
+       where the header puts it. The anchor's border box carries --size-2-2 of
+       .text-icon-button padding per side, so a margin of card-padding − that
+       lands the glyph card-padding from the edge — the same distance the header's
+       own padding box gives it. Tracks the padding slider rather than a literal,
+       so the two layouts stay aligned at every setting. */
+    margin: calc(var(--dynamic-views-card-padding, 8px) - var(--size-2-2));
+  }
+}
+
+/* Colour goes on the anchor, NOT the svg: the hover background below mixes off
+   currentColor at the anchor, which Obsidian's .text-icon-button leaves at
+   --text-muted. Setting only the glyph leaves the hover background a dark smudge
+   over the photo. Poster gets away with `inherit` because it re-points
+   --text-muted at its fade colour; a cover re-points nothing. Same colour pair
+   and shadow token as the multi-image icon. */
+.theme-light .dynamic-views #{$url-button-over-cover} .card-title-url-icon,
+.theme-light .dynamic-views #{$url-button-tr-image} .card-title-url-icon {
+  color: white;
+}
+
+.theme-dark .dynamic-views #{$url-button-over-cover} .card-title-url-icon,
+.theme-dark .dynamic-views #{$url-button-tr-image} .card-title-url-icon {
+  color: var(--dynamic-views-color-base-100);
+}
+
+.dynamic-views #{$url-button-over-cover} .card-title-url-icon svg,
+.dynamic-views #{$url-button-tr-image} .card-title-url-icon svg {
+  color: inherit;
+  filter: var(--dynamic-views-icon-shadow);
+}
+
+/* Obsidian dims `.text-icon-button` on hover to `--icon-opacity-hover`, which
+   some environments set below 1 — measured at 0.65 on mobile, against a default
+   of 1 on desktop. The button then faded on hover on one platform and not the
+   other, and a white glyph at 65% over a photo loses legibility. Held at full
+   opacity; the hover background below is the whole hover affordance. Beats
+   Obsidian's (0,2,0) rule on specificity rather than on load order. */
+.dynamic-views .card-title-url-icon:is(:hover, :active) {
+  opacity: 1;
+}
+
+/* Obsidian's own hover background sits in `@media (hover: hover)`, which tests
+   the PRIMARY pointer — false on a tablet whose primary input is touch, even
+   with a trackpad or pen attached. The button then had no hover feedback there
+   except over an image, whose halo below carries no media gate. Supplied here
+   instead, keyed on interact-hover: that class is only ever set by a genuine
+   hover pointer, so it expresses the intent directly and needs no query. */
+.dynamic-views .card.interact-hover .card-title-url-icon:is(:hover, :active) {
+  background-color: var(--background-modifier-hover);
+}
+
+/* Hover surface for a URL button sitting over an image, in any image format. There
+   is no card background under it for --background-modifier-hover to read against,
+   so the hover background mixes off the icon's own forced colour instead — white
+   over a cover, poster's fade colour over a poster. One rule for all three
+   selector families on purpose: they are the same decision, and splitting them is
+   how the cover and poster values drifted apart before.
+
+   Every arm is gated on an image being present (`has-cover`, `has-poster`).
+   Without one the card keeps the standard tokens, currentColor resolves to
+   --text-muted, and the mix comes out a dark smudge — so an imageless card falls
+   through to Obsidian's own `.text-icon-button:hover` like every other URL button.
+
+   Backdrop is deliberately absent: its URL button is not forced to a light colour,
+   so it would hit exactly that smudge. It needs a glyph colour decided first.
+ */
+.dynamic-views
+  #{$url-button-over-cover}.interact
+  .card-title-url-icon:is(:hover, :active),
+.dynamic-views
+  #{$url-button-tr-image}.interact
+  .card-title-url-icon:is(:hover, :active),
+.dynamic-views
+  .card.image-format-poster.has-poster.interact
+  .card-title-url-icon:is(:hover, :active) {
+  background-color: color-mix(in srgb, currentColor 25%, transparent);
+  /* Follows Obsidian's own button radius, so the background keeps whatever
+     shape the platform gives every other icon button — a circle on mobile,
+     where --button-radius resolves to a touch size. */
+  border-radius: var(--button-radius);
+}
+
+/* Light tint: the card re-points --text-muted at the tint, so currentColor is
+   near-black and the mix above lands ~3.7x heavier than the hover background
+   Obsidian itself uses (0.25 against 0.067) — a dark smudge on a light card. A
+   light tint gives --background-modifier-hover a surface to read against, which
+   is the condition the mix exists to work around, so this hands it back to
+   native's own value.
+
+   Split by poster mode on purpose: the fade tint classes govern Fade and the
+   colour-scheme classes govern Overlay. OR-ing them into one selector let a
+   dark Fade match through an unrelated colour-scheme class. Both enumerate
+   their `match` arm the same way card/_poster.scss does for the palette. */
+body:is(
+    .dynamic-views-poster-fade-light,
+    .dynamic-views-poster-fade-match.theme-light
+  )
+  .dynamic-views.poster-mode-fade
+  .card.image-format-poster.has-poster.interact
+  .card-title-url-icon:is(:hover, :active),
+body:is(
+    .dynamic-views-poster-color-scheme-light,
+    .dynamic-views-poster-color-scheme-match.theme-light
+  )
+  .dynamic-views.poster-mode-overlay
+  .card.image-format-poster.has-poster.interact
+  .card-title-url-icon:is(:hover, :active) {
+  background-color: var(--background-modifier-hover);
+}
+
+/* The URL button belongs at the card's top-right in every cover layout. In these
+   two it does not get there on its own: cover-top puts the header below the
+   cover, cover-right squeezes it against the cover's inner edge. Absolute rather
+   than a DOM move — the icon keeps its listeners, its
+   urlButtonRerenderController lifecycle, and updateUrlButton()'s header-empty
+   cleanup unchanged. */
+.dynamic-views #{$url-button-tr-image} .card-title-url-icon,
+#{$ph-body-grid}
+  .dynamic-views
+  .dynamic-views-grid
+  #{$url-button-tr-ph}
+  .card-title-url-icon,
+#{$ph-body-masonry}
+  .dynamic-views
+  .dynamic-views-masonry
+  #{$url-button-tr-ph}
+  .card-title-url-icon {
+  position: absolute;
+  /* The anchor's border box carries --size-2-2 of .text-icon-button padding per
+     side, so subtracting it lands the glyph at exactly card-padding from the
+     card edge — the same distance the header's own padding box gives it, and
+     the same the collapsed overlay reaches via margin. Tracks the padding
+     slider rather than a literal, so all variants stay aligned at every value. */
+  top: calc(var(--dynamic-views-card-padding, 8px) - var(--size-2-2));
+  right: calc(var(--dynamic-views-card-padding, 8px) - var(--size-2-2));
+  /* The base rule's negative margin cancels .text-icon-button padding in flow;
+     out of flow it would shift the icon off its inset. */
+  margin: 0;
+  z-index: 4;
+}
+
+.is-mobile .dynamic-views .card-title-url-icon svg.svg-icon {
+  width: 28px;
+  height: 28px;
+  stroke-width: 1.5;
+}
+
+/* The URL button is an anchor, so iOS claims its long press for the native link
+   callout and never delivers `contextmenu` — the plugin's own menu, which the
+   card and tags get on Android and desktop, simply never opens (#430). Opting
+   the callout out hands the gesture back to the page. Inert on Chromium, so it
+   needs no platform gate. */
+.dynamic-views .card-title-url-icon {
+  -webkit-touch-callout: none;
+}
+
+@media (any-hover: hover) {
+  /* Desktop only: on iPadOS an attached trackpad or Pencil makes any-hover match,
+     and this then blinds the icon to the first touch — hit-testing runs at
+     touchstart, before setupTouchPress() adds .interact (#430). What it buys is a
+     cursor-only nicety (no tooltip or hover background while cards scroll under a
+     stationary pointer); a finger never scrolls past. */
+  body:not(.dynamic-views-dragging):not(.is-mobile)
+    .dynamic-views
+    .card:not(.interact)
+    .card-title-url-icon {
+    pointer-events: none;
+  }
+
+  /* Suppress Obsidian's .text-icon-button:hover background during drag —
+     :hover pseudo-class stays stuck on drag source (Chromium quirk) */
+  body.dynamic-views-dragging .card-title-url-icon {
+    background-color: transparent !important;
+  }
+}
+
+.dynamic-views {
+  /* When URL button is only child (no title/subtitle), push to right */
+  .card-header .card-title-url-icon:only-child {
+    margin-left: auto;
+  }
+}

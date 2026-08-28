@@ -1,5 +1,11 @@
 /**
- * Touch scrubbing + shared visibility reset IO for multi-image thumbnails.
+ * Touch swipe navigation + shared visibility reset IO for multi-image covers
+ * and thumbnails.
+ *
+ * Touch and hover are different interactions here: touch commits one image per
+ * swipe (this file), while positional scrubbing is hover-only and lives in the
+ * renderer's pointermove handler. `computeScrubIndex` and `applyScrubImage`
+ * serve that hover path; everything else here is swipe.
  */
 
 import { getCachedBlobUrl, preloadImageBatch } from './slideshow';
@@ -7,14 +13,15 @@ import { isTouchPointer } from './hover-and-touch';
 import { getOwnerWindow, type OwnerWindow } from '../utils/owner-window';
 import { markImageBroken } from './image-loader';
 import {
-  SCRUB_DIRECTION_THRESHOLD,
-  SCROLL_THROTTLE_MS,
-  SLIDESHOW_ANIMATION_MS,
-} from './constants';
+  addScrollIndicatorRestore,
+  claimIndicator,
+  releaseIndicator,
+} from './multi-image-icon';
+import { SCRUB_DIRECTION_THRESHOLD, SLIDESHOW_ANIMATION_MS } from './constants';
 
 // ── Pure helpers ──────────────────────────────────────────────────────────
 
-/** Clamp-safe scrub index from pointer X position within a thumbnail of `width`. */
+/** Clamp-safe scrub index from pointer X position within an element of `width`. */
 export function computeScrubIndex(
   x: number,
   width: number,
@@ -42,7 +49,7 @@ export function applyScrubImage(imgEl: HTMLImageElement, rawUrl: string): void {
   }
 }
 
-// ── Thumbnail animation state ────────────────────────────────────────────
+// ── Slide animation state ───────────────────────────────────────────────
 
 interface ThumbnailAnimState {
   isAnimating: boolean;
@@ -51,11 +58,11 @@ interface ThumbnailAnimState {
   enterClass: string;
 }
 
-/** Finish the current thumbnail animation immediately: remove classes, swap
+/** Finish the current slide animation immediately: remove classes, swap
  *  image roles, clear src on the now-next element, reset state. */
-function finishThumbnailAnimation(
+function finishSlideAnimation(
   state: ThumbnailAnimState,
-  thumbEl: HTMLElement
+  scrubEl: HTMLElement
 ): void {
   if (!state.isAnimating) return;
 
@@ -64,10 +71,10 @@ function finishThumbnailAnimation(
     state.timeout = null;
   }
 
-  const currImg = thumbEl.querySelector<HTMLImageElement>(
+  const currImg = scrubEl.querySelector<HTMLImageElement>(
     '.slideshow-img-current'
   );
-  const nextImg = thumbEl.querySelector<HTMLImageElement>(
+  const nextImg = scrubEl.querySelector<HTMLImageElement>(
     '.slideshow-img-next'
   );
   if (!currImg || !nextImg) {
@@ -93,22 +100,10 @@ function finishThumbnailAnimation(
   state.isAnimating = false;
 }
 
-// ── Indicator exclusivity ────────────────────────────────────────────────
+// ── Touch swipe lifecycle ─────────────────────────────────────────────────
 
-/** Tracks the most recently hidden indicator so a new swipe restores the previous one. */
-let activeIndicator: HTMLElement | null = null;
-
-function claimIndicator(indicator: HTMLElement): void {
-  if (activeIndicator && activeIndicator !== indicator) {
-    activeIndicator.classList.remove('dynamic-views-icon-hidden');
-  }
-  activeIndicator = indicator;
-}
-
-// ── Touch scrubbing lifecycle ─────────────────────────────────────────────
-
-export interface TouchScrubOptions {
-  thumbEl: HTMLElement;
+export interface TouchSwipeOptions {
+  scrubEl: HTMLElement;
   cardEl: HTMLElement;
   /** Mutable array — spliced by brokenHandler when images fail validation. */
   imageUrls: string[];
@@ -118,27 +113,34 @@ export interface TouchScrubOptions {
   preloadSignal: AbortSignal;
   preloadGuard: { done: boolean };
   brokenHandler: (url: string) => void;
+  /** Called when the set drops to one valid image, so the caller can strip the
+   *  multi-image affordances its format needs. */
+  onReduced?: () => void;
+  /** Called when a swipe commits a new frame, so the caller can drop hover-zoom
+   *  eligibility. Matters on hybrid devices where a trackpad hover and a touch
+   *  swipe both reach the same card. */
+  onFrameChange?: () => void;
   /** Pre-read animation duration (ms). Avoids per-card getComputedStyle. */
   animationDuration?: number;
 }
 
-/** Wire up pointerdown/move/up/cancel for touch swipe-to-advance on a thumbnail.
+/** Wire up pointerdown/move/up/cancel for touch swipe-to-advance on a cover or thumbnail.
  * One swipe = one image change. Swipe left = next, swipe right = previous (natural scrolling).
  * Returns a comprehensive reset function for IO scroll-out reset and cleanup. */
-export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
+export function setupTouchSwipeNavigation(opts: TouchSwipeOptions): () => void {
   let touchStartX = 0;
   let touchStartY = 0;
-  let touchScrubbing = false;
+  let swipeActive = false;
   /** Once gesture direction is decided (horizontal or vertical), lock it for the touch. */
   let directionLocked = false;
   /** Persistent index across swipes — reset by IO scroll-out observer. */
   let currentIndex = 0;
 
-  const { thumbEl, imageUrls, signal } = opts;
+  const { scrubEl, imageUrls, signal } = opts;
 
-  // Lazy-cached indicator — created after setupTouchScrubbing returns
+  // Lazy-cached indicator — created after setupTouchSwipeNavigation returns
   let indicator: HTMLElement | null = null;
-  const scrollContainer = thumbEl.closest<HTMLElement>('.bases-view');
+  const scrollContainer = scrubEl.closest<HTMLElement>('.bases-view');
 
   const animationDuration = opts.animationDuration ?? SLIDESHOW_ANIMATION_MS;
 
@@ -149,13 +151,13 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
     enterClass: '',
   };
 
-  thumbEl.addEventListener(
+  scrubEl.addEventListener(
     'pointerdown',
     (e: PointerEvent) => {
       if (!isTouchPointer(e)) return;
       touchStartX = e.clientX;
       touchStartY = e.clientY;
-      touchScrubbing = false;
+      swipeActive = false;
       directionLocked = false;
       // Preload images on first touch
       if (!opts.preloadGuard.done) {
@@ -166,7 +168,7 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
     { signal, passive: true }
   );
 
-  thumbEl.addEventListener(
+  scrubEl.addEventListener(
     'pointermove',
     (e: PointerEvent) => {
       if (!isTouchPointer(e) || directionLocked) return;
@@ -185,14 +187,16 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
 
       // One swipe = one image change, then lock until pointerup
       // Swipe left (negative deltaX) = next, swipe right = previous (natural scrolling)
-      touchScrubbing = true;
+      swipeActive = true;
       // Freeze scroll container to prevent vertical drift during horizontal swipe
       if (scrollContainer)
         scrollContainer.classList.add('dynamic-views-scroll-locked');
-      thumbEl.classList.add('scrub-hover');
+      scrubEl.classList.add('scrub-hover');
       // Hide multi-image indicator during swipe (lazy query — indicator created after setup).
-      // claimIndicator restores the previous thumbnail's indicator (exclusivity).
-      indicator ??= thumbEl.querySelector<HTMLElement>('.thumbnail-indicator');
+      // claimIndicator restores the previously hidden indicator (exclusivity).
+      indicator ??= scrubEl.querySelector<HTMLElement>(
+        '.thumbnail-indicator, .slideshow-icon'
+      );
       if (indicator) {
         claimIndicator(indicator);
         indicator.classList.add('dynamic-views-icon-hidden');
@@ -204,13 +208,13 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
       if (newIndex !== currentIndex) {
         // Cancel any in-flight animation before starting a new one
         if (animState.isAnimating) {
-          finishThumbnailAnimation(animState, thumbEl);
+          finishSlideAnimation(animState, scrubEl);
         }
 
-        const currImg = thumbEl.querySelector<HTMLImageElement>(
+        const currImg = scrubEl.querySelector<HTMLImageElement>(
           '.slideshow-img-current'
         );
-        const nextImg = thumbEl.querySelector<HTMLImageElement>(
+        const nextImg = scrubEl.querySelector<HTMLImageElement>(
           '.slideshow-img-next'
         );
         if (!currImg || !nextImg) {
@@ -230,9 +234,9 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
             const idx = imageUrls.indexOf(nextImg.src);
             if (idx !== -1) imageUrls.splice(idx, 1);
             if (imageUrls.length <= 1) {
-              thumbEl.classList.remove('multi-image');
+              opts.onReduced?.();
             }
-            finishThumbnailAnimation(animState, thumbEl);
+            finishSlideAnimation(animState, scrubEl);
           },
           { once: true }
         );
@@ -252,11 +256,12 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
         nextImg.classList.add(animState.enterClass);
 
         currentIndex = newIndex;
+        opts.onFrameChange?.();
 
         animState.timeout = window.setTimeout(() => {
           animState.timeout = null;
-          finishThumbnailAnimation(animState, thumbEl);
-          thumbEl.dataset.scrubbedSrc = getCachedBlobUrl(
+          finishSlideAnimation(animState, scrubEl);
+          scrubEl.dataset.scrubbedSrc = getCachedBlobUrl(
             imageUrls[currentIndex]
           );
         }, animationDuration);
@@ -265,12 +270,12 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
     { signal, passive: true }
   );
 
-  thumbEl.addEventListener(
+  scrubEl.addEventListener(
     'pointerup',
     (e: PointerEvent) => {
       if (!isTouchPointer(e)) return;
-      if (touchScrubbing) {
-        thumbEl.classList.remove('scrub-hover');
+      if (swipeActive) {
+        scrubEl.classList.remove('scrub-hover');
         if (scrollContainer)
           scrollContainer.classList.remove('dynamic-views-scroll-locked');
         // Suppress the click synthesized from this touch (card open / image viewer).
@@ -292,30 +297,30 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
           300
         );
       }
-      touchScrubbing = false;
+      swipeActive = false;
       directionLocked = false;
     },
     { signal, passive: true }
   );
 
-  thumbEl.addEventListener(
+  scrubEl.addEventListener(
     'pointercancel',
     (e: PointerEvent) => {
       if (!isTouchPointer(e)) return;
-      thumbEl.classList.remove('scrub-hover');
+      scrubEl.classList.remove('scrub-hover');
       if (scrollContainer)
         scrollContainer.classList.remove('dynamic-views-scroll-locked');
-      touchScrubbing = false;
+      swipeActive = false;
       directionLocked = false;
     },
     { signal, passive: true }
   );
 
   // Block vertical scroll during active horizontal scrub (direction lock prevents false positives)
-  thumbEl.addEventListener(
+  scrubEl.addEventListener(
     'touchmove',
     (e: TouchEvent) => {
-      if (touchScrubbing) e.preventDefault();
+      if (swipeActive) e.preventDefault();
     },
     { signal, passive: false }
   );
@@ -324,10 +329,7 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
   if (scrollContainer) {
     addScrollIndicatorRestore(
       scrollContainer,
-      () => {
-        indicator?.classList.remove('dynamic-views-icon-hidden');
-        if (activeIndicator === indicator) activeIndicator = null;
-      },
+      () => releaseIndicator(indicator),
       signal
     );
   }
@@ -335,15 +337,15 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
   // Comprehensive reset: cancel animation, reset index, restore images and scroll state
   return () => {
     if (animState.isAnimating) {
-      finishThumbnailAnimation(animState, thumbEl);
+      finishSlideAnimation(animState, scrubEl);
     }
-    thumbEl.classList.remove('scrub-hover');
+    scrubEl.classList.remove('scrub-hover');
     if (scrollContainer)
       scrollContainer.classList.remove('dynamic-views-scroll-locked');
-    touchScrubbing = false;
+    swipeActive = false;
     directionLocked = false;
     currentIndex = 0;
-    const currImg = thumbEl.querySelector<HTMLImageElement>(
+    const currImg = scrubEl.querySelector<HTMLImageElement>(
       '.slideshow-img-current'
     );
     if (currImg) {
@@ -353,15 +355,15 @@ export function setupTouchScrubbing(opts: TouchScrubOptions): () => void {
         currImg.src = getCachedBlobUrl(imageUrls[0]);
       }
     }
-    const nextImg = thumbEl.querySelector<HTMLImageElement>(
+    const nextImg = scrubEl.querySelector<HTMLImageElement>(
       '.slideshow-img-next'
     );
     if (nextImg) nextImg.src = '';
-    delete thumbEl.dataset.scrubbedSrc;
+    delete scrubEl.dataset.scrubbedSrc;
   };
 }
 
-// ── Shared IntersectionObserver for thumbnail visibility reset ─────────
+// ── Shared IntersectionObserver for scrub visibility reset ─────────────
 
 const resetObservers = new WeakMap<Window, IntersectionObserver>();
 const resetState = new WeakMap<
@@ -372,7 +374,7 @@ const resetState = new WeakMap<
   }
 >();
 
-/** Get or create a shared per-window IO for thumbnail visibility reset. */
+/** Get or create a shared per-window IO for scrub visibility reset. */
 function getResetObserver(win: OwnerWindow): IntersectionObserver {
   let observer = resetObservers.get(win);
   if (observer) return observer;
@@ -397,8 +399,8 @@ function getResetObserver(win: OwnerWindow): IntersectionObserver {
   return observer;
 }
 
-/** Start observing a thumbnail for visibility-based image reset. */
-export function observeThumbnailReset(
+/** Start observing a cover or thumbnail for visibility-based image reset. */
+export function observeScrubReset(
   thumbEl: HTMLElement,
   onReset: () => void
 ): void {
@@ -406,43 +408,10 @@ export function observeThumbnailReset(
   getResetObserver(getOwnerWindow(thumbEl)).observe(thumbEl);
 }
 
-/** Stop observing a thumbnail for visibility-based image reset. */
-export function unobserveThumbnailReset(thumbEl: HTMLElement): void {
+/** Stop observing a cover or thumbnail for visibility-based image reset. */
+export function unobserveScrubReset(thumbEl: HTMLElement): void {
   const win = getOwnerWindow(thumbEl);
   const observer = resetObservers.get(win);
   if (observer) observer.unobserve(thumbEl);
   resetState.delete(thumbEl);
-}
-
-// ── Shared scroll listener for indicator icon restore ───────────────────
-
-const scrollIndicatorCallbacks = new WeakMap<Element, Set<() => void>>();
-const scrollThrottleState = new WeakMap<Element, number>();
-
-function addScrollIndicatorRestore(
-  scrollContainer: Element,
-  callback: () => void,
-  signal: AbortSignal
-): void {
-  let callbacks = scrollIndicatorCallbacks.get(scrollContainer);
-  if (!callbacks) {
-    callbacks = new Set();
-    scrollIndicatorCallbacks.set(scrollContainer, callbacks);
-    scrollContainer.addEventListener(
-      'scroll',
-      () => {
-        const now = Date.now();
-        const last = scrollThrottleState.get(scrollContainer) ?? 0;
-        if (now - last < SCROLL_THROTTLE_MS) return;
-        scrollThrottleState.set(scrollContainer, now);
-        const cbs = scrollIndicatorCallbacks.get(scrollContainer);
-        if (cbs) for (const cb of cbs) cb();
-      },
-      { passive: true }
-    );
-  }
-  callbacks.add(callback);
-  signal.addEventListener('abort', () => callbacks.delete(callback), {
-    once: true,
-  });
 }

@@ -1,25 +1,3 @@
-// Mock localStorage
-const localStorageMock = (() => {
-  let store: Record<string, string> = {};
-
-  return {
-    getItem: (key: string) => store[key] || null,
-    setItem: (key: string, value: string) => {
-      store[key] = value.toString();
-    },
-    removeItem: (key: string) => {
-      delete store[key];
-    },
-    clear: () => {
-      store = {};
-    },
-  };
-})();
-
-Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock,
-});
-
 // Mock Image class for image validation tests
 (global as any).Image = class {
   src: string = '';
@@ -30,8 +8,9 @@ Object.defineProperty(window, 'localStorage', {
   naturalHeight: number = 180;
 
   constructor() {
-    // Store reference to this instance for test access
-    if (!(global as any).__lastImage) {
+    // __imageInstances is the probe ladder in creation order (youtube-preview.test.ts asserts on [0]/[1]/[2] and .length for rung ordering); __lastImage is just the most recent probe.
+    // Guard on the array itself, not on __lastImage — a test that resets only one of the two would otherwise silently discard the ladder, surfacing as a wrong-rung assertion rather than an obvious setup error.
+    if (!(global as any).__imageInstances) {
       (global as any).__imageInstances = [];
     }
     (global as any).__imageInstances.push(this);
@@ -52,8 +31,23 @@ Object.defineProperty(window, 'localStorage', {
 // Declared on Node.prototype because that is where obsidian.d.ts declares them
 // (DocumentFragment gets them too, and HTMLElement inherits).
 //
-// Deliberately partial: cls, text, href and attr only. addClass/removeClass/
-// empty() are not here — nothing under test reaches them yet.
+// Deliberately partial: cls, text, href, attr, addClass and removeClass only.
+// empty() is not here — nothing under test reaches it yet.
+
+// addClass/removeClass mirror Obsidian's Element extensions (variadic, class-list based)
+Element.prototype.addClass = function (
+  this: Element,
+  ...classes: string[]
+): void {
+  this.classList.add(...classes);
+};
+Element.prototype.removeClass = function (
+  this: Element,
+  ...classes: string[]
+): void {
+  this.classList.remove(...classes);
+};
+
 function applyElementInfo(
   el: HTMLElement,
   info?: DomElementInfo | string

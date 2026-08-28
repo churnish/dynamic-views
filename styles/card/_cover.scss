@@ -87,18 +87,30 @@
 
 .dynamic-views {
   /* Cover-only cards: zero padding, reset wrapper margins */
-  .card.card-cover-top.image-format-cover:not(.has-card-content, .has-header),
-  .card.card-cover-bottom.image-format-cover:not(
+  .card.image-format-cover:is(.card-cover-top, .card-cover-bottom):not(
       .has-card-content,
       .has-header
+    ),
+  /* A header holding only the URL button is painted over the cover instead of sitting
+     below it (see card/_header.scss), so the card is cover-only in every visual
+     sense and takes the same full-bleed treatment. */
+  .card.image-format-cover:is(.card-cover-top, .card-cover-bottom).has-cover.has-url-icon:not(
+      .has-card-content,
+      .has-title-block
     ) {
     padding: 0;
   }
 
   /* Reset negative margins since padding is 0 */
-  .card.card-cover-top.image-format-cover:not(.has-card-content, .has-header)
+  .card.image-format-cover:is(.card-cover-top, .card-cover-bottom):not(
+      .has-card-content,
+      .has-header
+    )
     .card-cover-wrapper,
-  .card.card-cover-bottom.image-format-cover:not(.has-card-content, .has-header)
+  .card.image-format-cover:is(
+      .card-cover-top,
+      .card-cover-bottom
+    ).has-cover.has-url-icon:not(.has-card-content, .has-title-block)
     .card-cover-wrapper {
     margin: 0;
   }

@@ -165,7 +165,7 @@ Called on: unhover (desktop), untap (mobile), dismiss-other (revealing card B di
 
 ## Tap-to-reveal
 
-`handlePosterTapReveal(e, cardEl, openFileAction)` handles tap reveal/dismiss. Returns `true` if the event was consumed.
+`handlePosterTapReveal(e, cardEl, openOnTitle)` handles tap reveal/dismiss. Returns `true` if the event was consumed.
 
 ### Reveal (card not yet revealed)
 
@@ -184,7 +184,7 @@ Called on: unhover (desktop), untap (mobile), dismiss-other (revealing card B di
 - No `.card-poster` element in the card
 - Click landed on an interactive element (`a`, `button`, `.tag`, etc.)
 - Text is selected (prevents double-click word selection from being swallowed)
-- Click landed on a text-target element when `openFileAction === 'title'`
+- Click landed on a text-target element when `openOnTitle` is on
 
 ## Hover intent
 
@@ -198,7 +198,7 @@ Both share the same `AbortController` signal — they cancel together on card un
 
 ## `.interact` class lifecycle
 
-This class gates ~60 CSS rules (hover colors, cursors, zoom, slideshow nav). It must be managed on ALL poster state transitions:
+This class gates ~60 CSS rules (hover colors, cursors, slideshow nav). It must be managed on ALL poster state transitions. Poster image zoom is NOT among them — it keys on `interact-hover`, which only hover input sets, so a tap never zooms. Tap reveal has its own zoom, keyed on `poster-revealed`.
 
 | Transition | Action |
 |---|---|

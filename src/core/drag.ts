@@ -3,11 +3,19 @@
  * Reusable drag event handlers used by Bases (DOM) views
  */
 
+import { Platform } from 'obsidian';
 import type { App } from 'obsidian';
 
 import type { OwnerWindow } from '../utils/owner-window';
 
-const HOVER_CLASSES = ['interact', 'poster-hover-active'] as const;
+// interact-hover rides with interact: a drag captures the pointer, so the
+// pointerleave that would normally clear hover state never arrives and the
+// image zoom would stay on for the rest of the card's life.
+const HOVER_CLASSES = [
+  'interact',
+  'interact-hover',
+  'poster-hover-active',
+] as const;
 
 /**
  * Marker MIME type set on DataTransfer during plugin-initiated drags.
@@ -53,6 +61,7 @@ export function createCardDragHandler(
 
 /** Factory for external link drag — formats as Markdown link when captioned. */
 export function createExternalLinkDragHandler(
+  app: App,
   el: HTMLElement,
   caption: string,
   url: string
@@ -69,11 +78,26 @@ export function createExternalLinkDragHandler(
     e.dataTransfer?.setData(DRAG_MARKER, '');
     const dragText = c === u ? u : `[${c}](${u})`;
     e.dataTransfer?.setData('text/plain', dragText);
+    // Same reason as the URL button: WebKit fires no contextmenu for a touch
+    // long press, and Obsidian only synthesises one for a drag it registered.
+    // Without this a long press on a property link opens nothing (#430).
+    if (Platform.isIosApp) {
+      app.dragManager.onDragStart(e, {
+        type: 'text',
+        title: u,
+        icon: 'lucide-link',
+      });
+      const dragManagerState = app.dragManager as Record<string, unknown>;
+      dragManagerState.draggable = null;
+      (dragManagerState.ghostEl as HTMLElement | null)?.detach();
+      dragManagerState.ghostEl = null;
+    }
   };
 }
 
 /** Factory for URL button drag — defers pointer-events to avoid drag abort. */
 export function createUrlButtonDragHandlers(
+  app: App,
   iconEl: HTMLElement,
   urlValue: string
 ): {
@@ -168,7 +192,7 @@ export function createUrlButtonDragHandlers(
       body.addClass('dynamic-views-dragging');
       const card = iconEl.closest('.card');
       // Remove non-poster hover classes synchronously
-      card?.classList.remove('interact');
+      card?.classList.remove('interact', 'interact-hover');
       // Defer poster-hover-active removal and icon pointer-events —
       // synchronous removal sets pointer-events: none on .card-content,
       // aborting the drag. Deferred runs after drag system takes over.
@@ -191,6 +215,27 @@ export function createUrlButtonDragHandlers(
           'text/plain',
           iconEl.dataset.dvUrlValue ?? urlValue
         );
+      }
+      // WebKit dispatches no contextmenu for a touch long press; Obsidian synthesises
+      // one from DragManager when a registered drag ends without moving. Registering
+      // here buys that synthesis (#430). WebKit-only: on desktop this would replace
+      // the native two-line link ghost that the DataTransfer above exists to produce.
+      if (Platform.isIosApp) {
+        app.dragManager.onDragStart(e, {
+          type: 'text',
+          title: iconEl.dataset.dvUrlValue ?? urlValue,
+          icon: 'lucide-link',
+        });
+        // Registered only to buy the synthesis, so hand back everything else it
+        // took. A live `draggable` makes the editor's dragover take its own path
+        // and reject the drop — same reason createTagDragHandler clears it — and
+        // a `ghostEl` paints Obsidian's preview over WebKit's native link one.
+        // `dragStart`, the field onDragEnd actually reads, is separate and
+        // survives both; `moved` tracking sits outside the ghost branch too.
+        const dragManagerState = app.dragManager as Record<string, unknown>;
+        dragManagerState.draggable = null;
+        (dragManagerState.ghostEl as HTMLElement | null)?.detach();
+        dragManagerState.ghostEl = null;
       }
     },
     onDragEnd: cleanup,

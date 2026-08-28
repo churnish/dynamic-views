@@ -159,9 +159,11 @@ body.dynamic-views-text-preview-hyphenate .dynamic-views .card-text-preview {
     display: none;
   }
 
-  .card-thumbnail.multi-image .thumbnail-indicator {
+  :is(.card-thumbnail, .card-cover).multi-image .thumbnail-indicator {
     position: absolute;
-    top: var(--size-2-2);
+    /* Bottom-left. The glyph's ink is inset 0.393px inside its box on every
+       side, so one value on both axes reads as an equal corner gap. */
+    bottom: var(--size-2-2);
     left: var(--size-2-2);
     display: flex;
     align-items: center;
@@ -172,21 +174,45 @@ body.dynamic-views-text-preview-hyphenate .dynamic-views .card-text-preview {
     transition: opacity var(--dynamic-views-anim-duration-fast) ease;
 
     svg {
-      width: 12px;
-      height: 12px;
+      /* Same glyph as the cover icon, drawn identically — shared tokens rather
+         than matching literals, since the two were tuned separately and drifted.
+         The inset above stays local: this sits inside the thumbnail, not against
+         the card edge. */
+      width: var(--dynamic-views-multi-image-icon-size);
+      height: var(--dynamic-views-multi-image-icon-size);
+      stroke-width: var(--dynamic-views-multi-image-icon-stroke);
       /* Mirrored so the stacked-sheet offset reads as depth going into the image */
       transform: scaleX(-1);
-      color: white;
-      filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6))
-        drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
+      filter: var(--dynamic-views-icon-shadow);
     }
   }
 }
 
-/* Hide indicator during scrub hover + after swipe (restored on vertical scroll) */
-.dynamic-views .card-thumbnail .thumbnail-indicator.dynamic-views-icon-hidden,
-.dynamic-views .card-thumbnail.scrub-hover .thumbnail-indicator {
+/* Colour matches the cover slideshow icon — kept out of the block above so the
+   theme rules win without needing to out-specify the nested selector. */
+.theme-light .dynamic-views .thumbnail-indicator svg {
+  color: white;
+}
+
+.theme-dark .dynamic-views .thumbnail-indicator svg {
+  color: var(--dynamic-views-color-base-100);
+}
+
+/* Hide indicator after swipe (restored on vertical scroll) */
+.dynamic-views .card-thumbnail .thumbnail-indicator.dynamic-views-icon-hidden {
   opacity: 0;
+}
+
+/* Hide during hover scrub. Gated on hover intent as well as scrub-hover: pointerenter
+   fires when a card scrolls under a stationary cursor, but scrubbing needs a pointermove
+   that never comes, so without .interact the indicator would vanish for nothing. */
+@media (any-hover: hover) {
+  .dynamic-views
+    .card.interact
+    .card-thumbnail.scrub-hover
+    .thumbnail-indicator {
+    opacity: 0;
+  }
 }
 
 /* Hide scrubbing indicator when toggle is on */
@@ -213,22 +239,23 @@ body.dynamic-views-show-thumbnail-placeholder
   transition: background-color var(--dynamic-views-anim-duration-fast) ease;
 }
 
-/* Multi-image thumbnail: use drop-shadow on img for consistent look in crop/contain */
+/* Multi-image scrub surface: the embed is the clip box, the img carries the radius */
 .dynamic-views {
-  .card-thumbnail.multi-image {
-    overflow: visible; /* Allow drop-shadow to extend outside */
+  :is(.card-thumbnail, .card-cover).multi-image {
+    overflow: visible; /* Clipping is delegated to the embed below */
     touch-action: pan-y;
     pointer-events: auto; /* Override default pointer-events: none for scrub gestures */
   }
 
-  /* Anchor absolute-positioned slideshow images and clip sliding animation.
-     Parent .card-thumbnail.multi-image stays overflow: visible for drop-shadow. */
-  .card-thumbnail.multi-image .dynamic-views-image-embed {
+  /* Anchor absolute-positioned slideshow images and clip the sliding animation.
+     The parent multi-image cover/thumbnail stays overflow: visible, so this is
+     the only box that clips them. */
+  :is(.card-thumbnail, .card-cover).multi-image .dynamic-views-image-embed {
     position: relative;
     overflow: hidden;
   }
 
-  .card-thumbnail.multi-image img {
+  :is(.card-thumbnail, .card-cover).multi-image img {
     border-radius: var(--dynamic-views-thumbnail-border-radius, 4px);
   }
 }
@@ -240,7 +267,7 @@ body.dynamic-views-show-thumbnail-placeholder
     height: 100%;
   }
 
-  .card-thumbnail img.scrub-loading {
+  :is(.card-thumbnail, .card-cover) img.scrub-loading {
     visibility: hidden;
   }
 

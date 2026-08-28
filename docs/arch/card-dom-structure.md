@@ -2,7 +2,7 @@
 title: Card DOM structure
 description: Card DOM hierarchy, class names, and property rows for Grid and Masonry views.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-06
+updated: 2026-08-24
 ---
 # Card DOM structure
 
@@ -24,15 +24,21 @@ Both backends produce the same DOM structure with minor element-type differences
 div.card                                    ← data-path="{path}"
 │ [format classes: image-format-{cover|thumbnail|poster|backdrop}]
 │ [position classes: card-cover-{top|bottom|left|right}, card-thumbnail-{position}]
-│ [structural: has-card-content, has-header, has-url-icon, has-properties-bottom, has-poster,
-│              has-backdrop, has-cover, has-cover-placeholder, has-cover-wrapper-placeholder]
+│ [structural: has-card-content, has-header, has-title-block, has-url-icon, has-properties-bottom,
+│              has-poster, has-backdrop, has-cover, has-cover-placeholder,
+│              has-cover-wrapper-placeholder]
 │ [state: clickable-card, compact-mode, thumbnail-stack]
 │ [transient: interact, poster-hover-active, poster-revealed]
 │
 ├─ div.card-cover-wrapper                   ← cover format, position=top|left (before .card-content)
 │   ├─ div.card-cover                       ← single image
 │   │   └─ div.dynamic-views-image-embed → img
-│   ├─ div.card-cover.card-cover-slideshow  ← slideshow (≥2 images, top/bottom only; see `image-navigation.md`)
+│   ├─ div.card-cover.multi-image           ← Scrub mode, ≥2 images (default; see `image-navigation.md`)
+│   │   ├─ div.dynamic-views-image-embed
+│   │   │   ├─ img.slideshow-img.slideshow-img-current
+│   │   │   └─ img.slideshow-img.slideshow-img-next
+│   │   └─ div.slideshow-icon               ← Lucide icon; omitted when "Hide icon" is on
+│   ├─ div.card-cover.card-cover-slideshow  ← Slide mode, ≥2 images
 │   │   ├─ div.dynamic-views-image-embed
 │   │   │   ├─ img.slideshow-img.slideshow-img-current
 │   │   │   └─ img.slideshow-img.slideshow-img-next
@@ -50,11 +56,11 @@ div.card                                    ← data-path="{path}"
 │   │   │   ├─ div.card-title               ← tabIndex=-1
 │   │   │   │   ├─ span.card-title-icon     ← file-type icon (Icon mode)
 │   │   │   │   ├─ span.card-title-ext      ← format badge (Flair mode); data-ext="{ext}"
-│   │   │   │   ├─ [openFileAction=title]:
+│   │   │   │   ├─ [openOnTitle on]:
 │   │   │   │   │   └─ a.internal-link.card-title-text ← clickable link; tabIndex=-1
 │   │   │   │   │       ├─ (text: title)
 │   │   │   │   │       └─ span.card-title-ext-suffix   ← ".ext" (Extension mode)
-│   │   │   │   └─ [openFileAction=card]:
+│   │   │   │   └─ [openOnTitle off]:
 │   │   │   │       ├─ span.card-title-text
 │   │   │   │       └─ span.card-title-ext-suffix
 │   │   │   └─ div.card-subtitle            ← subtitle property; tabIndex=-1
@@ -113,7 +119,7 @@ div.property-pair.property-pair-{N}
 
 ## Structural content classes
 
-Classes that replace `:has()` selectors (see AGENTS.md constraint). All five are derived from the card's current DOM by `syncStructuralClasses()` in [shared-renderer.ts](../../src/bases/shared-renderer.ts), which runs at render time and again at the end of every `updateCardContent()` — so they re-derive on in-place updates too, not only on a full render. Every toggle is `classList.toggle(name, condition)`, making the function idempotent and able to clear a class as readily as set it.
+Classes that replace `:has()` selectors (see AGENTS.md constraint). All six are derived from the card's current DOM by `syncStructuralClasses()` in [shared-renderer.ts](../../src/bases/shared-renderer.ts), which runs at render time and again at the end of every `updateCardContent()` — so they re-derive on in-place updates too, not only on a full render. Every toggle is `classList.toggle(name, condition)`, making the function idempotent and able to clear a class as readily as set it.
 
 Both backends use the shared `VISIBLE_BODY_SELECTOR` module-level constant:
 
@@ -128,6 +134,7 @@ Both backends use the shared `VISIBLE_BODY_SELECTOR` module-level constant:
 | `has-card-content` | `.card` | `VISIBLE_BODY_SELECTOR` on card descendants | Drives title divider border and cover-only padding resets |
 | `has-body-content` | `.card-body` | `VISIBLE_BODY_SELECTOR` on body children | Without it, `card-body` is `display: none` (collapses to avoid gap from `card-content` flex layout) |
 | `has-properties-bottom` | `.card` | `.card-properties-bottom` exists | Gates rules that need to know a bottom property row is present |
+| `has-title-block` | `.card` | `.card-title-block` exists | Gates the URL button's cover overlay; distinguishes a button-only header from one carrying text |
 
 `has-url-icon` is derived from the DOM rather than from `CardData.hasValidUrl`: the class must track the icon, and a valid URL on a card with no `.card-content` renders no icon at all.
 

@@ -98,7 +98,7 @@ const MOCK_VIEW_DEFAULTS: any = {
 
 const MOCK_PLUGIN_SETTINGS: any = {
   randomizeAction: 'shuffle',
-  openFileAction: 'card',
+  openOnTitle: false,
   smartTimestamp: true,
   createdTimeProperty: 'created time',
   modifiedTimeProperty: 'modified time',
@@ -325,13 +325,17 @@ describe('readBasesSettings — numeric range clamping', () => {
   });
 
   it('clamps card gap to the slider bounds', () => {
-    const config = createMockConfig(
-      { cardGapDesktop: 500, cardGapPhone: -10 },
-      []
-    );
+    const config = createMockConfig({ cardGapDesktop: 500 }, []);
     const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
     expect(result.cardGapDesktop).toBe(64);
-    expect(result.cardGapPhone).toBe(0);
+  });
+
+  // The lower bound used to be covered via the retired phone key; keep it
+  // asserted now that cardGapDesktop is the only gap setting.
+  it('clamps card gap up to the slider minimum', () => {
+    const config = createMockConfig({ cardGapDesktop: -10 }, []);
+    const result = readBasesSettings(config, MOCK_PLUGIN_SETTINGS);
+    expect(result.cardGapDesktop).toBe(0);
   });
 });
 
@@ -404,17 +408,23 @@ describe('getBasesViewOptions — card gap platform branch', () => {
     Platform.isPhone = false;
   });
 
-  it('emits only the desktop gap key off phone', () => {
-    const options = getBasesViewOptions('grid');
-    expect(findItem(options, 'cardGapDesktop')).toBeDefined();
-    expect(findItem(options, 'cardGapPhone')).toBeUndefined();
+  it('shows the desktop gap slider off phone', () => {
+    const item = findItem(getBasesViewOptions('grid'), 'cardGapDesktop');
+    expect(item).toBeDefined();
+    expect(item.shouldHide()).toBe(false);
   });
 
-  it('emits only the phone gap key on phone', () => {
+  it('hides the desktop gap slider on phone', () => {
     Platform.isPhone = true;
-    const options = getBasesViewOptions('grid');
-    expect(findItem(options, 'cardGapPhone')).toBeDefined();
-    expect(findItem(options, 'cardGapDesktop')).toBeUndefined();
+    const item = findItem(getBasesViewOptions('grid'), 'cardGapDesktop');
+    expect(item).toBeDefined();
+    expect(item.shouldHide()).toBe(true);
+  });
+
+  it('never emits the retired phone gap key', () => {
+    expect(
+      findItem(getBasesViewOptions('grid'), 'cardGapPhone')
+    ).toBeUndefined();
   });
 });
 

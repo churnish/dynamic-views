@@ -2,6 +2,8 @@
  * Utility functions to read Style Settings values from CSS variables and body classes
  */
 
+import { PHONE_CARD_GAP } from '../core/constants';
+
 /**
  * Cache for CSS text variables to avoid repeated getComputedStyle calls.
  * Reading getComputedStyle forces layout recalculation - calling it per card
@@ -208,7 +210,7 @@ export function getCardSpacing(containerEl?: HTMLElement): number {
     return result;
   }
 
-  const result = getCSSVariableAsNumber(varName, isPhone ? 6 : 8);
+  const result = getCSSVariableAsNumber(varName, isPhone ? PHONE_CARD_GAP : 8);
   if (containerEl) containerSpacingCache.set(containerEl, result);
   return result;
 }
@@ -299,6 +301,13 @@ export function isSlideshowEnabled(): boolean {
   return !hasBodyClass('dynamic-views-cover-disable-navigation');
 }
 
+/** Cover navigation mode. Elimination fallback returns true — Style Settings
+ *  applies the `-scrub` class for the default, but the plugin must behave
+ *  correctly with Style Settings absent. */
+export function isCoverScrubMode(): boolean {
+  return !hasBodyClass('dynamic-views-cover-navigation-slide');
+}
+
 /**
  * Check if slideshow icon should be shown (default behavior)
  * Returns false when user enables "Hide slideshow icon"
@@ -346,14 +355,6 @@ export function getOmitFirstLineMode(): OmitFirstLineMode {
 }
 
 /**
- * Get maximum number of images for slideshow
- * Returns slider value (default 10, min 2, max 24)
- */
-export function getSlideshowMaxImages(): number {
-  return getCSSVariableAsNumber('--dynamic-views-slideshow-max-images', 10);
-}
-
-/**
  * Get a hash of Style Settings that affect card rendering
  * Used to detect when cards need re-rendering due to Style Settings changes
  */
@@ -373,8 +374,8 @@ export function getStyleSettingsHash(): string {
     showTagHashPrefix(),
     // Slideshow
     isSlideshowEnabled(),
+    isCoverScrubMode(),
     isThumbnailScrubbingDisabled(),
-    getSlideshowMaxImages(),
     // Layout
     getCompactBreakpoint(),
     // Body classes for overflow and layout modes

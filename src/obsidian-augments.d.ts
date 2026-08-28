@@ -2,7 +2,15 @@
  * Obsidian module augmentations for undocumented APIs used by this plugin.
  */
 
-import { App, TFile, Plugin, LinkCache, EventRef } from 'obsidian';
+import {
+  App,
+  TFile,
+  Plugin,
+  LinkCache,
+  EventRef,
+  Menu,
+  PluginManifest,
+} from 'obsidian';
 
 declare global {
   interface Window {
@@ -22,6 +30,16 @@ declare module 'obsidian' {
     /** Access installed plugins by ID (undocumented API) */
     plugins: {
       plugins: Record<string, Plugin | undefined>;
+      /** Manifests for every installed plugin, enabled or not (undocumented API) */
+      manifests: Record<string, PluginManifest | undefined>;
+      /**
+       * Enable an installed plugin by ID and persist it (undocumented API).
+       * NEVER use bare `enablePlugin`: it loads the plugin without adding it to
+       * `enabledPlugins` or requesting a config save, so the plugin silently
+       * reverts to disabled on the next launch. Resolves false on failure and
+       * never throws, surfacing its own Notice for load failures.
+       */
+      enablePluginAndSave(id: string): Promise<boolean>;
       /**
        * Fires (debounced) whenever any community plugin is enabled or disabled.
        * `Events.on` tolerates unknown event names, so if Obsidian ever drops
@@ -65,6 +83,10 @@ declare module 'obsidian' {
       getPluginById(id: string): { instance?: unknown } | null;
     };
   }
+  interface Workspace {
+    /** Appends native's URL actions (Copy URL, Open link in default browser) to an existing menu and fires `url-menu`. Undocumented — verified present in 1.13.7. */
+    handleExternalLinkContextMenu(menu: Menu, url: string): boolean;
+  }
   interface MetadataCache {
     /** Get all known property types across the vault (undocumented API) */
     getAllPropertyInfos():
@@ -76,9 +98,5 @@ declare module 'obsidian' {
   interface DataAdapter {
     /** Get absolute filesystem path (undocumented API) */
     getFullPath(path: string): string | undefined;
-  }
-  interface Vault {
-    /** Read an app preference, e.g. `settingsPopoutWindow` (undocumented API) */
-    getConfig?(key: string): unknown;
   }
 }

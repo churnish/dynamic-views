@@ -177,7 +177,7 @@ Triggered when file **content** changed (mtime differs) but file paths and setti
 1. Clear content cache for changed paths only.
 2. Load fresh text previews and images for changed entries.
 3. For each changed path: find fresh `BasesEntry` from `changedEntries` (pre-filtered to changed paths), rebuild `CardData` via `basesEntryToCardData()`, update `cardDataByPath` with fresh entry and cardData.
-4. Call `updateCardContent()` on each card element — updates title, subtitle, properties, text preview and URL icon DOM in-place, then re-derives the structural classes.
+4. Call `updateCardContent()` on each card element — updates title, subtitle, properties, text preview and URL button DOM in-place, then re-derives the structural classes.
 5. **No relayout needed** — CSS Grid auto-adjusts row heights when content changes.
 
 #### Image change detection
@@ -189,7 +189,7 @@ When `hasImageChanged(oldCard, newCard)` returns `true`, the card cannot be surg
 3. Insert new card at same DOM position with height-lock. Immediate passes: `syncResponsiveClasses`, `setHoverScaleForCards`
 4. Deferred passes via `scheduleMountRemeasure`: `initializeScrollGradientsForCards`, `initializeTextPreviewClampForCards`, then release height lock
 
-When image is unchanged, `updateCardContent()` handles title, subtitle, properties, text preview, and URL icon (`updateUrlButton`) surgically, then re-derives the structural classes (`syncStructuralClasses`).
+When image is unchanged, `updateCardContent()` handles title, subtitle, properties, text preview, and URL button (`updateUrlButton`) surgically, then re-derives the structural classes (`syncStructuralClasses`).
 
 **Guard**: `changedPaths.size === 0` on the `renderHash` early return prevents content-only changes (mtime changed, paths/settings unchanged) from being skipped.
 
@@ -598,7 +598,7 @@ Cards use CSS Grid for automatic flow-based positioning:
 | `--dynamic-views-grid-columns`       | Layout JS | Column count for `grid-template-columns: repeat(N, 1fr)`.           |
 | `--dynamic-views-image-aspect-ratio` | Layout JS | Cover aspect ratio via `padding-top` trick.                         |
 | `--dynamic-views-preserve-height`    | Layout JS | Temporary `min-height` during DOM wipe to prevent scroll reset.     |
-| `gap`                                | CSS       | Card spacing. Reads `--dynamic-views-card-spacing-desktop`/`-phone`, written onto the container by layout JS from the per-view gap setting. |
+| `gap`                                | CSS       | Card spacing. Reads `--dynamic-views-card-spacing-desktop`/`-phone`, written onto the container by layout JS — from the per-view gap setting on desktop and tablet, from the fixed `PHONE_CARD_GAP` constant on phone. |
 | `align-items: stretch`               | CSS       | Cards fill grid cell height (enables `margin-top: auto` alignment). |
 
 **Key CSS classes**:

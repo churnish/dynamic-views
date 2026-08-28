@@ -765,3 +765,27 @@ describe('isMountEstimateProfile', () => {
     expect(isMountEstimateProfile({ ...valid, coverWidth: null })).toBe(false);
   });
 });
+
+describe('estimateUnmountedHeight — corrupted baselines', () => {
+  it('floors the estimate at 1 when fixedHeight is negative', () => {
+    // Poisoned-baseline shape: measuredHeight 0 → fixedHeight = 0 - scalableHeight
+    const item = {
+      scalableHeight: 40,
+      fixedHeight: -40,
+      measuredAtWidth: 300,
+      height: 0,
+    };
+    // At equal width the terms cancel to exactly 0 — must clamp to 1, not 0
+    expect(estimateUnmountedHeight(item, 300)).toBe(1);
+  });
+
+  it('never returns 0 or negative for any corrupted split', () => {
+    const item = {
+      scalableHeight: 0,
+      fixedHeight: -25,
+      measuredAtWidth: 200,
+      height: 0,
+    };
+    expect(estimateUnmountedHeight(item, 400)).toBeGreaterThanOrEqual(1);
+  });
+});

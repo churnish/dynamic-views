@@ -34,10 +34,7 @@ import {
   filterBrokenUrls,
   markImageBroken,
 } from '../core/image-loader';
-import {
-  showFileContextMenu,
-  showExternalLinkContextMenu,
-} from '../core/context-menu';
+import { showFileContextMenu } from '../core/context-menu';
 import {
   updateScrollGradient,
   setupScrollGradients,
@@ -66,7 +63,7 @@ import {
   isSlideshowEnabled,
   isSlideshowIconEnabled,
   isThumbnailScrubbingDisabled,
-  getSlideshowMaxImages,
+  isCoverScrubMode,
   getCompactBreakpoint,
 } from '../utils/style-settings';
 import {
@@ -85,6 +82,7 @@ import { getFileExtInfo, getFileTypeIcon } from '../utils/file-extension';
 import type DynamicViews from '../../main';
 import type { ResolvedSettings, LayoutSource } from '../types';
 import {
+  cancelHoverZoom,
   createPreloadBrokenHandler,
   createSlideshowNavigator,
   getCachedBlobUrl,
@@ -101,12 +99,12 @@ import {
   setupTouchPress,
 } from '../core/hover-and-touch';
 import {
-  setupTouchScrubbing,
-  observeThumbnailReset,
-  unobserveThumbnailReset,
+  setupTouchSwipeNavigation,
+  observeScrubReset,
+  unobserveScrubReset,
   computeScrubIndex,
   applyScrubImage,
-} from '../core/thumbnail-scrub';
+} from '../core/multi-image-nav';
 import {
   handleArrowNavigation,
   isArrowKey,
@@ -116,6 +114,8 @@ import {
 import {
   CHECKBOX_MARKER_PREFIX,
   CONTEXT_MENU_SUPPRESS_MS,
+  MAX_MULTI_IMAGES,
+  PHONE_CARD_GAP,
   THUMBNAIL_STACK_MULTIPLIER,
   TOUCH_TAP_THRESHOLD_MS,
   URL_ICON_SELECTOR,
@@ -392,7 +392,7 @@ export function applyViewContainerStyles(
   const gapVar = Platform.isPhone
     ? '--dynamic-views-card-spacing-phone'
     : '--dynamic-views-card-spacing-desktop';
-  const gapValue = `${Platform.isPhone ? settings.cardGapPhone : settings.cardGapDesktop}px`;
+  const gapValue = `${Platform.isPhone ? PHONE_CARD_GAP : settings.cardGapDesktop}px`;
   if (container.style.getPropertyValue(gapVar) !== gapValue) {
     container.style.setProperty(gapVar, gapValue);
     clearStyleSettingsCache();
@@ -425,9 +425,7 @@ export function applyViewContainerStyles(
   // same variable — at gap 64 that overflowed the heading 51px on each side.
   const scrollEl = container.closest<HTMLElement>('.bases-view');
   const isEmbedded = !!container.closest('.bases-embed');
-  const gapPx = Platform.isPhone
-    ? settings.cardGapPhone
-    : settings.cardGapDesktop;
+  const gapPx = Platform.isPhone ? PHONE_CARD_GAP : settings.cardGapDesktop;
   if (
     scrollEl &&
     !isEmbedded &&
@@ -661,7 +659,7 @@ export function syncResponsiveClasses(cards: HTMLElement[]): boolean {
  *
  * Runs at render time and again after every in-place content update, so all
  * five classes stay truthful when properties, previews, the header or the URL
- * chip come and go. `toggle(name, condition)` throughout — the function must be
+ * icon come and go. `toggle(name, condition)` throughout — the function must be
  * idempotent and must clear a class as readily as it sets one.
  *
  * `bodyEl` is nullable only for cards whose body never existed; callers that
@@ -696,6 +694,13 @@ export function syncStructuralClasses(
     'has-url-icon',
     !!cardEl.querySelector(URL_ICON_SELECTOR)
   );
+  // Distinguishes a header holding only the URL button from one that also carries
+  // text. The icon alone is the case that collapses onto the cover; a title or
+  // subtitle must keep the content area in flow or it would be hidden with it.
+  cardEl.classList.toggle(
+    'has-title-block',
+    !!cardEl.querySelector('.card-title-block')
+  );
 }
 
 /**
@@ -716,6 +721,36 @@ function prependHeader(cardEl: HTMLElement): HTMLElement | null {
   const headerEl = contentEl.createDiv('card-header');
   contentEl.prepend(headerEl);
   return headerEl;
+}
+
+/**
+ * Property ids whose text is already rendered elsewhere on the card, and so must
+ * not also appear as a property row.
+ *
+ * Membership is limited to settings that render the property's **text**: the text
+ * preview shows it as prose, the URL button shows it as a link. Membership is also
+ * unconditional — setting one of those declares the property's role, so the row is
+ * dropped whether or not the value actually renders. Making it conditional on the
+ * other rendering having failed would tie the row's presence to async load state
+ * and change card height after render, which is layout shift for a corner case.
+ *
+ * The image property is deliberately absent (#437) — an image is not a rendering
+ * of the property's text, and excluding it made the value invisible whenever no
+ * image resolved: a broken reference produced no image, no placeholder and no row.
+ * Users who do not want the row simply leave the property out of the view's
+ * property order, which is how visibility is controlled for every other property.
+ *
+ * Ids are compared against `CardData.properties[].name`, which comes straight from
+ * `config.getOrder()` — so both sides are the qualified form (`note.image`), never
+ * the bare one.
+ */
+export function getPropertiesRenderedElsewhere(
+  settings: Pick<ResolvedSettings, 'textPreviewProperty' | 'urlProperty'>
+): Set<string> {
+  const excluded = new Set<string>();
+  if (settings.textPreviewProperty) excluded.add(settings.textPreviewProperty);
+  if (settings.urlProperty) excluded.add(settings.urlProperty);
+  return excluded;
 }
 
 export class SharedCardRenderer {
@@ -924,7 +959,7 @@ export class SharedCardRenderer {
       // Embedded external link (image)
       const img = container.createEl('img', {
         cls: 'external-embed',
-        attr: { src: link.url, alt: link.caption },
+        attr: { src: link.url, alt: link.caption, draggable: 'false' },
       });
       img.addEventListener(
         'click',
@@ -964,17 +999,15 @@ export class SharedCardRenderer {
     );
     el.addEventListener(
       'dragstart',
-      createExternalLinkDragHandler(el, link.caption, link.url),
+      createExternalLinkDragHandler(this.app, el, link.caption, link.url),
       { signal }
     );
     el.addEventListener(
       'contextmenu',
       (e) => {
-        showExternalLinkContextMenu(
-          e,
-          link.url,
-          link.isMarkdownLink ? link.caption : undefined
-        );
+        const file = this.app.vault.getAbstractFileByPath(sourcePath);
+        if (!(file instanceof TFile)) return;
+        showFileContextMenu(e, this.app, file, sourcePath, link.url);
       },
       { signal }
     );
@@ -1011,6 +1044,12 @@ export class SharedCardRenderer {
     // Snapshot instance array lengths for per-card resource collection
     const observersBefore = this.propertyObservers.length;
     const slideshowsBefore = this.slideshowCleanups.length;
+
+    // Resolved up front because the open-on-title fallback below has to know
+    // whether a title will render at all. Pure and cheap, and the single result
+    // feeds both the fallback and the header — no extra work on this hot path.
+    const { displayTitle, isTitleEmpty } =
+      SharedCardRenderer.resolveTitleDisplay(card, entry, settings);
 
     // Create card element
     const cardEl = container.createDiv('card');
@@ -1059,8 +1098,11 @@ export class SharedCardRenderer {
       settings.posterInteractToReveal &&
       this.app.isMobile;
 
-    const isCardClickable =
-      settings.openFileAction === 'card' && !isPosterClickReveal;
+    // Open-on-title leaves a card with no title nothing to press, so the file could not be
+    // opened at all. Such a card opens on card press instead.
+    const effectiveOpenOnTitle = settings.openOnTitle && !!displayTitle;
+
+    const isCardClickable = !effectiveOpenOnTitle && !isPosterClickReveal;
     if (isCardClickable) {
       cardEl.setAttribute('draggable', 'true');
     }
@@ -1204,13 +1246,21 @@ export class SharedCardRenderer {
 
         if (
           isPosterClickReveal &&
-          handlePosterTapReveal(e, cardEl, settings.openFileAction)
+          handlePosterTapReveal(e, cardEl, effectiveOpenOnTitle)
         ) {
           return;
         }
 
         // Card-level click-to-open: mobile except poster cards with images (poster with image uses tap-to-reveal)
-        if (settings.openFileAction === 'card' && !isPosterClickReveal) {
+        if (!effectiveOpenOnTitle && !isPosterClickReveal) {
+          // A drag-select over card text ends in a click on release. Opening the
+          // file would throw the selection away — same guard as
+          // handlePosterTapReveal, which the poster path takes instead.
+          if (
+            (getOwnerWindow(cardEl).getSelection()?.toString().length ?? 0) > 0
+          )
+            return;
+
           const target = e.target as HTMLElement;
           // Don't open if clicking on links, tags, path segments, or images (when zoom enabled)
           const isLink = target.tagName === 'A' || target.closest('a');
@@ -1247,7 +1297,14 @@ export class SharedCardRenderer {
       setupHoverIntent(
         cardEl,
         () => {
-          cardEl.classList.add('interact');
+          // interact-hover is the hover-only half of interact. setupHoverIntent
+          // filters every event through isHoverPointer, so reaching here proves
+          // the input was a mouse or a pen in hover range — never a finger.
+          // Image zoom keys on it so the gate is the input that produced the
+          // event, not the device: a tablet with a trackpad still zooms, and a
+          // finger on that same tablet does not. setupTouchPress must never set
+          // this class — its absence there is the whole mechanism.
+          cardEl.classList.add('interact', 'interact-hover');
           cardEl
             .closest('.masonry-container, .bases-cards-group')
             ?.classList.add('has-hover-card');
@@ -1256,7 +1313,7 @@ export class SharedCardRenderer {
         () => {
           // Image viewer overlay triggers pointerleave — keep hover state
           if (cardEl.classList.contains('viewer-active')) return;
-          cardEl.classList.remove('interact');
+          cardEl.classList.remove('interact', 'interact-hover');
           deferContainerHoverDrop(cardEl);
           keyboardNav?.onHoverEnd?.();
         },
@@ -1281,7 +1338,7 @@ export class SharedCardRenderer {
       // rest of the card must not light the card up as if it were actionable.
       // Matches the dead-zone click handler's target — the whole .card-title,
       // not just the link, since that is the mobile tap region.
-      settings.openFileAction === 'title' && this.app.isMobile
+      effectiveOpenOnTitle && this.app.isMobile
         ? (e) => Boolean((e.target as HTMLElement)?.closest?.('.card-title'))
         : undefined
     );
@@ -1311,9 +1368,9 @@ export class SharedCardRenderer {
       );
     }
 
-    // Handle hover for page preview (only on card when openFileAction is 'card')
+    // Handle hover for page preview (only on card when open-on-title is off)
     // Use mouseenter (not mouseover) to prevent multiple triggers from child elements
-    if (settings.openFileAction === 'card') {
+    if (!effectiveOpenOnTitle) {
       cardEl.addEventListener(
         'mouseenter',
         (e) => {
@@ -1354,8 +1411,8 @@ export class SharedCardRenderer {
       showFileContextMenu(e, this.app, entry.file, card.path);
     };
 
-    // Attach context menu to card when openFileAction is 'card'
-    if (settings.openFileAction === 'card') {
+    // Attach context menu to card when open-on-title is off
+    if (!effectiveOpenOnTitle) {
       cardEl.addEventListener(
         'contextmenu',
         (e: MouseEvent) => {
@@ -1385,7 +1442,7 @@ export class SharedCardRenderer {
       const extNoDot = extInfo?.ext.slice(1) || '';
 
       // Add title text
-      if (settings.openFileAction === 'title' || isPosterClickReveal) {
+      if (effectiveOpenOnTitle || isPosterClickReveal) {
         // Render as clickable, draggable link
         const link = titleEl.createEl('a', {
           cls: 'internal-link card-title-text',
@@ -1413,8 +1470,7 @@ export class SharedCardRenderer {
         if (isTitleEmpty) link.classList.add('empty-value-marker');
 
         // Precise ink-rect state — hoisted for click/contextmenu access
-        const isPreciseHover =
-          settings.openFileAction === 'title' && !this.app.isMobile;
+        const isPreciseHover = effectiveOpenOnTitle && !this.app.isMobile;
         let inkRects: InkRect[] = [];
 
         const checkInkHit = (e: MouseEvent): boolean =>
@@ -1452,11 +1508,11 @@ export class SharedCardRenderer {
         );
 
         // Page preview on hover — skip when card handler already covers it
-        // (isPosterClickReveal + openFileAction 'card' = card mouseenter handles it)
+        // (isPosterClickReveal + open-on-card = card mouseenter handles it)
         // Also skip desktop open-on-title — precise hover handler below manages it
         if (
-          !(isPosterClickReveal && settings.openFileAction === 'card') &&
-          !(!this.app.isMobile && settings.openFileAction === 'title')
+          !(isPosterClickReveal && !effectiveOpenOnTitle) &&
+          !(!this.app.isMobile && effectiveOpenOnTitle)
         ) {
           link.addEventListener(
             'mouseenter',
@@ -1577,13 +1633,13 @@ export class SharedCardRenderer {
           { signal }
         );
 
-        // Make title draggable when openFileAction is 'title'
+        // Make title draggable when open-on-title is on
         link.addEventListener('dragstart', handleDrag, { signal });
 
         // Dead zone: clicks/contextmenu on .card-title that miss the link.
         // Mobile only — fat-finger tap targets. Desktop uses precise link clicks.
         // Only for open-on-title — in press mode, only the link itself is clickable.
-        if (settings.openFileAction === 'title' && this.app.isMobile) {
+        if (effectiveOpenOnTitle && this.app.isMobile) {
           titleEl.addEventListener(
             'click',
             (e) => {
@@ -1725,8 +1781,6 @@ export class SharedCardRenderer {
     const hasImage = imageUrls.length > 0;
 
     // Check if title or subtitle will be rendered
-    const { displayTitle, isTitleEmpty } =
-      SharedCardRenderer.resolveTitleDisplay(card, entry, settings);
     const hasTitle = !!displayTitle;
     const hasSubtitle = settings.subtitleProperty && card.subtitle;
 
@@ -1742,6 +1796,7 @@ export class SharedCardRenderer {
         hasImage,
         position,
         settings,
+        effectiveOpenOnTitle,
         card,
         signal
       );
@@ -1776,15 +1831,15 @@ export class SharedCardRenderer {
       }
 
       if (card.hasValidUrl && card.urlValue) {
-        this.createUrlIcon(headerEl, card.urlValue, signal);
+        this.createUrlIcon(headerEl, card.urlValue, card.path, signal);
       }
     };
 
     // Header in card-content (before body) — all formats
     createHeader(cardContent);
 
-    // Make card draggable when settings.openFileAction is 'card'
-    if (settings.openFileAction === 'card') {
+    // Make card draggable when open-on-title is off
+    if (!effectiveOpenOnTitle) {
       cardEl.addEventListener('dragstart', handleDrag, { signal });
     }
 
@@ -1793,7 +1848,7 @@ export class SharedCardRenderer {
       const bgWrapper = cardEl.createDiv('card-poster');
       cardEl.classList.add('has-poster');
       const img = bgWrapper.createEl('img', {
-        attr: { src: imageUrls[0], alt: '' },
+        attr: { src: imageUrls[0], alt: '', draggable: 'false' },
       });
       // Real DOM gradient overlay (replaces ::after pseudo-element).
       // ::after forces WebKit to create a separate compositor layer on fresh DOM
@@ -1814,7 +1869,7 @@ export class SharedCardRenderer {
       const bgWrapper = cardEl.createDiv('card-backdrop');
       cardEl.classList.add('has-backdrop');
       const img = bgWrapper.createEl('img', {
-        attr: { src: imageUrls[0], alt: '' },
+        attr: { src: imageUrls[0], alt: '', draggable: 'false' },
       });
       setupBackdropImageLoader(
         img,
@@ -1871,8 +1926,14 @@ export class SharedCardRenderer {
             'thumbnail',
             position,
             settings,
+            effectiveOpenOnTitle,
             cardEl,
-            signal
+            signal,
+            format === 'thumbnail' &&
+              imageUrls.length > 1 &&
+              !isThumbnailScrubbingDisabled()
+              ? imageUrls.slice(0, MAX_MULTI_IMAGES)
+              : null
           );
 
           // Multi-image indicator for scrubbable thumbnails
@@ -1907,6 +1968,7 @@ export class SharedCardRenderer {
         hasImage,
         position,
         settings,
+        effectiveOpenOnTitle,
         card,
         signal
       );
@@ -2011,7 +2073,7 @@ export class SharedCardRenderer {
         // constrains their height. Selecting on has-poster rather than or-ing
         // the two arms is what makes that true, and matches the batch call
         // sites: a bare .poster-static test also caught imageless Masonry
-        // cards, whose height is free, and there the clipper hid the URL icon
+        // cards, whose height is free, and there the clipper hid the URL button
         // for the 4px its border box legitimately overhangs the header.
         if (
           format === 'poster' &&
@@ -2063,6 +2125,13 @@ export class SharedCardRenderer {
     hasImage: boolean,
     position: 'left' | 'right' | 'top' | 'bottom',
     settings: ResolvedSettings,
+    /**
+     * renderCard's title-aware open mode. Threaded rather than read from
+     * `settings` because with the image viewer disabled this value decides
+     * whether an image click opens the file, and the trigger stops
+     * propagation — the card-level handler cannot compensate.
+     */
+    effectiveOpenOnTitle: boolean,
     card: CardData,
     signal: AbortSignal
   ): void {
@@ -2074,12 +2143,10 @@ export class SharedCardRenderer {
 
     if (hasImage) {
       cardEl.classList.add('has-cover');
-      const maxSlideshow = getSlideshowMaxImages();
-      const slideshowUrls = imageUrls.slice(0, maxSlideshow);
-      const shouldShowSlideshow =
-        isSlideshowEnabled() &&
-        (position === 'top' || position === 'bottom') &&
-        slideshowUrls.length >= 2;
+      const slideshowUrls = imageUrls.slice(0, MAX_MULTI_IMAGES);
+      const isMulti = isSlideshowEnabled() && slideshowUrls.length >= 2;
+      const shouldScrub = isMulti && isCoverScrubMode();
+      const shouldShowSlideshow = isMulti && !shouldScrub;
 
       if (shouldShowSlideshow) {
         const slideshowEl = coverWrapper.createDiv(
@@ -2091,6 +2158,7 @@ export class SharedCardRenderer {
           'cover',
           position,
           settings,
+          effectiveOpenOnTitle,
           card.path
         );
       } else {
@@ -2101,9 +2169,15 @@ export class SharedCardRenderer {
           'cover',
           position,
           settings,
+          effectiveOpenOnTitle,
           cardEl,
-          signal
+          signal,
+          shouldScrub ? slideshowUrls : null
         );
+        if (shouldScrub && isSlideshowIconEnabled()) {
+          const iconEl = imageEl.createDiv('slideshow-icon');
+          setIcon(iconEl, 'lucide-copy');
+        }
       }
     } else {
       cardEl.classList.add(
@@ -2124,6 +2198,13 @@ export class SharedCardRenderer {
     format: 'thumbnail' | 'cover',
     position: 'left' | 'right' | 'top' | 'bottom',
     settings: ResolvedSettings,
+    /**
+     * renderCard's title-aware open mode. Threaded rather than read from
+     * `settings` because with the image viewer disabled this value decides
+     * whether an image click opens the file, and the trigger stops
+     * propagation — the card-level handler cannot compensate.
+     */
+    effectiveOpenOnTitle: boolean,
     cardPath: string
   ): void {
     // Create AbortController for cleanup
@@ -2136,7 +2217,7 @@ export class SharedCardRenderer {
       'dynamic-views-image-embed'
     );
 
-    // imageUrls is already capped by getSlideshowMaxImages() at the call site
+    // imageUrls is already capped by MAX_MULTI_IMAGES at the call site
     setViewerImageSet(imageEmbedContainer, imageUrls);
 
     // Add zoom handler
@@ -2150,7 +2231,7 @@ export class SharedCardRenderer {
           this.app,
           this.viewerCleanupFns,
           this.viewerClones,
-          settings.openFileAction
+          effectiveOpenOnTitle
         );
       },
       { signal }
@@ -2159,13 +2240,13 @@ export class SharedCardRenderer {
     // Create two persistent img elements (current and next)
     const currentImg = imageEmbedContainer.createEl('img', {
       cls: 'slideshow-img slideshow-img-current',
-      attr: { src: imageUrls[0], alt: '' },
+      attr: { src: imageUrls[0], alt: '', draggable: 'false' },
     });
 
     // Next image starts with empty src
     imageEmbedContainer.createEl('img', {
       cls: 'slideshow-img slideshow-img-next',
-      attr: { src: '', alt: '' },
+      attr: { src: '', alt: '', draggable: 'false' },
     });
 
     // Shared handler for both hover preload and navigator preload —
@@ -2312,8 +2393,18 @@ export class SharedCardRenderer {
     format: 'thumbnail' | 'cover',
     position: 'left' | 'right' | 'top' | 'bottom',
     settings: ResolvedSettings,
+    /**
+     * renderCard's title-aware open mode. Threaded rather than read from
+     * `settings` because with the image viewer disabled this value decides
+     * whether an image click opens the file, and the trigger stops
+     * propagation — the card-level handler cannot compensate.
+     */
+    effectiveOpenOnTitle: boolean,
     cardEl: HTMLElement,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    /** Images to scrub through, or null for a plain single image. The caller owns
+     *  the gate — thumbnails check their own setting, covers check navigation mode. */
+    scrubUrls: string[] | null = null
   ): void {
     const imageEmbedContainer = imageEl.createDiv('dynamic-views-image-embed');
 
@@ -2327,14 +2418,14 @@ export class SharedCardRenderer {
           this.app,
           this.viewerCleanupFns,
           this.viewerClones,
-          settings.openFileAction
+          effectiveOpenOnTitle
         );
       },
       signal ? { signal } : undefined
     );
 
     const imgEl = imageEmbedContainer.createEl('img', {
-      attr: { src: imageUrls[0], alt: '' },
+      attr: { src: imageUrls[0], alt: '', draggable: 'false' },
     });
 
     // Handle image load for masonry layout
@@ -2347,16 +2438,28 @@ export class SharedCardRenderer {
       );
     }
 
-    // Scrubbable array declared here so tryNextImage can splice broken URLs.
-    // null when scrubbing not active (cover format, mobile, disabled).
-    const scrubbableUrls =
-      format === 'thumbnail' &&
-      imageUrls.length > 1 &&
-      !isThumbnailScrubbingDisabled()
-        ? imageUrls.slice(0, 10)
-        : null;
+    // Scrubbable array aliased here so tryNextImage can splice broken URLs.
+    // null when scrubbing not active (single image, or disabled by setting).
+    const scrubbableUrls = scrubUrls;
 
-    // scrubbableUrls already encodes the thumbnail + multi-image + scrubbing gate
+    // Degrading to one valid image drops the multi-image affordances. Covers
+    // additionally take `.slideshow-single`, which hides the slideshow icon.
+    const markSingle = () => {
+      imageEl.classList.remove('multi-image');
+      if (format === 'cover') imageEl.addClass('slideshow-single');
+    };
+
+    // Hover zoom survives only until the displayed frame first changes. One flag,
+    // no seed: the frame the session started on is whatever is already on screen,
+    // which the src comparison reads directly.
+    let zoomCleared = false;
+    const dropZoomOnFrameChange = () => {
+      if (zoomCleared) return;
+      zoomCleared = true;
+      cancelHoverZoom(imageEmbedContainer);
+    };
+
+    // scrubbableUrls already encodes the format + multi-image + navigation gate
     if (scrubbableUrls) {
       setViewerImageSet(imageEmbedContainer, scrubbableUrls);
     }
@@ -2377,13 +2480,14 @@ export class SharedCardRenderer {
           const idx = scrubbableUrls.indexOf(failedSrc);
           if (idx !== -1) scrubbableUrls.splice(idx, 1);
           if (scrubbableUrls.length <= 1) {
-            imageEl.classList.remove('multi-image');
+            markSingle();
           }
           // Show first remaining valid image
           if (scrubbableUrls.length > 0) {
             if (signal?.aborted || !imgEl.isConnected) return;
             imgEl.removeClass('dynamic-views-hidden');
             imgEl.src = getCachedBlobUrl(scrubbableUrls[0]);
+            dropZoomOnFrameChange();
             return;
           }
         } else {
@@ -2419,15 +2523,29 @@ export class SharedCardRenderer {
       );
     }
 
-    // Thumbnail scrubbing (hover + touch, max 10 images)
+    // Scrubbing for covers and thumbnails (hover + touch), capped at MAX_MULTI_IMAGES
     if (scrubbableUrls) {
       imageEl.classList.add('multi-image');
       imgEl.classList.add('slideshow-img', 'slideshow-img-current');
 
+      // Thumbnails do not zoom, so only covers need the eligibility wiring. The
+      // card — not the image — is the hover-session boundary: moving between the
+      // image and card content is an ordinary excursion that must not restart it.
+      if (format === 'cover') {
+        setupHoverZoomEligibility(cardEl, imageEmbedContainer, signal!);
+        cardEl.addEventListener(
+          'mouseenter',
+          () => {
+            zoomCleared = false;
+          },
+          { signal }
+        );
+      }
+
       // Second image element for swipe animation (touch only)
       const nextImg = imageEmbedContainer.createEl('img', {
         cls: ['slideshow-img', 'slideshow-img-next'],
-        attr: { src: '', alt: '' },
+        attr: { src: '', alt: '', draggable: 'false' },
       });
       nextImg.addEventListener(
         'error',
@@ -2436,8 +2554,7 @@ export class SharedCardRenderer {
           markImageBroken(nextImg.src);
           const idx = scrubbableUrls.indexOf(nextImg.src);
           if (idx !== -1) scrubbableUrls.splice(idx, 1);
-          if (scrubbableUrls.length <= 1)
-            imageEl.classList.remove('multi-image');
+          if (scrubbableUrls.length <= 1) markSingle();
         },
         signal ? { signal } : undefined
       );
@@ -2449,7 +2566,7 @@ export class SharedCardRenderer {
       const scrubBrokenHandler = createPreloadBrokenHandler(
         scrubbableUrls,
         cardEl,
-        () => imageEl.classList.remove('multi-image')
+        markSingle
       );
 
       // Preload on hover — splice broken URLs from scrubbable array immediately
@@ -2464,16 +2581,77 @@ export class SharedCardRenderer {
       }
 
       // Touch scrub reset — declared before hover handlers so closures can call it
-      let resetTouchScrub: (() => void) | null = null;
+      let resetSwipeNavigation: (() => void) | null = null;
 
       // Cache bounding rect on pointerenter to avoid layout thrashing on every pointermove
       // Closure and DOMRect freed when event listeners are removed via { signal }
       let cachedRect: DOMRect | null = null;
+      // undefined = not measured yet, null = measured and this card has none.
+      let cachedDeadRect: DOMRect | null | undefined;
+
+      const pointInRect = (e: PointerEvent, rect: DOMRect): boolean =>
+        e.clientX >= rect.left &&
+        e.clientX <= rect.right &&
+        e.clientY >= rect.top &&
+        e.clientY <= rect.bottom;
+
+      /**
+       * The region around the URL button that scrubbing ignores, in client
+       * coordinates — null when this card has no URL button over its image.
+       *
+       * Every edge is read from a live rect: the card's padding is a Style
+       * Settings slider and the icon's box is bigger on mobile, so any literal
+       * would be wrong at most settings.
+       */
+      const getDeadRect = (): DOMRect | null => {
+        if (cachedDeadRect !== undefined) return cachedDeadRect;
+        const urlButtonEl =
+          cardEl.querySelector<HTMLElement>(URL_ICON_SELECTOR);
+        const urlButtonRect = urlButtonEl?.getBoundingClientRect();
+        const coverRect = (cachedRect ??= imageEl.getBoundingClientRect());
+        // An intersection test rather than a position-class check: the layouts
+        // that park the icon in the header away from the image are exactly the
+        // ones that need no dead zone, and naming none of them keeps layouts
+        // nobody has thought of yet correct for free.
+        if (
+          !urlButtonRect ||
+          urlButtonRect.right <= coverRect.left ||
+          urlButtonRect.left >= coverRect.right ||
+          urlButtonRect.bottom <= coverRect.top ||
+          urlButtonRect.top >= coverRect.bottom
+        ) {
+          cachedDeadRect = null;
+          return null;
+        }
+        const cardRect = cardEl.getBoundingClientRect();
+        // Flush to the card's top and right edges, inset from the icon on the
+        // left and bottom by that same edge's own gap, so the zone reads as the
+        // button's own margin at any padding or URL button size.
+        const gapTop = urlButtonRect.top - cardRect.top;
+        const gapRight = cardRect.right - urlButtonRect.right;
+        // Clipped to the image, which is also what lets pointerleave tell the
+        // two exits apart: moving onto the icon stacked over the image reports
+        // a point inside the image, while a geometric exit reports one outside
+        // it altogether.
+        const left = Math.max(urlButtonRect.left - gapRight, coverRect.left);
+        const top = Math.max(cardRect.top, coverRect.top);
+        const right = Math.min(cardRect.right, coverRect.right);
+        const bottom = Math.min(
+          urlButtonRect.bottom + gapTop,
+          coverRect.bottom
+        );
+        cachedDeadRect = new DOMRect(left, top, right - left, bottom - top);
+        return cachedDeadRect;
+      };
+
       imageEl.addEventListener(
         'pointerenter',
         (e: PointerEvent) => {
           if (!isHoverPointer(e)) return;
           cachedRect = imageEl.getBoundingClientRect();
+          // Invalidated with cachedRect: a URL button that updateUrlButton added
+          // or removed since the last hover must not leave a stale zone behind.
+          cachedDeadRect = undefined;
           imageEl.classList.add('scrub-hover');
         },
         { signal }
@@ -2484,6 +2662,12 @@ export class SharedCardRenderer {
         (e: PointerEvent) => {
           if (!isHoverPointer(e)) return;
           if (signal?.aborted || scrubbableUrls.length === 0) return;
+          // Movement near the URL button drives nothing — the icon and a matching margin
+          // around it are dead for scrubbing, so a pointer travelling to the button does
+          // not drag the frame with it. Frozen, not reset: the frame the user scrubbed to
+          // is still the one they want when they come back.
+          const deadRect = getDeadRect();
+          if (deadRect && pointInRect(e, deadRect)) return;
           // Use cached rect, or cache on first mousemove if mouseenter didn't fire
           const rect = (cachedRect ??= imageEl.getBoundingClientRect());
           const x = e.clientX - rect.left;
@@ -2492,7 +2676,14 @@ export class SharedCardRenderer {
             '.slideshow-img-current'
           );
           if (!curr) return;
-          applyScrubImage(curr, scrubbableUrls[index]);
+          // A changed src means a visibly different frame — except when
+          // cacheExternalImage has just swapped this same frame's raw URL for a
+          // blob:, which always has beforeSrc equal to the raw target.
+          const target = scrubbableUrls[index];
+          const beforeSrc = curr.src;
+          applyScrubImage(curr, target);
+          if (curr.src !== beforeSrc && beforeSrc !== target)
+            dropZoomOnFrameChange();
         },
         { signal, passive: true }
       );
@@ -2503,9 +2694,14 @@ export class SharedCardRenderer {
           if (!isHoverPointer(e)) return;
           // Don't reset while image viewer is open (overlay triggers pointerleave)
           if (this.viewerClones.has(imageEmbedContainer)) return;
+          // pointerleave fires when the pointer moves onto the URL button, which is not a
+          // descendant of the cover. Leaving into the dead zone is not leaving the cover.
+          const deadRect = getDeadRect();
+          if (deadRect && pointInRect(e, deadRect)) return;
           imageEl.classList.remove('scrub-hover');
           // Invalidate cached rect for next hover (handles resize)
           cachedRect = null;
+          cachedDeadRect = undefined;
           const curr = imageEmbedContainer.querySelector<HTMLImageElement>(
             '.slideshow-img-current'
           );
@@ -2515,22 +2711,25 @@ export class SharedCardRenderer {
           if (!firstUrl) return;
           // First image is pre-validated, always show it
           curr.removeClass('dynamic-views-hidden');
+          const beforeSrc = curr.src;
           curr.src = getCachedBlobUrl(firstUrl);
+          if (curr.src !== beforeSrc && beforeSrc !== firstUrl)
+            dropZoomOnFrameChange();
           // Sync touch state back to index 0
-          resetTouchScrub?.();
+          resetSwipeNavigation?.();
         },
         { signal }
       );
 
-      // Touch scrubbing: horizontal swipe across multi-image thumbnail
+      // Touch scrubbing: horizontal swipe across a multi-image cover or thumbnail
       const scrubAnimDuration = (() => {
         const v = parseInt(
           getComputedStyle(imageEl).getPropertyValue('--anim-duration-moderate')
         );
         return !isNaN(v) && v > 0 ? v : undefined;
       })();
-      resetTouchScrub = setupTouchScrubbing({
-        thumbEl: imageEl,
+      resetSwipeNavigation = setupTouchSwipeNavigation({
+        scrubEl: imageEl,
         cardEl,
         imageUrls: scrubbableUrls,
         signal: signal!,
@@ -2538,13 +2737,15 @@ export class SharedCardRenderer {
         preloadGuard,
         animationDuration: scrubAnimDuration,
         brokenHandler: scrubBrokenHandler,
+        onReduced: markSingle,
+        onFrameChange: dropZoomOnFrameChange,
       });
-      observeThumbnailReset(imageEl, resetTouchScrub);
+      observeScrubReset(imageEl, resetSwipeNavigation);
       signal?.addEventListener(
         'abort',
         () => {
-          resetTouchScrub?.();
-          unobserveThumbnailReset(imageEl);
+          resetSwipeNavigation?.();
+          unobserveScrubReset(imageEl);
         },
         { once: true }
       );
@@ -2641,7 +2842,7 @@ export class SharedCardRenderer {
   }
 
   /**
-   * Build the URL chip anchor inside a card header.
+   * Build the URL button anchor inside a card header.
    *
    * Shared by the render path and updateUrlButton(). The caller owns the
    * listener lifecycle and passes its own signal — the per-render controller at
@@ -2651,6 +2852,7 @@ export class SharedCardRenderer {
   private createUrlIcon(
     headerEl: HTMLElement,
     urlValue: string,
+    cardPath: string,
     signal: AbortSignal
   ): HTMLAnchorElement {
     const iconEl = headerEl.createEl('a', {
@@ -2683,11 +2885,19 @@ export class SharedCardRenderer {
     iconEl.addEventListener(
       'contextmenu',
       (e) => {
-        showExternalLinkContextMenu(e, iconEl.dataset.dvUrlValue ?? urlValue);
+        const file = this.app.vault.getAbstractFileByPath(cardPath);
+        if (!(file instanceof TFile)) return;
+        showFileContextMenu(
+          e,
+          this.app,
+          file,
+          cardPath,
+          iconEl.dataset.dvUrlValue ?? urlValue
+        );
       },
       { signal }
     );
-    const urlDrag = createUrlButtonDragHandlers(iconEl, urlValue);
+    const urlDrag = createUrlButtonDragHandlers(this.app, iconEl, urlValue);
     iconEl.addEventListener('dragstart', urlDrag.onDragStart, { signal });
     iconEl.addEventListener('dragend', urlDrag.onDragEnd, { signal });
     iconEl.addEventListener('touchstart', urlDrag.onTouchStart, {
@@ -2720,21 +2930,26 @@ export class SharedCardRenderer {
       } else {
         // A card with no header is the displayFirstAsTitle-OFF case: nothing was
         // renderable at render time, so the header has to be created now or the
-        // chip never appears until a full re-render.
+        // URL button never appears until a full re-render.
         const targetEl = headerEl ?? prependHeader(cardEl);
         if (targetEl) {
           this.urlButtonRerenderController.get(cardEl)?.abort();
           const urlButtonAbort = new AbortController();
           this.urlButtonRerenderController.set(cardEl, urlButtonAbort);
-          this.createUrlIcon(targetEl, card.urlValue, urlButtonAbort.signal);
+          this.createUrlIcon(
+            targetEl,
+            card.urlValue,
+            card.path,
+            urlButtonAbort.signal
+          );
         }
       }
     } else if (existingIcon) {
       this.urlButtonRerenderController.get(cardEl)?.abort();
       this.urlButtonRerenderController.delete(cardEl);
       existingIcon.remove();
-      // Mirror of the creation path: a header the chip was the sole occupant of
-      // would otherwise keep holding its --size-2-3 gap open forever.
+      // Mirror of the creation path: a header the URL button was the sole
+      // occupant of would otherwise keep holding its --size-2-3 gap open forever.
       if (headerEl && headerEl.childElementCount === 0) headerEl.remove();
     }
 
@@ -2870,12 +3085,7 @@ export class SharedCardRenderer {
     // Parse override lists for O(1) lookup
     const invertPairingSet = parsePropertyList(settings.invertPropertyPairing);
 
-    // Properties rendered elsewhere — exclude from property rows
-    const excludeSet = new Set<string>();
-    if (settings.textPreviewProperty)
-      excludeSet.add(settings.textPreviewProperty);
-    if (settings.urlProperty) excludeSet.add(settings.urlProperty);
-    if (settings.imageProperty) excludeSet.add(settings.imageProperty);
+    const excludeSet = getPropertiesRenderedElsewhere(settings);
 
     // Pre-compute hide settings (needed before pairing to exclude collapsed)
     const hideMissing = shouldHideMissingProperties();

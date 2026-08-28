@@ -14,6 +14,16 @@ function firstLink(text: string) {
   return seg.link;
 }
 
+// Same lookup, but returns the whole segment — firstLink unwraps to .link, so it cannot serve assertions on segment-level fields such as `raw`.
+function firstLinkSegment(text: string) {
+  const segments = findLinksInText(text);
+  const seg = segments.find(
+    (s): s is Extract<TextSegment, { type: 'link' }> => s.type === 'link'
+  );
+  if (!seg) throw new Error(`No link segment found in: ${text}`);
+  return seg;
+}
+
 describe('link-parser', () => {
   // ---------------------------------------------------------------------------
   // hasUriScheme
@@ -513,38 +523,22 @@ describe('link-parser', () => {
   // ---------------------------------------------------------------------------
   describe('findLinksInText — raw field', () => {
     it('raw matches the original wikilink text', () => {
-      const segments = findLinksInText('[[Note]]');
-      const link = segments.find((s) => s.type === 'link') as Extract<
-        TextSegment,
-        { type: 'link' }
-      >;
+      const link = firstLinkSegment('[[Note]]');
       expect(link.raw).toBe('[[Note]]');
     });
 
     it('raw matches the original embedded wikilink text', () => {
-      const segments = findLinksInText('![[img.png]]');
-      const link = segments.find((s) => s.type === 'link') as Extract<
-        TextSegment,
-        { type: 'link' }
-      >;
+      const link = firstLinkSegment('![[img.png]]');
       expect(link.raw).toBe('![[img.png]]');
     });
 
     it('raw matches the original Markdown link text', () => {
-      const segments = findLinksInText('[Example](https://example.org)');
-      const link = segments.find((s) => s.type === 'link') as Extract<
-        TextSegment,
-        { type: 'link' }
-      >;
+      const link = firstLinkSegment('[Example](https://example.org)');
       expect(link.raw).toBe('[Example](https://example.org)');
     });
 
     it('raw for plain URL is the clean URL without trailing punctuation', () => {
-      const segments = findLinksInText('https://example.org.');
-      const link = segments.find((s) => s.type === 'link') as Extract<
-        TextSegment,
-        { type: 'link' }
-      >;
+      const link = firstLinkSegment('https://example.org.');
       expect(link.raw).toBe('https://example.org');
     });
   });

@@ -4,11 +4,6 @@ import { scanOpaque } from '../../src/core/opaque-scan';
 import { extractImageEmbeds } from '../../src/core/image-extraction';
 import { sanitizeForTextPreview } from '../../src/core/text-preview';
 
-// Mock style settings
-vi.mock('../../src/utils/style-settings', () => ({
-  getSlideshowMaxImages: vi.fn(() => 10),
-}));
-
 /** Cut every comment out of `content`, using full code detection. */
 function cut(content: string): string {
   return scanOpaque(content).cutComments();

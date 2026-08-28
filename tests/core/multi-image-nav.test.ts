@@ -14,10 +14,10 @@ vi.mock('../../src/core/image-loader', () => ({
 import {
   computeScrubIndex,
   applyScrubImage,
-  setupTouchScrubbing,
-  observeThumbnailReset,
-  unobserveThumbnailReset,
-} from '../../src/core/thumbnail-scrub';
+  setupTouchSwipeNavigation,
+  observeScrubReset,
+  unobserveScrubReset,
+} from '../../src/core/multi-image-nav';
 import { getCachedBlobUrl, preloadImageBatch } from '../../src/core/slideshow';
 
 // Obsidian's addClass/removeClass extensions on HTMLElement (not present in jsdom)
@@ -152,9 +152,9 @@ describe('applyScrubImage', () => {
   });
 });
 
-// ── setupTouchScrubbing ───────────────────────────────────────────────────
+// ── setupTouchSwipeNavigation ─────────────────────────────────────────────
 
-describe('setupTouchScrubbing', () => {
+describe('setupTouchSwipeNavigation', () => {
   let thumbEl: HTMLElement;
   let currImg: HTMLImageElement;
   let nextImg: HTMLImageElement;
@@ -198,8 +198,8 @@ describe('setupTouchScrubbing', () => {
   });
 
   it('triggers preload on first touch pointerdown', () => {
-    setupTouchScrubbing({
-      thumbEl,
+    setupTouchSwipeNavigation({
+      scrubEl: thumbEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -223,8 +223,8 @@ describe('setupTouchScrubbing', () => {
 
   it('does not trigger preload on second touch', () => {
     preloadGuard.done = true;
-    setupTouchScrubbing({
-      thumbEl,
+    setupTouchSwipeNavigation({
+      scrubEl: thumbEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -242,8 +242,8 @@ describe('setupTouchScrubbing', () => {
   });
 
   it('enters scrub mode on pointermove > 10px delta', () => {
-    setupTouchScrubbing({
-      thumbEl,
+    setupTouchSwipeNavigation({
+      scrubEl: thumbEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -266,8 +266,8 @@ describe('setupTouchScrubbing', () => {
   });
 
   it('does NOT enter scrub mode when vertical movement dominates', () => {
-    setupTouchScrubbing({
-      thumbEl,
+    setupTouchSwipeNavigation({
+      scrubEl: thumbEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -309,8 +309,8 @@ describe('setupTouchScrubbing', () => {
   });
 
   it('does NOT enter scrub mode on pointermove < 10px delta', () => {
-    setupTouchScrubbing({
-      thumbEl,
+    setupTouchSwipeNavigation({
+      scrubEl: thumbEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -331,9 +331,59 @@ describe('setupTouchScrubbing', () => {
     expect(thumbEl.classList.contains('scrub-hover')).toBe(false);
   });
 
+  it('fires onFrameChange exactly once for a committed swipe', () => {
+    const onFrameChange = vi.fn();
+    setupTouchSwipeNavigation({
+      scrubEl: thumbEl,
+      cardEl,
+      imageUrls,
+      signal: controller.signal,
+      preloadSignal: controller.signal,
+      preloadGuard,
+      brokenHandler,
+      onFrameChange,
+    });
+
+    firePointer(thumbEl, 'pointerdown', {
+      pointerType: 'touch',
+      clientX: 50,
+    });
+    firePointer(thumbEl, 'pointermove', {
+      pointerType: 'touch',
+      clientX: 38,
+    });
+
+    expect(onFrameChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT fire onFrameChange below the movement threshold', () => {
+    const onFrameChange = vi.fn();
+    setupTouchSwipeNavigation({
+      scrubEl: thumbEl,
+      cardEl,
+      imageUrls,
+      signal: controller.signal,
+      preloadSignal: controller.signal,
+      preloadGuard,
+      brokenHandler,
+      onFrameChange,
+    });
+
+    firePointer(thumbEl, 'pointerdown', {
+      pointerType: 'touch',
+      clientX: 50,
+    });
+    firePointer(thumbEl, 'pointermove', {
+      pointerType: 'touch',
+      clientX: 55,
+    });
+
+    expect(onFrameChange).not.toHaveBeenCalled();
+  });
+
   it('applies animation classes on swipe (left swipe → exit-left + enter-left = next)', () => {
-    setupTouchScrubbing({
-      thumbEl,
+    setupTouchSwipeNavigation({
+      scrubEl: thumbEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -359,8 +409,8 @@ describe('setupTouchScrubbing', () => {
 
   it('applies correct direction for right swipe (exit-right + enter-right = previous)', () => {
     // Advance to index 1 first via left swipe
-    setupTouchScrubbing({
-      thumbEl,
+    setupTouchSwipeNavigation({
+      scrubEl: thumbEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -406,8 +456,8 @@ describe('setupTouchScrubbing', () => {
   });
 
   it('cancel-and-restart: finishes previous animation before starting new one', () => {
-    setupTouchScrubbing({
-      thumbEl,
+    setupTouchSwipeNavigation({
+      scrubEl: thumbEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -440,7 +490,7 @@ describe('setupTouchScrubbing', () => {
       clientX: 38,
     });
 
-    // After cancel-and-restart, roles should have swapped (finishThumbnailAnimation ran)
+    // After cancel-and-restart, roles should have swapped (finishSlideAnimation ran)
     // The new current img should now have the exit class
     const newCurr = thumbEl.querySelector<HTMLImageElement>(
       '.slideshow-img-current'
@@ -453,8 +503,8 @@ describe('setupTouchScrubbing', () => {
   });
 
   it('suppresses click after scrub on pointerup', () => {
-    setupTouchScrubbing({
-      thumbEl,
+    setupTouchSwipeNavigation({
+      scrubEl: thumbEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -485,8 +535,8 @@ describe('setupTouchScrubbing', () => {
   });
 
   it('does NOT suppress click when no scrub occurred', () => {
-    setupTouchScrubbing({
-      thumbEl,
+    setupTouchSwipeNavigation({
+      scrubEl: thumbEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -514,8 +564,8 @@ describe('setupTouchScrubbing', () => {
   });
 
   it('click suppressor expires after 300ms (does not eat next deliberate tap)', () => {
-    setupTouchScrubbing({
-      thumbEl,
+    setupTouchSwipeNavigation({
+      scrubEl: thumbEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -551,8 +601,8 @@ describe('setupTouchScrubbing', () => {
   });
 
   it('cleans up on pointercancel', () => {
-    setupTouchScrubbing({
-      thumbEl,
+    setupTouchSwipeNavigation({
+      scrubEl: thumbEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -576,8 +626,8 @@ describe('setupTouchScrubbing', () => {
   });
 
   it('ignores mouse pointer events', () => {
-    setupTouchScrubbing({
-      thumbEl,
+    setupTouchSwipeNavigation({
+      scrubEl: thumbEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -600,8 +650,8 @@ describe('setupTouchScrubbing', () => {
   });
 
   it('reset function cancels animation, resets index, and restores images', () => {
-    const reset = setupTouchScrubbing({
-      thumbEl,
+    const reset = setupTouchSwipeNavigation({
+      scrubEl: thumbEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -644,8 +694,8 @@ describe('setupTouchScrubbing', () => {
     basesView.appendChild(cardEl); // cardEl already contains thumbEl
     document.body.appendChild(basesView);
 
-    const reset = setupTouchScrubbing({
-      thumbEl,
+    const reset = setupTouchSwipeNavigation({
+      scrubEl: thumbEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -680,8 +730,8 @@ describe('setupTouchScrubbing', () => {
 
   it('wraps from last to first on left swipe at end (looping default)', () => {
     imageUrls = ['/img/a.jpg', '/img/b.jpg'];
-    setupTouchScrubbing({
-      thumbEl,
+    setupTouchSwipeNavigation({
+      scrubEl: thumbEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -720,8 +770,8 @@ describe('setupTouchScrubbing', () => {
   });
 
   it('sets dataset.scrubbedSrc after animation completes', () => {
-    setupTouchScrubbing({
-      thumbEl,
+    setupTouchSwipeNavigation({
+      scrubEl: thumbEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -749,8 +799,8 @@ describe('setupTouchScrubbing', () => {
   });
 
   it('swaps roles and clears src on timeout completion', () => {
-    setupTouchScrubbing({
-      thumbEl,
+    setupTouchSwipeNavigation({
+      scrubEl: thumbEl,
       cardEl,
       imageUrls,
       signal: controller.signal,
@@ -784,9 +834,9 @@ describe('setupTouchScrubbing', () => {
   });
 });
 
-// ── observeThumbnailReset / unobserveThumbnailReset ───────────────────────
+// ── observeScrubReset / unobserveScrubReset ───────────────────────
 
-describe('observeThumbnailReset / unobserveThumbnailReset', () => {
+describe('observeScrubReset / unobserveScrubReset', () => {
   let thumbEl: HTMLElement;
   let mockObserve: Mock;
   let mockUnobserve: Mock;
@@ -819,7 +869,7 @@ describe('observeThumbnailReset / unobserveThumbnailReset', () => {
 
   it('calls onReset when re-entering after being hidden', () => {
     const onReset = vi.fn();
-    observeThumbnailReset(thumbEl, onReset);
+    observeScrubReset(thumbEl, onReset);
 
     // Go out of view
     ioCallback([{ target: thumbEl, isIntersecting: false } as any], {} as any);
@@ -832,7 +882,7 @@ describe('observeThumbnailReset / unobserveThumbnailReset', () => {
 
   it('does not call onReset on first intersection (was never hidden)', () => {
     const onReset = vi.fn();
-    observeThumbnailReset(thumbEl, onReset);
+    observeScrubReset(thumbEl, onReset);
 
     ioCallback([{ target: thumbEl, isIntersecting: true } as any], {} as any);
 
@@ -844,8 +894,8 @@ describe('observeThumbnailReset / unobserveThumbnailReset', () => {
     const onReset1 = vi.fn();
     const onReset2 = vi.fn();
 
-    observeThumbnailReset(thumbEl, onReset1);
-    observeThumbnailReset(thumbEl2, onReset2);
+    observeScrubReset(thumbEl, onReset1);
+    observeScrubReset(thumbEl2, onReset2);
 
     // Simulate both going out of view
     ioCallback(
@@ -869,10 +919,10 @@ describe('observeThumbnailReset / unobserveThumbnailReset', () => {
     expect(onReset2).toHaveBeenCalledTimes(1);
   });
 
-  it('unobserveThumbnailReset removes state so IO callback is a no-op', () => {
+  it('unobserveScrubReset removes state so IO callback is a no-op', () => {
     const onReset = vi.fn();
-    observeThumbnailReset(thumbEl, onReset);
-    unobserveThumbnailReset(thumbEl);
+    observeScrubReset(thumbEl, onReset);
+    unobserveScrubReset(thumbEl);
 
     // IO callback for unobserved element should be a no-op since state was deleted
     ioCallback([{ target: thumbEl, isIntersecting: false } as any], {} as any);

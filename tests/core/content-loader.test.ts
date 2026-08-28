@@ -24,11 +24,6 @@ vi.mock('../../src/core/text-preview', () => ({
   loadNotePreview: vi.fn(),
 }));
 
-// Mock style-settings to provide deterministic getSlideshowMaxImages
-vi.mock('../../src/utils/style-settings', () => ({
-  getSlideshowMaxImages: vi.fn(() => 10),
-}));
-
 describe('content-loader', () => {
   let mockApp: App;
   let mockFile: TFile;

@@ -1,3 +1,6 @@
+@use 'sass:list';
+@use 'color-presets' as *;
+
 /* Enable container queries and set view padding for plugin's custom view types
    (Obsidian only sets --bases-view-padding for its own types: cards, list, table) */
 .bases-view[data-view-type='dynamic-views-grid'],
@@ -45,8 +48,8 @@
 }
 
 /* View background theme presets — standalone Bases files only (not embeds).
-   Body-class-gated: each theme sets --dynamic-views-view-bg-color on body,
-   consumed by a single [class*=] rule. "Default" = no background (transparent). */
+   Body-class-gated: each option sets --dynamic-views-view-bg-color on body,
+   consumed by the single generated :is() rule below. "Default" = no background. */
 body.dynamic-views-view-background-flexoki {
   --dynamic-views-view-bg-color: #fffcf0;
 }
@@ -71,6 +74,20 @@ body.dynamic-views-view-background-rose-pine {
 body.dynamic-views-view-background-solarized {
   --dynamic-views-view-bg-color: #fdf6e3;
 }
+/* View background colour presets — same 7% tint over primary as the card
+   background presets, from the same $preset-colors list. Unlike the named scheme
+   presets above, these need no theme-dark override: the mix resolves against
+   --dynamic-views-background-primary, which already differs per theme. */
+@each $color in $preset-colors {
+  body.dynamic-views-view-background-#{$color} {
+    --dynamic-views-view-bg-color: color-mix(
+      in srgb,
+      var(--dynamic-views-color-#{$color}) 7%,
+      var(--dynamic-views-background-primary)
+    );
+  }
+}
+
 body.dynamic-views-view-background-custom {
   --dynamic-views-view-bg-color: var(
     --dynamic-views-view-background-custom,
@@ -104,20 +121,26 @@ body.theme-dark.dynamic-views-view-background-solarized {
   --dynamic-views-view-bg-color: #002b36;
 }
 
-/* Single consumption rule — :is() enumeration instead of [class*=] to avoid
-   substring invalidation on every body class change. :not(.default) skips the
-   "Default" option which means transparent (no background override). */
-body:is(
-    .dynamic-views-view-background-flexoki,
-    .dynamic-views-view-background-ayu,
-    .dynamic-views-view-background-catppuccin,
-    .dynamic-views-view-background-everforest,
-    .dynamic-views-view-background-gruvbox,
-    .dynamic-views-view-background-nord,
-    .dynamic-views-view-background-rose-pine,
-    .dynamic-views-view-background-solarized,
-    .dynamic-views-view-background-custom
-  )
+/* Single consumption rule. "Default" has no class rule at all, so it simply
+   never sets the variable and the view stays transparent.
+   Builds the :is() gate from the same lists that define the presets, so a new
+   colour cannot be added to $preset-colors without the gate picking it up — a
+   gate missing a class leaves that preset setting the variable with nothing
+   consuming it. Enumerated rather than [class*=] to avoid substring
+   invalidation on every body class change. */
+$view-bg-schemes:
+  'flexoki', 'ayu', 'catppuccin', 'everforest', 'gruvbox', 'nord', 'rose-pine',
+  'solarized', 'custom';
+
+@function view-bg-gate() {
+  $sel: ();
+  @each $c in list.join($preset-colors, $view-bg-schemes) {
+    $sel: list.append($sel, '.dynamic-views-view-background-#{$c}', comma);
+  }
+  @return $sel;
+}
+
+body:is(#{view-bg-gate()})
   .workspace-leaf-content[data-type='bases']
   .bases-view:is(
     [data-view-type='dynamic-views-grid'],

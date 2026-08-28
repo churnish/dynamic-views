@@ -40,6 +40,24 @@ body {
   --dynamic-views-icon-color-hover: var(--icon-color-hover, #5c5c5c);
   --dynamic-views-icon-opacity: var(--icon-opacity, 0.85);
   --dynamic-views-clickable-icon-radius: var(--clickable-icon-radius, 4px);
+  /* Plugin-owned: --shadow-xs/-s/-l are all multi-layer box-shadow values and
+     drop-shadow() takes exactly one shadow, so none can be substituted. They
+     are also elevation shadows under 0.12 alpha, where this needs an opaque
+     centred glow to keep a glyph legible over arbitrary photography.
+     drop-shadow, not box-shadow, so it follows the glyph's alpha not its box. */
+  --dynamic-views-icon-shadow: drop-shadow(0 0 1px rgba(0, 0, 0, 0.55))
+    drop-shadow(0 0 2px rgba(0, 0, 0, 0.3));
+
+  /* Plugin-owned: the multi-image glyph, shared by the cover icon and the
+     thumbnail indicator so the two cannot drift apart again. Both values are
+     derived against the URL button's glyph — see card/_slideshow.scss for the
+     arithmetic. The stroke is an explicit override of --icon-stroke, which
+     renders too thin at this size to hold up over arbitrary photography.
+     Positioning is deliberately NOT shared: the cover icon is inset against the
+     card edge to line up with the URL button, while the indicator sits inside a
+     thumbnail only ~80px wide, where that inset would land it near the middle. */
+  --dynamic-views-multi-image-icon-size: 12.578px;
+  --dynamic-views-multi-image-icon-stroke: 2.5px;
 
   /* Animation */
   --dynamic-views-anim-duration-superfast: var(--anim-duration-superfast, 70ms);

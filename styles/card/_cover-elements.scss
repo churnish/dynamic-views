@@ -1,3 +1,17 @@
+/* Single-image covers and thumbnails: the multi-image surfaces already set this
+   (card/_previews.scss, card/_slideshow.scss) for gesture handling; matched here
+   so every image surface declares the same touch behaviour. Whether pan-y is
+   enough to stop WebKit's long-press image drag is unconfirmed — `touch-action`
+   is the only property that reaches it at all, but our notes only establish
+   that for `none`, which would also kill vertical scrolling started on an
+   image. */
+.dynamic-views
+  .card.image-format-cover
+  .card-cover:not(.multi-image):not(.card-cover-slideshow),
+.dynamic-views .card .card-thumbnail:not(.multi-image) {
+  touch-action: pan-y;
+}
+
 .dynamic-views {
   /* Cover-top: fixed aspect ratio using padding-top trick */
   .card.card-cover-top.image-format-cover .card-cover {
@@ -200,12 +214,17 @@ body.dynamic-views-round-covers
 }
 
 /* Hover zoom for cover images — transition on desktop only (avoid compositor
-   layer promotion on touch), scale trigger fires for both hover and touch. */
+   layer promotion on touch). The transition stays outside the trigger's gate:
+   transitions are bidirectional, so one that only existed while the card was
+   hovered would animate the zoom in and snap it out. */
 @media (any-hover: hover) {
-  /* Default transition for single-image covers */
+  /* Default transition for single-image covers. Scrub covers are excluded
+     because transform on the two stacked images fights the frame swap —
+     card/_slideshow.scss gives them a scale transition instead. Thumbnails do
+     not zoom at all, so they need neither. */
   .dynamic-views
     .card.image-format-cover
-    .card-cover:not(.card-cover-slideshow)
+    .card-cover:not(.card-cover-slideshow):not(.multi-image)
     .dynamic-views-image-embed
     img {
     transition:
@@ -215,11 +234,12 @@ body.dynamic-views-round-covers
 }
 
 /* Cover hover zoom — enabled by default, disabled via Style Settings toggle.
-   Uses interact (card-level JS class) to trigger zoom. */
+   Uses interact-hover, the hover-only card class, so a finger press never zooms
+   while a trackpad or hovering pen on the same device still does. */
 body:not(.dynamic-views-cover-disable-hover-zoom)
   .dynamic-views
-  .card.image-format-cover.interact
-  .card-cover:not(.card-cover-slideshow)
+  .card.image-format-cover.interact-hover
+  .card-cover:not(.card-cover-slideshow):not(.multi-image)
   .dynamic-views-image-embed
   img {
   transform: scale(1.05);
@@ -227,8 +247,8 @@ body:not(.dynamic-views-cover-disable-hover-zoom)
 
 body:not(.dynamic-views-cover-disable-hover-zoom)
   .dynamic-views
-  .card.image-format-cover.interact
-  .card-cover-slideshow
+  .card.image-format-cover.interact-hover
+  :is(.card-cover-slideshow, .card-cover.multi-image)
   .dynamic-views-image-embed
   img.hover-zoom-eligible {
   scale: 1.05;
@@ -397,10 +417,19 @@ body.dynamic-views-cover-shadow-content
   position: relative;
 }
 
+/* The URL-button-only header that card/_header.scss paints over the cover — it
+   casts nothing onto the cover, so it must not raise the band. Cover-left and
+   cover-bottom keep their URL button in the header row and do cast. */
+$collapsed-header: ':is(.card-cover-top, .card-cover-bottom, .card-cover-right).has-cover.has-url-icon:not(.has-title-block)';
+
 /* Cover-only cards excluded — with no content there is nothing casting. */
 body.dynamic-views-cover-shadow-content
   .dynamic-views
-  .card.image-format-cover:is(.has-card-content, .has-header)
+  .card.image-format-cover.has-card-content
+  .card-cover-wrapper::after,
+body.dynamic-views-cover-shadow-content
+  .dynamic-views
+  .card.image-format-cover.has-header:not(#{$collapsed-header})
   .card-cover-wrapper::after {
   content: '';
   position: absolute;
@@ -420,9 +449,35 @@ body.dynamic-views-cover-shadow-content
 /* Dark theme: matches the heavier outer layer of the dark --shadow-l. */
 body.theme-dark.dynamic-views-cover-shadow-content
   .dynamic-views
-  .card.image-format-cover:is(.has-card-content, .has-header)
+  .card.image-format-cover.has-card-content
+  .card-cover-wrapper::after,
+body.theme-dark.dynamic-views-cover-shadow-content
+  .dynamic-views
+  .card.image-format-cover.has-header:not(#{$collapsed-header})
   .card-cover-wrapper::after {
   @include cover-edge-band(0.38, 0.14, 12px, 60px);
+}
+
+/* Same enumeration as $ph-body-grid / $ph-body-masonry in card/_header.scss. */
+$band-ph-grid: "body:is(.dynamic-views-show-cover-placeholder-grid, .dynamic-views-show-cover-placeholder-both, :not([class*='dynamic-views-show-cover-placeholder-']))";
+$band-ph-masonry: 'body:is(.dynamic-views-show-cover-placeholder-masonry, .dynamic-views-show-cover-placeholder-both)';
+/* Placeholder card whose URL-button-only header card/_header.scss lifts out of
+   flow and dissolves. has-header is still on the card and $collapsed-header
+   requires has-cover, so without this the band paints with nothing casting.
+   Cards with content are excluded — their content casts and earns the band. */
+$band-ph-card: '.card.image-format-cover.has-cover-placeholder.has-url-icon:is(.card-cover-right, .card-cover-top):not(.has-title-block, .has-card-content)';
+
+#{$band-ph-grid}.dynamic-views-cover-shadow-content
+  .dynamic-views
+  .dynamic-views-grid
+  #{$band-ph-card}
+  .card-cover-wrapper::after,
+#{$band-ph-masonry}.dynamic-views-cover-shadow-content
+  .dynamic-views
+  .dynamic-views-masonry
+  #{$band-ph-card}
+  .card-cover-wrapper::after {
+  content: none;
 }
 
 /* ============================================

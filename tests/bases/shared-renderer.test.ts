@@ -18,7 +18,6 @@ vi.mock('../../src/core/image-loader', () => ({
 }));
 vi.mock('../../src/core/context-menu', () => ({
   showFileContextMenu: vi.fn(),
-  showExternalLinkContextMenu: vi.fn(),
 }));
 vi.mock('../../src/core/scroll-gradient', () => ({
   updateScrollGradient: vi.fn(),
@@ -41,7 +40,7 @@ vi.mock('../../src/utils/style-settings', () => ({
   isSlideshowEnabled: vi.fn(),
   isSlideshowIconEnabled: vi.fn(),
   isThumbnailScrubbingDisabled: vi.fn(),
-  getSlideshowMaxImages: vi.fn(),
+  isCoverScrubMode: vi.fn(),
   getCompactBreakpoint: vi.fn(),
   hasBodyClass: vi.fn(),
 }));
@@ -105,7 +104,10 @@ vi.mock('../../src/core/property-helpers', () => ({
   computeInvertPairs: vi.fn(),
 }));
 vi.mock('../../src/utils/owner-window', () => ({
-  getOwnerWindow: vi.fn(),
+  // Defaults to the jsdom window so click-path tests need no per-suite stub. The
+  // card-click selection guard calls this, and a bare `vi.fn()` returns undefined,
+  // failing with an opaque "Cannot read properties of undefined" instead.
+  getOwnerWindow: vi.fn(() => globalThis.window),
 }));
 vi.mock('../../src/core/poster', () => ({
   clipPosterStaticOverflow: vi.fn(),
@@ -120,10 +122,15 @@ import {
   applyCssOnlySettings,
   applyViewContainerStyles,
   clearViewContainerStyles,
+  getPropertiesRenderedElsewhere,
   syncStructuralClasses,
 } from '../../src/bases/shared-renderer';
 import { getOwnerWindow } from '../../src/utils/owner-window';
-import { clearStyleSettingsCache } from '../../src/utils/style-settings';
+import {
+  clearStyleSettingsCache,
+  getEmptyValueMarker,
+} from '../../src/utils/style-settings';
+import { filterBrokenUrls } from '../../src/core/image-loader';
 import { clipPosterStaticOverflowBatch } from '../../src/core/poster';
 import { VIEW_DEFAULTS } from '../../src/constants';
 import type { ResolvedSettings } from '../../src/types';
@@ -209,6 +216,7 @@ describe('Structural content classes', () => {
     options: {
       hasHeader?: boolean;
       hasUrlIcon?: boolean;
+      hasTitleBlock?: boolean;
       hasPropertiesTop?: boolean;
       hasPropertiesBottom?: boolean;
       hasPreviews?: boolean;
@@ -217,10 +225,15 @@ describe('Structural content classes', () => {
     const card = document.createElement('div');
     card.classList.add('card');
 
-    // A URL chip only ever lives inside a header
-    if (options.hasHeader || options.hasUrlIcon) {
+    // A URL chip and a title block only ever live inside a header
+    if (options.hasHeader || options.hasUrlIcon || options.hasTitleBlock) {
       const header = document.createElement('div');
       header.classList.add('card-header');
+      if (options.hasTitleBlock) {
+        const titleBlock = document.createElement('div');
+        titleBlock.classList.add('card-title-block');
+        header.appendChild(titleBlock);
+      }
       if (options.hasUrlIcon) {
         const icon = document.createElement('a');
         icon.classList.add('card-title-url-icon');
@@ -378,6 +391,33 @@ describe('Structural content classes', () => {
       const card = buildCardDOM({ hasHeader: true });
       syncStructuralClasses(card, bodyOf(card));
       expect(card.classList.contains('has-url-icon')).toBe(false);
+    });
+  });
+
+  describe('has-title-block', () => {
+    it('added when the header holds a title block', () => {
+      const card = buildCardDOM({ hasTitleBlock: true });
+      syncStructuralClasses(card, bodyOf(card));
+      expect(card.classList.contains('has-title-block')).toBe(true);
+    });
+
+    it('not added for a chip-only header', () => {
+      const card = buildCardDOM({ hasUrlIcon: true });
+      syncStructuralClasses(card, bodyOf(card));
+      expect(card.classList.contains('has-title-block')).toBe(false);
+    });
+
+    it('comes off when the title block goes', () => {
+      const card = buildCardDOM({ hasTitleBlock: true, hasUrlIcon: true });
+      const body = bodyOf(card);
+      syncStructuralClasses(card, body);
+      expect(card.classList.contains('has-title-block')).toBe(true);
+
+      card.querySelector('.card-title-block')!.remove();
+      syncStructuralClasses(card, body);
+
+      expect(card.classList.contains('has-title-block')).toBe(false);
+      expect(card.classList.contains('has-url-icon')).toBe(true);
     });
   });
 
@@ -582,6 +622,63 @@ describe('updateCardContent — URL chip', () => {
     expect(after!.getAttribute('href')).toBe('https://new.example');
     expect(after!.getAttribute('aria-label')).toBe('https://new.example');
     expect(after!.dataset.dvUrlValue).toBe('https://new.example');
+  });
+});
+
+describe('getPropertiesRenderedElsewhere', () => {
+  const settings = (
+    over: Partial<ResolvedSettings> = {}
+  ): Pick<ResolvedSettings, 'textPreviewProperty' | 'urlProperty'> =>
+    ({ ...VIEW_DEFAULTS, ...over }) as ResolvedSettings;
+
+  it('excludes the text preview property', () => {
+    const excluded = getPropertiesRenderedElsewhere(
+      settings({ textPreviewProperty: 'note.description' })
+    );
+    expect(excluded.has('note.description')).toBe(true);
+  });
+
+  it('excludes the URL property', () => {
+    const excluded = getPropertiesRenderedElsewhere(
+      settings({ urlProperty: 'note.url' })
+    );
+    expect(excluded.has('note.url')).toBe(true);
+  });
+
+  // #437: an image is not a rendering of the property's text. Excluding it made
+  // the value invisible whenever no image resolved — a broken reference showed no
+  // image, no placeholder and no row.
+  it('does NOT exclude the image property', () => {
+    // imageProperty is deliberately absent from the parameter type, so the key is
+    // set at runtime and cast back — a caller cannot reintroduce the exclusion
+    // without also widening the signature.
+    const withImageProperty = {
+      ...settings(),
+      imageProperty: 'note.image',
+    } as Pick<ResolvedSettings, 'textPreviewProperty' | 'urlProperty'>;
+
+    const excluded = getPropertiesRenderedElsewhere(withImageProperty);
+    expect(excluded.has('note.image')).toBe(false);
+    expect(excluded.size).toBe(0);
+  });
+
+  it('adds nothing for unset properties', () => {
+    expect(
+      getPropertiesRenderedElsewhere({
+        textPreviewProperty: '',
+        urlProperty: '',
+      }).size
+    ).toBe(0);
+  });
+
+  it('keeps both when the text preview and URL properties differ', () => {
+    const excluded = getPropertiesRenderedElsewhere(
+      settings({
+        textPreviewProperty: 'note.description',
+        urlProperty: 'note.url',
+      })
+    );
+    expect([...excluded].sort()).toEqual(['note.description', 'note.url']);
   });
 });
 
@@ -973,11 +1070,11 @@ describe('applyViewContainerStyles — card gap variable', () => {
     Platform.isPhone = true;
     const container = document.createElement('div');
 
-    applyViewContainerStyles(container, settings({ cardGapPhone: 14 }));
+    applyViewContainerStyles(container, settings());
 
     expect(
       container.style.getPropertyValue('--dynamic-views-card-spacing-phone')
-    ).toBe('14px');
+    ).toBe('6px');
     expect(
       container.style.getPropertyValue('--dynamic-views-card-spacing-desktop')
     ).toBe('');
@@ -1149,5 +1246,104 @@ describe('applyViewContainerStyles — view padding override', () => {
     const container = document.createElement('div');
 
     expect(() => clearViewContainerStyles(container)).not.toThrow();
+  });
+});
+
+describe('renderCard — titleless open-on-title fallback', () => {
+  /** Only `file.basename` is read, and only when the title property carries an extension. */
+  const entry = {
+    file: { basename: 'Note' },
+  } as unknown as BasesEntry;
+
+  /** Every handler that would touch these is bound but never fired. */
+  const app = {
+    isMobile: false,
+    workspace: { trigger: vi.fn() },
+    vault: { getAbstractFileByPath: vi.fn() },
+    keymap: { pushScope: vi.fn(), popScope: vi.fn() },
+  };
+
+  const makeRenderer = () =>
+    new SharedCardRenderer(app as never, {} as never, { current: null });
+
+  const cardData = (title?: string) =>
+    ({ path: 'Note.md', title, properties: [] }) as unknown as CardData;
+
+  const settings = (over: Partial<ResolvedSettings> = {}): ResolvedSettings =>
+    ({ ...VIEW_DEFAULTS, openOnTitle: false, ...over }) as ResolvedSettings;
+
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    // renderCard reads ResizeObserver off the card's own window — jsdom has none.
+    (window as unknown as { ResizeObserver: unknown }).ResizeObserver = class {
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    };
+    vi.mocked(getOwnerWindow).mockReturnValue(
+      window as unknown as Window & typeof globalThis
+    );
+    vi.mocked(filterBrokenUrls).mockReturnValue([]);
+    vi.mocked(getEmptyValueMarker).mockReturnValue('—');
+
+    container = document.createElement('div');
+    document.body.appendChild(container);
+  });
+
+  afterEach(() => {
+    container.remove();
+  });
+
+  it('opens on the card when open-on-title has no title to bind to', () => {
+    const { el } = makeRenderer().renderCard(
+      container,
+      cardData(),
+      entry,
+      settings({ openOnTitle: true, titleProperty: '' })
+    );
+
+    expect(el.querySelector('.card-title')).toBeNull();
+    expect(el.classList.contains('clickable-card')).toBe(true);
+    expect(el.getAttribute('draggable')).toBe('true');
+  });
+
+  it('leaves a titled card bound to its title', () => {
+    const { el } = makeRenderer().renderCard(
+      container,
+      cardData('Some title'),
+      entry,
+      settings({ openOnTitle: true, titleProperty: 'note.title' })
+    );
+
+    expect(el.querySelector('a.card-title-text')).not.toBeNull();
+    expect(el.classList.contains('clickable-card')).toBe(false);
+    expect(el.getAttribute('draggable')).toBeNull();
+  });
+
+  // The empty-value marker is itself the link, so the card must not take over.
+  it('leaves a card whose title property resolves to the empty marker bound to its title', () => {
+    const { el } = makeRenderer().renderCard(
+      container,
+      cardData(),
+      entry,
+      settings({ openOnTitle: true, titleProperty: 'note.title' })
+    );
+
+    const link = el.querySelector('a.card-title-text');
+    expect(link).not.toBeNull();
+    expect(link!.classList.contains('empty-value-marker')).toBe(true);
+    expect(el.classList.contains('clickable-card')).toBe(false);
+  });
+
+  it('leaves open-on-card untouched when there is no title', () => {
+    const { el } = makeRenderer().renderCard(
+      container,
+      cardData(),
+      entry,
+      settings({ openOnTitle: false, titleProperty: '' })
+    );
+
+    expect(el.classList.contains('clickable-card')).toBe(true);
   });
 });

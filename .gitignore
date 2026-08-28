@@ -3,6 +3,7 @@
 
 .claude/
 .vscode/
+coverage/
 cc-chats/
 node_modules/
 assets/

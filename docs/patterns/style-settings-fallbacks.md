@@ -2,7 +2,7 @@
 title: Style Settings fallback selectors
 description: Patterns for CSS defaults that work with or without the Style Settings plugin installed.
 author: 🤖 Generated with Claude Code
-updated: 2026-08-14
+updated: 2026-08-26
 ---
 # Style Settings fallback selectors
 
@@ -36,6 +36,17 @@ body:not([class*='dynamic-views-card-background-hover-'])
   --card-bg: var(--dynamic-views-background-primary);
 }
 ```
+
+### Sibling class names must not contain the gate substring
+
+A `[class*='prefix-']` gate treats **any** body class containing that substring as "the user picked an option". A sibling setting whose option classes embed that prefix therefore silently kills the gated setting's no-Style-Settings fallback — the `:not([class*=…])` arm stops matching the moment the sibling's class lands on `body`.
+
+- **Check both directions** when adding a setting alongside one that owns a `[class*=]` gate: the new prefix must not contain the existing one, **and** the existing must not contain the new.
+- **Insert the distinguishing word early**, not as a suffix. Suffixing produces a strict superstring of the original prefix, which always collides.
+
+Example — an existing setting owns `dynamic-views-thing-*` and is gated on `:not([class*='dynamic-views-thing-'])`. A sibling named `dynamic-views-thing-extra-*` breaks it: every one of its option classes contains `dynamic-views-thing-`, so choosing any of them satisfies the gate and suppresses the original's fallback. `dynamic-views-extra-thing-*` is safe — neither prefix is a substring of the other, so the two gates stay mutually exclusive.
+
+This constraint is live: [_cover-side.scss](../../styles/card/_cover-side.scss) gates on `:not([class*='dynamic-views-show-cover-placeholder-'])`, so no future setting may use a class containing that substring.
 
 ## Specificity
 

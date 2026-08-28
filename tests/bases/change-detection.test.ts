@@ -1,10 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { BasesEntry } from 'obsidian';
 import type { ResolvedSettings } from '../../src/types';
 import {
   computeRenderHashes,
   detectEntryChanges,
   commitMtimes,
+  applyCustomClasses,
+  scheduleLateConfigRechecks,
 } from '../../src/bases/change-detection';
 
 function makeEntry(path: string, mtime: number): BasesEntry {
@@ -169,5 +171,68 @@ describe('commitMtimes', () => {
     );
     expect(Array.from(lastMtimes.keys())).toEqual(['b.md', 'a.md', 'c.md']);
     expect(Array.from(lastMtimes.values())).toEqual([2, 3, 4]);
+  });
+});
+
+describe('applyCustomClasses', () => {
+  it('applies new classes and returns the new list', () => {
+    const el = document.createElement('div');
+    const result = applyCustomClasses(el, [], 'alpha, beta');
+    expect(result).toEqual(['alpha', 'beta']);
+    expect(el.classList.contains('alpha')).toBe(true);
+    expect(el.classList.contains('beta')).toBe(true);
+  });
+
+  it('removes dropped classes when the list changes', () => {
+    const el = document.createElement('div');
+    const first = applyCustomClasses(el, [], 'alpha, beta');
+    const second = applyCustomClasses(el, first, 'beta');
+    expect(second).toEqual(['beta']);
+    expect(el.classList.contains('alpha')).toBe(false);
+    expect(el.classList.contains('beta')).toBe(true);
+  });
+
+  it('is a no-op returning the previous array when unchanged', () => {
+    const el = document.createElement('div');
+    const first = applyCustomClasses(el, [], 'alpha');
+    const second = applyCustomClasses(el, first, 'alpha');
+    expect(second).toBe(first);
+  });
+
+  it('handles empty input without touching the DOM', () => {
+    const el = document.createElement('div');
+    const result = applyCustomClasses(el, [], '');
+    expect(result).toEqual([]);
+    expect(el.className).toBe('');
+  });
+});
+
+describe('scheduleLateConfigRechecks', () => {
+  it('retriggers only when the property order actually changed', () => {
+    vi.useFakeTimers();
+    const onStale = vi.fn();
+    let props = ['a', 'b'];
+    scheduleLateConfigRechecks(
+      () => props,
+      JSON.stringify(['a', 'b']),
+      onStale
+    );
+    vi.advanceTimersByTime(100);
+    expect(onStale).not.toHaveBeenCalled();
+    props = ['b', 'a'];
+    vi.advanceTimersByTime(150);
+    expect(onStale).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(250);
+    expect(onStale).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+
+  it('stays silent across all three checkpoints when order is stable', () => {
+    vi.useFakeTimers();
+    const onStale = vi.fn();
+    scheduleLateConfigRechecks(() => ['a'], JSON.stringify(['a']), onStale);
+    vi.advanceTimersByTime(600);
+    expect(onStale).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 });

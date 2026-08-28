@@ -51,11 +51,18 @@
   overflow: hidden;
 }
 
-/* WebKit: overflow:clip constrains sticky header stacking context so its z-index
+/* WebKit: clip constrains sticky header stacking context so its z-index
    doesn't paint above the native overlay scrollbar. Masonry has this on
-   .dynamic-views-masonry; Grid needs it scoped to iOS where the issue manifests. */
+   .dynamic-views-masonry; Grid needs it scoped to iOS where the issue manifests.
+   Horizontal axis ONLY — the overlay scrollbar is a horizontal concern, while the
+   press lift (translate -2px) overflows vertically and must stay visible.
+   overflow-clip-margin cannot carry that: WebKit ships it only behind a
+   default-off flag, so on iOS it computes to nothing and the first card's lift is
+   cut at the padding box. The margin is kept for Chromium, where it still gives
+   the horizontal axis room for hover scale on edge columns. */
 body.is-ios .dynamic-views .dynamic-views-grid {
-  overflow: clip;
+  overflow-x: clip;
+  overflow-y: visible;
   overflow-clip-margin: var(--dynamic-views-bases-view-padding);
 }
 

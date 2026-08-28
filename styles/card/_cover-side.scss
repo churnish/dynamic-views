@@ -50,7 +50,7 @@ body:is(
     .card-cover-left,
     .card-cover-right
   ).image-format-cover.has-cover-placeholder {
-  min-height: var(--dynamic-views-side-cover-height, 150px);
+  min-height: var(--dynamic-views-left-right-cover-height, 150px);
 }
 
 /* Masonry: spacing for side covers when cover element OR visible placeholder exists.
@@ -103,5 +103,5 @@ body:is(
     .card-cover-left,
     .card-cover-right
   ).image-format-cover.has-cover-placeholder {
-  min-height: var(--dynamic-views-side-cover-height, 150px);
+  min-height: var(--dynamic-views-left-right-cover-height, 150px);
 }

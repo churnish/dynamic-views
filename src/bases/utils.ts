@@ -3,18 +3,21 @@
  * Eliminates code duplication between view implementations
  */
 
+import type { EventRef } from 'obsidian';
 import {
   BasesEntry,
   TFile,
   TFolder,
   Menu,
   App,
+  Platform,
   setIcon,
   parseYaml,
   stringifyYaml,
   Notice,
 } from 'obsidian';
 import { resolveTimestampProperty } from '../core/data-transform';
+import { restoreActiveIndicator } from '../core/multi-image-icon';
 import {
   getFirstBasesPropertyValue,
   getAllBasesImagePropertyValues,
@@ -296,6 +299,56 @@ export function estimatePaneRange(
   ];
 }
 
+/** Descendant query, not `:scope >` — sections are grandchildren of `.dynamic-views`,
+ *  nested under `.dynamic-views-grid` or `.dynamic-views-masonry`, and that intermediate
+ *  class differs per view so no single child selector covers both. */
+function getGroupSections(container: HTMLElement): NodeListOf<HTMLElement> {
+  return container.querySelectorAll<HTMLElement>(
+    '.dynamic-views-group-section'
+  );
+}
+
+/** Absolute top of a section within the scroll container's coordinate space. */
+function getSectionTop(scrollEl: HTMLElement, section: HTMLElement): number {
+  return (
+    section.getBoundingClientRect().top -
+    scrollEl.getBoundingClientRect().top +
+    scrollEl.scrollTop
+  );
+}
+
+/** Index of the group section occupying the top of the pane, or null when the view is
+ *  ungrouped. Ungrouped Grid still renders one implicit section, so grouping is detected
+ *  by the container's `is-grouped` class, never by the section count. */
+export function getTopmostVisibleGroupIndex(
+  scrollEl: HTMLElement,
+  container: HTMLElement
+): number | null {
+  if (!container.classList.contains('is-grouped')) return null;
+
+  const sections = getGroupSections(container);
+  if (sections.length === 0) return null;
+
+  const scrollTop = scrollEl.scrollTop;
+  let topmost = 0;
+  for (let i = 0; i < sections.length; i++) {
+    // 1px slack absorbs sub-pixel rounding in the rect arithmetic
+    if (getSectionTop(scrollEl, sections[i]) <= scrollTop + 1) topmost = i;
+  }
+  return topmost;
+}
+
+/** Scroll so the given group section's top aligns with the pane top. */
+export function scrollToGroupIndex(
+  scrollEl: HTMLElement,
+  container: HTMLElement,
+  index: number
+): void {
+  const section = getGroupSections(container)[index];
+  if (!section) return;
+  scrollEl.scrollTop = getSectionTop(scrollEl, section);
+}
+
 /** Sentinel value for undefined group keys in dataset storage */
 export const UNDEFINED_GROUP_KEY_SENTINEL = '__dynamic-views-undefined__';
 
@@ -334,6 +387,62 @@ export function setupBasesSwipePrevention(
   } else {
     delete containerEl.dataset.ignoreSwipe;
   }
+}
+
+/**
+ * Bring back a swipe-hidden multi-image indicator on the two triggers that end a
+ * swipe's context without scrolling the view: a tap elsewhere, and the pane
+ * losing focus. Without these the icon stays hidden until the next vertical
+ * scroll, another card's swipe claims it, or the card scrolls out and back.
+ *
+ * Mobile only: a touch swipe is the only thing that hides the icon. The gate is
+ * here rather than in `restoreActiveIndicator`, which the desktop scroll and
+ * visibility paths share.
+ *
+ * View lifetime, not render lifetime — `containerEl` is created once per view
+ * and only emptied on re-render, so a single listener covers every card without
+ * accumulating.
+ */
+export function setupIndicatorRestoreTriggers(
+  containerEl: HTMLElement,
+  app: App,
+  registerEvent: (event: EventRef) => void,
+  register: (cleanup: () => void) => void
+): void {
+  if (!Platform.isMobile) return;
+
+  // A tap that is not on a swipeable surface ends the swipe's context, so the
+  // icon comes back. Capture phase: card handlers stopPropagation, and this must
+  // still see the tap. pointerdown, not click, so it fires for a tap that ends up
+  // being a scroll or a long press.
+  const handleTapElsewhere = (e: Event): void => {
+    // Skip a tap on the same kind of surface the swipe happened on — the user
+    // may still be working that image.
+    if (
+      (e.target as HTMLElement | null)?.closest('.card-cover, .card-thumbnail')
+    )
+      return;
+    restoreActiveIndicator();
+  };
+  containerEl.addEventListener('pointerdown', handleTapElsewhere, {
+    capture: true,
+    passive: true,
+  });
+  register(() =>
+    containerEl.removeEventListener('pointerdown', handleTapElsewhere, {
+      capture: true,
+    })
+  );
+
+  // Leaving the pane ends the swipe's context too. Gated on the newly active
+  // leaf not being ours — the same containment test both view constructors use
+  // to find their own leaf — so activating this view does not restore.
+  registerEvent(
+    app.workspace.on('active-leaf-change', (leaf) => {
+      if (leaf?.view?.containerEl?.contains(containerEl)) return;
+      restoreActiveIndicator();
+    })
+  );
 }
 
 // Re-export from shared location

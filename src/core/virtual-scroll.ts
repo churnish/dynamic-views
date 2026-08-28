@@ -175,16 +175,14 @@ export function estimateUnmountedHeight(
   cardWidth: number
 ): number {
   if (item.measuredAtWidth > 0 && cardWidth > 0) {
-    // Cover area scales linearly with width (aspect ratio preserved).
-    // Text content (header, properties, text preview) wraps more at narrower
-    // widths and less at wider widths — approximate as sqrt(widthRatio).
-    // k=0.5 minimizes average absolute error empirically: text reflow is discrete
-    // (lines either wrap or don't), so lower k avoids overpredicting growth for
-    // items that don't actually reflow at a given width change.
+    // Rationale for the linear + sqrt split and k=0.5 lives in the JSDoc above
     const widthRatio = item.measuredAtWidth / cardWidth;
-    return (
+    // Floor at 1 — corrupted baselines (negative fixedHeight) must degrade to a
+    // bounded error, never to 0, which syncVirtualScroll treats as unmeasured-skip
+    return Math.max(
+      1,
       item.scalableHeight * (cardWidth / item.measuredAtWidth) +
-      item.fixedHeight * Math.sqrt(widthRatio)
+        item.fixedHeight * Math.sqrt(widthRatio)
     );
   }
   return item.height > 0 ? item.height : UNMEASURED_CARD_HEIGHT;

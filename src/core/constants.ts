@@ -67,6 +67,9 @@ export const INITIAL_REMEASURE_MS = 500;
 /** Slideshow animation duration in milliseconds (must match CSS) */
 export const SLIDESHOW_ANIMATION_MS = 300;
 
+/** Cap on images per multi-image card — shared by cover navigation and thumbnail scrubbing. */
+export const MAX_MULTI_IMAGES = 10;
+
 /** Minimum movement in pixels to determine swipe direction */
 export const SWIPE_DETECT_THRESHOLD = 16;
 
@@ -82,11 +85,24 @@ export const VIEWER_DISMISS_SUPPRESS_MS = 300;
 /** Touch tap threshold (ms) — presses longer than this suppress file-open on lift. */
 export const TOUCH_TAP_THRESHOLD_MS = 200;
 
+/**
+ * Delay (ms) before press feedback appears on a surface that also swipes.
+ *
+ * A swipe and a press are indistinguishable at pointerdown, so the press waits
+ * long enough for a swipe to declare itself by moving. Short enough to feel
+ * immediate on a real press, long enough that a swipe never flashes the
+ * highlight — a swipe clears SCRUB_DIRECTION_THRESHOLD well inside it.
+ */
+export const SWIPE_PRESS_DEFER_MS = 120;
+
 /** Context menu click suppression window (ms) — clicks within this window after a context menu event are dropped. */
 export const CONTEXT_MENU_SUPPRESS_MS = 500;
 
 /** JSON prefix for checkbox property markers */
 export const CHECKBOX_MARKER_PREFIX = '{"type":"checkbox"';
+
+/** Phone card gap is fixed — a phone pane has no room to benefit from a wider gap. */
+export const PHONE_CARD_GAP = 6;
 
 /** Thumbnail stacking threshold multiplier (card stacks when width < thumbnail * this) */
 export const THUMBNAIL_STACK_MULTIPLIER = 3;
@@ -100,7 +116,7 @@ export const MAX_HOVER_SCALE = 1.04;
 export const VISIBLE_BODY_SELECTOR =
   '.card-properties-top, .card-properties-bottom, .card-previews:not(.thumbnail-placeholder-only)';
 
-/** Selector for the URL chip anchor in a card header — used by shared-renderer and poster clipping. */
+/** Selector for the URL button anchor in a card header — used by shared-renderer and poster clipping. */
 export const URL_ICON_SELECTOR = '.card-title-url-icon';
 
 // Fixed cover height body classes (Style Settings class-select options)

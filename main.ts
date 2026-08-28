@@ -29,6 +29,7 @@ import {
   openRandomFile,
   toggleShuffleActiveView,
   getPaneType,
+  getActiveBasesView,
 } from './src/core/randomize';
 import {
   clearInFlightLoads,
@@ -78,7 +79,7 @@ export default class DynamicViews extends Plugin {
     const settings = this.persistenceManager.getPluginSettings();
     applyOpenFileActionClass(
       [document, ...this.getAllPopoutDocuments()],
-      settings.openFileAction
+      settings.openOnTitle
     );
 
     // Register settings tab
@@ -163,15 +164,22 @@ export default class DynamicViews extends Plugin {
     );
 
     // Add commands for Random and Shuffle
+    // checkCallback rather than callback so the palette hides these without an
+    // active Bases view (#434). The ribbon icons still call the same functions
+    // unconditionally and surface the "no active view" notice themselves.
     this.addCommand({
       id: 'open-random-file',
       name: 'Open random file from base',
       icon: 'dices',
-      callback: async () => {
-        closeAllViewers();
-        const openInNewTab =
-          this.persistenceManager.getPluginSettings().openRandomInNewTab;
-        await openRandomFile(this.app, openInNewTab);
+      checkCallback: (checking) => {
+        if (!getActiveBasesView(this.app)) return false;
+        if (!checking) {
+          closeAllViewers();
+          const openInNewTab =
+            this.persistenceManager.getPluginSettings().openRandomInNewTab;
+          void openRandomFile(this.app, openInNewTab);
+        }
+        return true;
       },
     });
 
@@ -179,9 +187,13 @@ export default class DynamicViews extends Plugin {
       id: 'shuffle-base',
       name: 'Shuffle base',
       icon: 'shuffle',
-      callback: () => {
-        closeAllViewers();
-        toggleShuffleActiveView(this.app);
+      checkCallback: (checking) => {
+        if (!getActiveBasesView(this.app)) return false;
+        if (!checking) {
+          closeAllViewers();
+          toggleShuffleActiveView(this.app);
+        }
+        return true;
       },
     });
 

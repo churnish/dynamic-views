@@ -5,16 +5,16 @@
     justify-content: space-between;
     gap: var(--size-4-2);
     /* Two features want block-end room here — the title divider's gap and the
-       URL icon halo's containment strip — and each is set by a rule the other
-       cannot out-specify, so the more specific one silently won. Both now write
-       a variable and this rule takes the larger.
+       URL button hover background's containment strip — and each is set by a rule
+       the other cannot out-specify, so the more specific one silently won. Both
+       now write a variable and this rule takes the larger.
        max(), never a sum: the divider gap (--size-4-2, 8px) already contains the
-       halo's one --size-2-2 (4px) of bleed, so summing would add 4px of header
-       height to every chip card with the divider on, break the parity the
-       give-back rules below exist to hold, and — on Grid poster cards, whose
-       height is aspect-ratio-locked — spend that height out of visible content
-       capacity. max() still guarantees containment if a theme shrinks
-       --size-4-2 below 4px. */
+       hover background's one --size-2-2 (4px) of bleed, so summing would add 4px
+       of header height to every URL button card with the divider on, break the
+       parity the give-back rules below exist to hold, and — on Grid poster
+       cards, whose height is aspect-ratio-locked — spend that height out of
+       visible content capacity. max() still guarantees containment if a theme
+       shrinks --size-4-2 below 4px. */
     padding-block-end: max(
       var(--dynamic-views-header-divider-gap, 0px),
       var(--dynamic-views-header-icon-strip, 0px)
@@ -24,8 +24,8 @@
   /* Keep clamped title/subtitle text from inflating card-content scroll height
      in poster mode. clip, not hidden: both contain the overflow, but clip creates
      no scroll box. This clips at the padding box, so the strips below give the
-     URL icon's hover halo room to paint — see the matching card-content strip
-     in _poster.scss. */
+     URL button's hover background room to paint — see the matching card-content
+     strip in _poster.scss. */
   .card.image-format-poster .card-header {
     overflow: clip;
     padding-block-start: var(--size-2-2);
@@ -34,15 +34,15 @@
     margin-inline-end: calc(-1 * var(--size-2-2));
   }
 
-  /* The icon's border box is taller than a single title line, so its hover halo
-     bleeds past the header on every side. The strips above contain the bleed at
-     block-start and inline-end; this one contains it at block-end, by feeding
-     the base rule's max() rather than setting padding directly. It must resolve
-     to real height, not a negative block-end margin — that leaves the border box
-     overhanging the flow, which the scroll container counts as scrollable
-     overflow and poster's JS clipping then acts on. On a title-only card the
-     rule below hands the 4px straight back, so the card is no taller than one
-     without an icon. */
+  /* The icon's border box is taller than a single title line, so its hover
+     background bleeds past the header on every side. The strips above contain
+     the bleed at block-start and inline-end; this one contains it at block-end,
+     by feeding the base rule's max() rather than setting padding directly. It
+     must resolve to real height, not a negative block-end margin — that leaves
+     the border box overhanging the flow, which the scroll container counts as
+     scrollable overflow and poster's JS clipping then acts on. On a title-only
+     card the rule below hands the 4px straight back, so the card is no taller
+     than one without an icon. */
   .card.image-format-poster.has-url-icon .card-header {
     --dynamic-views-header-icon-strip: var(--size-2-2);
   }
@@ -58,16 +58,18 @@
     );
   }
 
-  /* Give-back, content card: the halo keeps the same moat against content below
-     it that the card's padding gives it at the edges, so it reads identically on
-     hover wherever it sits. Without a strip the flex gap already absorbs the
-     bleed, leaving gap − bleed, so the body moves down by the remainder. */
+  /* Give-back, content card: the hover background keeps the same moat against
+     content below it that the card's padding gives it at the edges, so it reads
+     identically on hover wherever it sits. Without a strip the flex gap already
+     absorbs the bleed, leaving gap − bleed, so the body moves down by the
+     remainder. */
   .card.has-url-icon.has-card-content .card-body {
     margin-block-start: calc(2 * var(--size-2-2) - var(--size-2-3));
   }
 
   /* Poster's block-end strip already pushes the body a full gap clear of the
-     halo, so here the moat is reached by pulling back rather than pushing down. */
+     hover background, so here the moat is reached by pulling back rather than
+     pushing down. */
   .card.image-format-poster.has-url-icon.has-card-content .card-body {
     margin-block-start: calc(var(--size-2-2) - var(--size-2-3));
   }
@@ -140,74 +142,73 @@
   }
 }
 
-.dynamic-views {
-  .card-title-url-icon {
-    flex-shrink: 0;
-    /* Cancels .text-icon-button's padding: var(--size-2-2) per side, so the
-       icon's margin box stays glyph-sized (20px desktop, 28px mobile) and the
-       padding costs the title block no width — do NOT drop these to avoid
-       overflow. Its border box then bleeds one --size-2-2 past the header on
-       every side, which is what the strips above are sized to contain. */
-    margin: calc(-1 * var(--size-2-2));
-  }
+/* Cover card whose content area holds nothing but the URL button: the content area
+   leaves flow so the cover fills the card, and the icon is painted over the
+   cover's top-right corner. Absolute rather than a DOM move — the icon keeps its
+   listeners, its urlButtonRerenderController lifecycle, and updateUrlButton()'s
+   header-empty cleanup all unchanged. */
+$url-button-over-cover: '.card.image-format-cover:is(.card-cover-top, .card-cover-bottom).has-cover.has-url-icon:not(.has-card-content, .has-title-block)';
 
-  .card-title-url-icon svg {
-    width: 20px;
-    height: 20px;
-    color: var(--dynamic-views-text-faint);
-  }
+/* Body states in which a cover placeholder actually renders. Mirrors the
+   enumeration in card/_cover-side.scss: Grid shows placeholders with no
+   Style Settings class present, Masonry requires explicit opt-in. */
+$ph-body-grid: "body:is(.dynamic-views-show-cover-placeholder-grid, .dynamic-views-show-cover-placeholder-both, :not([class*='dynamic-views-show-cover-placeholder-']))";
+$ph-body-masonry: 'body:is(.dynamic-views-show-cover-placeholder-masonry, .dynamic-views-show-cover-placeholder-both)';
 
-  /* Gated on has-poster: inherit is only right over an image, where the card
-     re-points --text-muted at the poster fade colour. Without an image the card
-     keeps the standard tokens, so inherit would resolve to Obsidian's
-     .text-icon-button colour (--text-muted) and render the icon darker than the
-     same imageless card in every other image format. */
-  .card.image-format-poster.has-poster .card-title-url-icon svg {
-    color: inherit;
-  }
-}
-
-.is-mobile .dynamic-views .card-title-url-icon svg.svg-icon {
-  width: 28px;
-  height: 28px;
-  stroke-width: 1.5;
-}
-
-@media (any-hover: hover) {
-  body:not(.dynamic-views-dragging)
-    .dynamic-views
-    .card:not(.interact)
-    .card-title-url-icon {
-    pointer-events: none;
-  }
-
-  /* Suppress Obsidian's .text-icon-button:hover background during drag —
-     :hover pseudo-class stays stuck on drag source (Chromium quirk) */
-  body.dynamic-views-dragging .card-title-url-icon {
-    background-color: transparent !important;
-  }
-}
-
-/* Poster over an image: hover bg adapts to the forced text colour, since there is
-   no card background for --background-modifier-hover to sit on. Gated on
-   has-poster for the same reason the glyph colour is — without an image the card
-   keeps the standard tokens, so currentColor is --text-muted and the mix comes
-   out a dark smudge. An imageless card falls through to Obsidian's own
-   `.text-icon-button:hover` (--background-modifier-hover), giving it the same
-   hover treatment as every other image format. */
-.dynamic-views
-  .card.image-format-poster.has-poster.interact
-  .card-title-url-icon:is(:hover, :active) {
-  background-color: color-mix(in srgb, currentColor 20%, transparent);
-  border-radius: var(--dynamic-views-radius-s);
-}
+/* Cards whose URL button leaves the header for the card's top-right corner.
+   Cover-top excludes the cover-only card: $url-button-over-cover already pins its
+   whole content area there. Cover-right needs no exclusion — the collapse is
+   top/bottom only. */
+$url-button-tr-image: '.card.image-format-cover.has-cover.has-url-icon:is(.card-cover-right, .card-cover-top:is(.has-card-content, .has-title-block))';
+$url-button-tr-ph: '.card.image-format-cover.has-cover-placeholder.has-url-icon:is(.card-cover-right, .card-cover-top)';
 
 .dynamic-views {
-  /* When URL icon is only child (no title/subtitle), push to right */
-  .card-header .card-title-url-icon:only-child {
-    margin-left: auto;
+  #{$url-button-over-cover} .card-content {
+    position: absolute;
+    top: 0;
+    right: 0;
+    /* Above .slideshow-img-current (2) and .slideshow-icon (3), below the card
+       border ::after (5). The card is an isolation: isolate stacking context, so
+       this is card-scoped. Shrink-wraps to the URL button, leaving the rest of the
+       cover free for scrub and slideshow pointer events. */
+    z-index: 4;
   }
+}
 
+/* Out of flow the hover background bleeds into nothing, so the give-back above
+   is unearned. */
+.dynamic-views #{$url-button-tr-image} .card-body,
+#{$ph-body-grid}
+  .dynamic-views
+  .dynamic-views-grid
+  #{$url-button-tr-ph}
+  .card-body,
+#{$ph-body-masonry}
+  .dynamic-views
+  .dynamic-views-masonry
+  #{$url-button-tr-ph}
+  .card-body {
+  margin-block-start: 0;
+}
+
+/* URL button gone from flow and no title block left: the header would still eat a
+   flex gap and, with the divider on, paint a line under nothing. display:
+   contents removes its box while leaving the icon to position against .card. */
+.dynamic-views #{$url-button-tr-image}:not(.has-title-block) .card-header,
+#{$ph-body-grid}
+  .dynamic-views
+  .dynamic-views-grid
+  #{$url-button-tr-ph}:not(.has-title-block)
+  .card-header,
+#{$ph-body-masonry}
+  .dynamic-views
+  .dynamic-views-masonry
+  #{$url-button-tr-ph}:not(.has-title-block)
+  .card-header {
+  display: contents;
+}
+
+.dynamic-views {
   /* File type indicator styles */
   .card-title-ext {
     display: none;
@@ -540,10 +541,33 @@ body.dynamic-views-title-divider
   border-bottom: 1px solid var(--dynamic-views-background-modifier-border);
 }
 
-/* With a divider present the halo's neighbour below is the divider line, not
-   content, and the divider's own gap already clears the bleed — so the content
-   give-back would only shrink the divider gap. Zero it, restoring exact card
-   height parity with a chipless card.
+/* The divider matches the card border so the two read as one frame. */
+/* Poster cards keep the default token: their divider sits over an image, where a border-preset colour reads as arbitrary. */
+/* Thickness stays 1px — following the border's thickness would delete the line at thickness 0, which is exactly where the fallback is meant to keep it. */
+/* `min(1, thickness / 1px)` is a 0-or-1 step, so a hidden border contributes 0% of its colour and the fallback token shows through. */
+/* @supports-gated: length-by-length division in calc() is CSS Values 4 and unverified on older WebKit — ungated, an unsupported engine would make border-bottom-color invalid at computed-value time and resolve it to currentColor. */
+@supports (
+  color: color-mix(in srgb, red calc(min(1, 1px / 1px) * 100%), blue)
+) {
+  body.dynamic-views-title-divider
+    .dynamic-views
+    .card.has-card-content:not(.image-format-poster)
+    .card-header {
+    border-bottom-color: color-mix(
+      in srgb,
+      var(--card-border-color)
+        calc(
+          min(1, var(--dynamic-views-card-border-thickness, 1px) / 1px) * 100%
+        ),
+      var(--dynamic-views-background-modifier-border)
+    );
+  }
+}
+
+/* With a divider present the hover background's neighbour below is the divider
+   line, not content, and the divider's own gap already clears the bleed — so the
+   content give-back would only shrink the divider gap. Zero it, restoring exact
+   card height parity with a card that has no URL button.
    Flat, not nested in the .dynamic-views block above: a body-class selector
    nested there compiles to `.dynamic-views body.…`, which matches nothing.
    Specificity (0,6,1) beats both give-back rules — (0,5,0) and (0,6,0) — so

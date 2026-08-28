@@ -78,16 +78,13 @@ export function computeRenderHashes(params: {
   const groupOrderHash = groupedData
     .map((g) => (g.hasKey() ? (serializeGroupKey(g.key) ?? '') : ''))
     .join('\0');
+  // groupByProperty, sortMethod, and visibleProperties are already inside settingsHash — not re-appended
   const renderHash =
     allEntries
       .map((e: BasesEntry) => `${e.file.path}:${e.file.stat.mtime}`)
       .join('\0') +
     '\0\0' +
     settingsHash +
-    '\0\0' +
-    (groupByProperty ?? '') +
-    '\0\0' +
-    sortMethod +
     '\0\0' +
     groupOrderHash +
     '\0\0' +
@@ -99,9 +96,7 @@ export function computeRenderHashes(params: {
     '\0\0' +
     String(isShuffled) +
     '\0\0' +
-    shuffleOrder.join('\0') +
-    '\0\0' +
-    JSON.stringify(visibleProperties);
+    shuffleOrder.join('\0');
 
   return {
     settingsHash,
@@ -195,7 +190,6 @@ export function applyCustomClasses(
 
   // Only update if classes changed (prevents unnecessary DOM mutations)
   const classesChanged =
-    previous.length === 0 ||
     previous.length !== customClasses.length ||
     !previous.every((cls, i) => cls === customClasses[i]);
 

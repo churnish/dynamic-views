@@ -15,6 +15,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "knip": "knip"
   },
   "knip": {
@@ -23,13 +25,14 @@
       "styles/**"
     ],
     "ignoreDependencies": [
-      "obsidian",
       "prettier",
       "sass"
     ],
     "ignoreBinaries": [
+      "eslint",
       "knip",
       "sass",
+      "tsc",
       "vitest"
     ],
     "ignoreExportsUsedInFile": true

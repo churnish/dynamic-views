@@ -278,20 +278,19 @@ export interface Hotkey {
   key: string;
 }
 
-// Preact/React exports (h function for JSX)
-export const h = (type: any, props: any, ...children: any[]) => {
-  return { type, props: { ...props, children } };
-};
-
-export const Fragment = ({ children }: { children: any }) => children;
-
 // Mock Notice
-export class Notice {
-  // Recorded rather than logged so assertions can read it without polluting test output.
-  message: string;
+//
+// Messages accumulate here rather than going to the console: version-bump.mjs runs eslint with `no-console` as an error over the whole repo as a release gate, so a console.log in this file would fail `npm run preversion` now that tests/ is linted.
+// The log is module-level rather than an instance field because a test cannot read one. `import { Notice } from 'obsidian'` is aliased to this file only at runtime by vitest, while tsc resolves it to the real obsidian.d.ts, whose Notice declares noticeEl/containerEl/messageEl and no message. Importing this log by relative path types correctly and resolves to the same module instance.
+export const noticeLog: string[] = [];
 
+export function resetNoticeLog(): void {
+  noticeLog.length = 0;
+}
+
+export class Notice {
   constructor(message: string, timeout?: number) {
-    this.message = message;
+    noticeLog.push(message);
   }
 }
 

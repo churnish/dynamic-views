@@ -1,10 +1,11 @@
 import { App, Notice, View, BasesEntry, PaneType, Keymap } from 'obsidian';
 import type { DynamicViewsGridView } from '../bases/grid-view';
 import type { DynamicViewsMasonryView } from '../bases/masonry-view';
+import { getTopmostVisibleGroupIndex } from '../bases/utils';
 
 type BasesCardView = DynamicViewsGridView | DynamicViewsMasonryView;
 
-const NO_ACTIVE_VIEW = 'No active Bases view';
+const NO_ACTIVE_VIEW = 'No active base';
 
 /**
  * Calculate pane type based on modifier keys and setting.
@@ -178,6 +179,17 @@ export function toggleShuffleActiveView(app: App): void {
       const paths = entries.map((e) => e.file.path);
       dynamicView.isShuffled = true;
       dynamicView.shuffledOrder = shuffleArray([...paths]);
+
+      // Capture the scroll target before the re-render wipes the DOM. Group index
+      // survives a shuffle — processGroups reorders only within each group.
+      const scrollEl = dynamicView.viewScrollEl;
+      const container = scrollEl?.querySelector<HTMLElement>('.dynamic-views');
+      dynamicView.pendingShuffleScroll = {
+        groupIndex:
+          scrollEl && container
+            ? getTopmostVisibleGroupIndex(scrollEl, container)
+            : null,
+      };
     }
 
     // Skip cover image fade-in during shuffle (not a fresh load).

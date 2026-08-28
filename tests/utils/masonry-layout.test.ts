@@ -1,7 +1,7 @@
 import {
   calculateMasonryLayout,
   calculateIncrementalMasonryLayout,
-  applyMasonryLayout,
+  calculateMasonryDimensions,
   repositionWithStableColumns,
   computeGreedyColumnHeights,
   computeSyntheticGroupOffsets,
@@ -219,64 +219,6 @@ describe('masonry-layout', () => {
           result.columnAssignments[i] * (result.cardWidth + 10);
         expect(result.positions[i].left).toBeCloseTo(expectedLeft, 0);
       }
-    });
-  });
-
-  describe('applyMasonryLayout', () => {
-    it('should set container class and height', () => {
-      const container = document.createElement('div');
-      const cards = [document.createElement('div')];
-
-      Object.defineProperty(cards[0], 'offsetHeight', {
-        value: 200,
-      });
-
-      const result = calculateMasonryLayout({
-        cards,
-        containerWidth: 1000,
-        cardSize: 200,
-        minColumns: 2,
-        gap: 16,
-      });
-
-      applyMasonryLayout(container, cards, result);
-
-      expect(container.classList.contains('masonry-container')).toBe(true);
-      expect(container.style.getPropertyValue('--masonry-height')).toBe(
-        `${result.containerHeight}px`
-      );
-    });
-
-    it('should apply inline positioning styles to cards', () => {
-      const container = document.createElement('div');
-      const card1 = document.createElement('div');
-      const card2 = document.createElement('div');
-
-      Object.defineProperty(card1, 'offsetHeight', { value: 100 });
-      Object.defineProperty(card2, 'offsetHeight', { value: 200 });
-
-      const cards = [card1, card2];
-
-      const result = calculateMasonryLayout({
-        cards,
-        containerWidth: 500,
-        cardSize: 100,
-        minColumns: 2,
-        gap: 10,
-      });
-
-      applyMasonryLayout(container, cards, result);
-
-      // Check card1
-      expect(card1.classList.contains('masonry-positioned')).toBe(true);
-      expect(card1.style.width).toBe(`${result.cardWidth}px`);
-      expect(card1.style.left).toBe('0px');
-      expect(card1.style.top).toBe('0px');
-
-      // Check card2
-      expect(card2.classList.contains('masonry-positioned')).toBe(true);
-      expect(card2.style.left).toBeTruthy();
-      expect(card2.style.top).toBeTruthy();
     });
   });
 
@@ -748,6 +690,57 @@ describe('masonry-layout', () => {
       // b: 50 + 80 = 130
       expect(result!.get('a')).toBe(0);
       expect(result!.get('b')).toBe(130);
+    });
+  });
+
+  describe('calculateMasonryDimensions — degenerate widths', () => {
+    it('clamps cardWidth to 0 when the container is narrower than the gaps', () => {
+      // 2 columns × 16px gap needs 16px between columns; a 10px container
+      // makes the raw per-column width negative
+      const { columns, cardWidth } = calculateMasonryDimensions({
+        containerWidth: 10,
+        cardSize: 200,
+        minColumns: 2,
+        gap: 16,
+      });
+      expect(columns).toBe(2);
+      expect(cardWidth).toBe(0);
+    });
+  });
+
+  describe('computeSyntheticGroupOffsets — key order precondition', () => {
+    it('produces stacking-order deltas ONLY when keys arrive in visual order', () => {
+      // Caller invariant (updateGroupOffsetsSynthetic): groupKeys MUST iterate
+      // in visual stacking order. Reversed keys mis-assign the cumulative
+      // delta — pinned here so the contract stays visible.
+      const cached = new Map([
+        ['top', 0],
+        ['bottom', 100],
+      ]);
+      const oldH = new Map([
+        ['top', 90],
+        ['bottom', 50],
+      ]);
+      const newH = new Map([
+        ['top', 140], // top grew 50px — bottom must shift down by 50
+        ['bottom', 50],
+      ]);
+      const correct = computeSyntheticGroupOffsets(
+        ['top', 'bottom'],
+        cached,
+        oldH,
+        newH
+      );
+      expect(correct!.get('bottom')).toBe(150);
+      const reversed = computeSyntheticGroupOffsets(
+        ['bottom', 'top'],
+        cached,
+        oldH,
+        newH
+      );
+      // Wrong order: bottom sees no delta and top absorbs bottom's zero delta
+      expect(reversed!.get('bottom')).toBe(100);
+      expect(reversed!.get('top')).toBe(0);
     });
   });
 });

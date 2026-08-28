@@ -5,7 +5,7 @@
 
 import { App, TFile } from 'obsidian';
 import { VALID_IMAGE_EXTENSIONS } from '../constants';
-import { getSlideshowMaxImages } from '../utils/style-settings';
+import { MAX_MULTI_IMAGES } from './constants';
 import { getYouTubeVideoId, getYouTubeThumbnailUrl } from './youtube-preview';
 import { stripWikilinkSyntax, isExternalUrl, WIKILINK_TARGET } from './image';
 import { scanOpaque } from './opaque-scan';
@@ -64,7 +64,6 @@ export async function extractImageEmbeds(
   const includeYoutube = options?.includeYoutube ?? true;
   const includeCardLink = options?.includeCardLink ?? true;
   const youtubeTargetWidth = options?.youtubeTargetWidth;
-  const maxImages = getSlideshowMaxImages();
 
   // Read and truncate content at line boundary to avoid splitting wikilinks
   let content = await app.vault.cachedRead(file);
@@ -185,9 +184,9 @@ export async function extractImageEmbeds(
   // to three quality levels with a 5s timeout apiece, and resolving them one at a
   // time inside the loop below serialises every one of those waits.
   //
-  // Bounded by `maxImages` rather than started for every embed: a 100KB link dump
-  // admits roughly two thousand YouTube embeds, and firing three requests for each
-  // would compete with real card images on a phone when at most `maxImages` of
+  // Bounded by `MAX_MULTI_IMAGES` rather than started for every embed: a 100KB link
+  // dump admits roughly two thousand YouTube embeds, and firing three requests for
+  // each would compete with real card images on a phone when at most that many of
   // them can ever be shown. The trade-off is that probes start for embeds the cap
   // may never reach — bounded waste in exchange for bounded load.
   //
@@ -196,7 +195,7 @@ export async function extractImageEmbeds(
   const youtubeProbes = new Map<string, Promise<string | null>>();
   if (includeYoutube) {
     for (const embed of uniqueEmbeds) {
-      if (youtubeProbes.size >= maxImages) break;
+      if (youtubeProbes.size >= MAX_MULTI_IMAGES) break;
       if (!isExternalUrl(embed.path)) continue;
       const videoId = getYouTubeVideoId(embed.path);
       if (!videoId || youtubeProbes.has(videoId)) continue;
@@ -213,7 +212,7 @@ export async function extractImageEmbeds(
   const resultUrls: string[] = [];
 
   for (const embed of uniqueEmbeds) {
-    if (resultUrls.length >= maxImages) break;
+    if (resultUrls.length >= MAX_MULTI_IMAGES) break;
 
     const path = embed.path;
 

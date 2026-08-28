@@ -48,7 +48,7 @@ function clampToFit(
 export function handlePosterTapReveal(
   e: MouseEvent,
   cardEl: HTMLElement,
-  openFileAction: string
+  openOnTitle: boolean
 ): boolean {
   if (!cardEl.querySelector('.card-poster')) return false;
 
@@ -56,8 +56,7 @@ export function handlePosterTapReveal(
   const isInteractive = target.closest(INTERACTIVE_SELECTOR);
   const win = getOwnerWindow(cardEl);
   const hasTextSelection = (win.getSelection()?.toString().length ?? 0) > 0;
-  const isTextTarget =
-    openFileAction === 'title' && target.closest(TEXT_TARGET_SELECTOR);
+  const isTextTarget = openOnTitle && target.closest(TEXT_TARGET_SELECTOR);
 
   if (!cardEl.classList.contains('poster-revealed')) {
     e.preventDefault();

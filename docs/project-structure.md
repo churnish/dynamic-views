@@ -31,7 +31,7 @@ dynamic-views/
 │   │   ├── content-visibility.ts     # IntersectionObserver-based visibility management
 │   │   ├── context-menu.ts           # Right-click menus for cards/links
 │   │   ├── data-transform.ts         # Normalizes Bases data -> CardData, URI validation
-│   │   ├── drag.ts                   # Drag handler factories (tag, card, link, URL icon)
+│   │   ├── drag.ts                   # Drag handler factories (tag, card, link, URL button)
 │   │   ├── file.ts                   # File timestamps + path resolution
 │   │   ├── hover-and-touch.ts        # Shared hover and touch interaction utilities
 │   │   ├── icon-alignment.ts         # Timestamp icon optical vertical alignment (live DOM measurement + boost ratio)
@@ -40,6 +40,8 @@ dynamic-views/
 │   │   ├── image-loader.ts           # Image aspect ratio caching + fallbacks
 │   │   ├── image-viewer.ts           # Image viewer (hand-rolled zoom/pan gestures)
 │   │   ├── keyboard-nav.ts           # Keyboard focus management for cards
+│   │   ├── multi-image-icon.ts  # Multi-image corner icon hidden state: exclusivity slot, restore, shared throttled scroll listener
+│   │   ├── multi-image-nav.ts        # Touch swipe navigation with slide animation + shared visibility reset IO for multi-image covers and thumbnails
 │   │   ├── notebook-navigator.ts     # Notebook Navigator plugin integration
 │   │   ├── opaque-scan.ts            # Lazy per-note scan of regions where syntax is literal (fenced/indented/inline code, %% and <!-- --> comments) + cardlink block bodies
 │   │   ├── poster.ts                 # Poster format utilities (static clipping, scroll reset)
@@ -57,7 +59,6 @@ dynamic-views/
 │   │   ├── text-preview-dom.ts       # DOM updates for card text previews
 │   │   ├── text-preview.ts           # Markdown stripping for card previews
 │   │   ├── text-selection.ts         # Confines drag text selection to the card it started in
-│   │   ├── thumbnail-scrub.ts        # Touch scrubbing with slide animation + shared visibility reset IO for multi-image thumbnails
 │   │   ├── view-validation.ts        # ViewDefaults validation + cleanup
 │   │   ├── viewer-navigation.ts      # Pure index stepper for image viewer arrow navigation
 │   │   ├── virtual-scroll.ts         # Virtual scrolling: VirtualItem, syncVisibleItems
@@ -89,7 +90,8 @@ dynamic-views/
 │   │   ├── _images.scss              # Shared image styles across all formats (skip-cover-fade, fullbleed img)
 │   │   ├── _poster.scss              # Poster image format
 │   │   ├── _previews.scss            # Thumbnail sizing, text preview, position layouts
-│   │   └── _slideshow.scss           # Slideshow animations
+│   │   ├── _slideshow.scss           # Slideshow animations
+│   │   └── _url-button.scss          # URL button: in-header glyph, cover top-right variants, hover background
 │   │
 │   ├── _compact.scss                 # Narrow pane breakpoints, compact toolbar
 │   ├── _container.scss               # Container queries, width system, scroll fade
@@ -99,7 +101,6 @@ dynamic-views/
 │   ├── _hover-and-touch.scss          # Hover and touch visual feedback, cursor gating
 │   ├── _image-viewer.scss            # Image viewer overlay, chrome, cursor rules
 │   ├── _masonry-view.scss            # Masonry: absolute positioning, container rules, transitions
-│   ├── _plugin-settings.scss         # Plugin settings tab styling
 │   ├── _properties.scss              # Property row system, labels, timestamps, paths, paired property layout
 │   ├── _property-colors.scss         # Color presets for labels, text, subtitle, title
 │   ├── _scroll-gradient.scss         # Horizontal/vertical gradient masks for scrollable content
@@ -133,6 +134,7 @@ dynamic-views/
 │   │   ├── image.test.ts
 │   │   ├── image-extraction.test.ts
 │   │   ├── image-loader.test.ts
+│   │   ├── multi-image-nav.test.ts
 │   │   ├── opaque-scan.test.ts
 │   │   ├── poster.test.ts
 │   │   ├── property-display.test.ts
@@ -146,7 +148,6 @@ dynamic-views/
 │   │   ├── text-preview-dom.test.ts
 │   │   ├── text-preview.test.ts
 │   │   ├── text-selection.test.ts
-│   │   ├── thumbnail-scrub.test.ts
 │   │   ├── viewer-navigation.test.ts
 │   │   ├── virtual-scroll.test.ts
 │   │   └── youtube-preview.test.ts

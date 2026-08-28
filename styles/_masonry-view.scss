@@ -3,9 +3,15 @@
     position: relative;
     width: 100%;
     max-width: 100%;
-    overflow: clip;
-    /* Extend clip boundary so hover transforms aren't clipped on edge rows
-       and sticky group header borders (negative-margin) remain visible */
+    /* Horizontal axis only: cards must not paint over the native overlay
+       scrollbar, but the press lift and sticky group header borders overflow
+       vertically and must stay visible. overflow-clip-margin cannot carry the
+       vertical case — WebKit ships it only behind a default-off flag, so on iOS
+       it computes to nothing and the first card's lift is cut at the padding box.
+       Kept for Chromium, where it still gives the horizontal axis room for hover
+       scale on edge columns. */
+    overflow-x: clip;
+    overflow-y: visible;
     overflow-clip-margin: var(--dynamic-views-bases-view-padding);
 
     .card .card-previews {

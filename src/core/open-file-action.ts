@@ -6,24 +6,22 @@
  * mutation here takes the full document list rather than assuming `document`.
  */
 
-import type { PluginSettings } from '../types';
-
-const OPEN_ON_CLASSES = [
-  'dynamic-views-open-on-card',
-  'dynamic-views-open-on-title',
-] as const;
+const OPEN_ON_CARD_CLASS = 'dynamic-views-open-on-card';
 
 /** Set on `.view-header` taps to decide whether a card image is interactive */
 export const OPEN_ON_TITLE_CLASS = 'dynamic-views-open-on-title';
 
+const OPEN_ON_CLASSES = [OPEN_ON_CARD_CLASS, OPEN_ON_TITLE_CLASS] as const;
+
 /** Replace the open file action class across every document */
 export function applyOpenFileActionClass(
   docs: Document[],
-  action: PluginSettings['openFileAction']
+  openOnTitle: boolean
 ): void {
+  const cls = openOnTitle ? OPEN_ON_TITLE_CLASS : OPEN_ON_CARD_CLASS;
   for (const doc of docs) {
     doc.body.classList.remove(...OPEN_ON_CLASSES);
-    doc.body.classList.add(`dynamic-views-open-on-${action}`);
+    doc.body.classList.add(cls);
   }
 }
 

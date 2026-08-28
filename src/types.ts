@@ -7,7 +7,7 @@
 /** Plugin-level settings (settings tab only, not per-view) */
 export interface PluginSettings {
   randomizeAction: string;
-  openFileAction: 'card' | 'title';
+  openOnTitle: boolean;
   openRandomInNewTab: boolean;
   smartTimestamp: boolean;
   createdTimeProperty: string;
@@ -57,7 +57,6 @@ export interface ViewDefaults {
   // Other
   minimumColumns: 1 | 2;
   cardGapDesktop: number;
-  cardGapPhone: number;
   cssclasses: string;
 }
 

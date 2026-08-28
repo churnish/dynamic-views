@@ -14,7 +14,7 @@ export const VALID_IMAGE_EXTENSIONS: string[] = [
 
 export const PLUGIN_SETTINGS: PluginSettings = {
   randomizeAction: 'shuffle',
-  openFileAction: 'card',
+  openOnTitle: false,
   openRandomInNewTab: true,
   smartTimestamp: true,
   createdTimeProperty: 'created time',
@@ -63,7 +63,6 @@ export const VIEW_DEFAULTS: ViewDefaults = {
   // Other
   minimumColumns: 1 as const,
   cardGapDesktop: 8,
-  cardGapPhone: 6,
   cssclasses: '',
 };
 

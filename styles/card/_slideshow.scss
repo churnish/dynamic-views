@@ -22,12 +22,12 @@
     z-index: 1;
   }
 
-  /* Thumbnail slideshow z-index (analogous to cover rules above) */
-  .card-thumbnail.multi-image .slideshow-img-current {
+  /* Scrub slideshow z-index (analogous to cover rules above) */
+  :is(.card-thumbnail, .card-cover).multi-image .slideshow-img-current {
     z-index: 2;
   }
 
-  .card-thumbnail.multi-image .slideshow-img-next {
+  :is(.card-thumbnail, .card-cover).multi-image .slideshow-img-next {
     z-index: 1;
   }
 
@@ -140,7 +140,7 @@
 
     /* Slideshow cover transition — uses scale (not transform) to avoid conflicting with slide animations */
     .card.image-format-cover
-      .card-cover-slideshow
+      :is(.card-cover-slideshow, .card-cover.multi-image)
       .dynamic-views-image-embed
       img {
       transition:
@@ -150,14 +150,34 @@
   }
 }
 
+/* Frame changes cancel the zoom outright rather than easing out of it — see
+   cancelHoverZoom() in core/slideshow.ts. Omitting scale/transform is what does
+   the cancelling; opacity is restated because this also fires from the broken-
+   image fallback before any hover, where blanking it would kill the load fade.
+   Hover-gated because the scale transitions it overrides only exist there, and
+   touch has no mouseenter to clear the class again.
+
+   The specificity floor is the .interact transition re-declaration in
+   card/_image.scss at (0,6,1) — it lists scale, so anything below it cancels
+   nothing. Do not drop a class from this selector. */
+@media (any-hover: hover) {
+  .workspace-leaf-content[data-type]
+    .dynamic-views
+    .card.image-format-cover
+    :is(.card-cover-slideshow, .card-cover.multi-image)
+    .dynamic-views-image-embed
+    img.zoom-cancel {
+    transition: opacity var(--dynamic-views-anim-duration-fast) ease;
+  }
+}
+
 /* Arrow icons */
 .dynamic-views {
   .slideshow-nav-left svg,
   .slideshow-nav-right svg {
     width: 24px;
     height: 24px;
-    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6))
-      drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
+    filter: var(--dynamic-views-icon-shadow);
   }
 }
 
@@ -177,38 +197,26 @@
   display: none;
 }
 
-/* Navigation arrows: Show — always visible, icon hidden */
-body.dynamic-views-slideshow-arrows-show .dynamic-views {
-  .slideshow-nav-left,
-  .slideshow-nav-right {
-    opacity: 1;
-  }
-
-  .slideshow-icon {
-    display: none;
-  }
-}
-
-/* Navigation arrows: Show — override mobile hide */
-body.dynamic-views-slideshow-arrows-show.is-mobile .dynamic-views {
-  .slideshow-nav-left,
-  .slideshow-nav-right {
-    display: flex;
-  }
-}
-
-/* Navigation arrows: Hide */
-body.dynamic-views-slideshow-arrows-hide .dynamic-views .slideshow-nav-left,
-body.dynamic-views-slideshow-arrows-hide .dynamic-views .slideshow-nav-right {
-  display: none;
-}
-
 .dynamic-views {
   /* Slideshow icon */
   .slideshow-icon {
     position: absolute;
-    left: max(calc(var(--dynamic-views-card-padding, 8px) - 2px), 4px);
-    top: max(calc(var(--dynamic-views-card-padding, 8px) - 1px), 4px);
+    /* Positioned so the drawn glyph aligns with the URL button's, NOT so the svg
+       boxes align. Lucide leaves 7 of 24 units empty around arrow-up-right but
+       only 2 around copy, so equal box offsets sit the two glyphs visibly
+       apart — 13.1px against 6.75px before this. The URL button's ink starts
+       card-padding + 5.104px from the edge; copy's starts 0.393px into its own
+       box, and the difference is the offset below. Every constant here derives
+       from the box size and pen weight on the svg — change either and all three
+       need recomputing together. */
+    left: calc(var(--dynamic-views-card-padding, 8px) + 4.711px);
+    /* Bottom-left, at the same gap the icon previously kept at the top: the copy
+       glyph's ink sits 0.393px inside its own box on all four sides, so the
+       offset that gave a 12.104px top gap gives an identical bottom one.
+       1px short of the `left` inset above — inherited from the centre-line
+       correction against the URL button, which no longer shares a row with this
+       icon; the value now survives only to preserve the previous gap. */
+    bottom: calc(var(--dynamic-views-card-padding, 8px) + 3.711px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -218,21 +226,69 @@ body.dynamic-views-slideshow-arrows-hide .dynamic-views .slideshow-nav-right {
     transition: opacity var(--dynamic-views-anim-duration-fast) ease;
 
     svg {
-      width: 14px;
-      height: 14px;
+      /* Drawn glyph height is locked equal to the URL button's, with pen weight as
+         the only free knob. Sizing the svg box does NOT size the glyph: Lucide's
+         copy fills 20 of its 24 viewBox units where arrow-up-right fills only
+         10, so an equal box draws copy nearly twice as tall.
+
+         box = target_ink * 24 / (20 + pen). Target is the URL button's own drawn
+         height plus 2px — 9.792 + 2 — because an exactly equal height reads
+         slightly small next to the URL button's sparse diagonal, which the eye
+         follows further than its ink. Pen is deliberately lighter than the URL
+         icon's rendered 1.458px: copy is two nested shapes, so equal pen weight
+         crowds them and reads as squat, where the URL button is one open stroke
+         with nothing beside it. */
+      width: var(--dynamic-views-multi-image-icon-size);
+      height: var(--dynamic-views-multi-image-icon-size);
+      stroke-width: var(--dynamic-views-multi-image-icon-stroke);
       /* Mirrored so the stacked-sheet offset reads as depth going into the image */
       transform: scaleX(-1);
-      filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6))
-        drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
+      filter: var(--dynamic-views-icon-shadow);
     }
   }
 }
 
-/* Hide icon when nav buttons appear on hover */
-@media (any-hover: hover) {
-  .dynamic-views .card.interact .card-cover-slideshow .slideshow-icon {
-    opacity: 0;
-  }
+/* Same relationship against the URL button's larger mobile glyph, which draws
+   13.708px at its 28px box. The desktop +2px is scaled by the same 1.4 the mobile
+   URL button is, so the pair reads identically on both platforms rather than the gap
+   shrinking in relative terms. Pen carries over unchanged; only box and inset are
+   restated. */
+.is-mobile .dynamic-views .slideshow-icon {
+  left: calc(var(--dynamic-views-card-padding, 8px) + 6.596px);
+  /* Mirrored to the bottom edge unchanged, for the same reason as desktop. */
+  bottom: calc(var(--dynamic-views-card-padding, 8px) + 5.196px);
+}
+
+/* Cover only, deliberately: this tracks the URL button, which is larger on mobile.
+   The thumbnail indicator shares the desktop tokens on every platform because its
+   thumbnail does not grow on mobile — scaling it here would leave it oversized
+   inside an unchanged box. */
+.is-mobile .dynamic-views .slideshow-icon svg {
+  width: 17.609px;
+  height: 17.609px;
+}
+
+/* Hide icon when nav buttons appear on hover, or while a scrub cover is hovered.
+   Keyed on interact-hover, NOT interact: the latter is set by a touch press too,
+   so a plain tap on a Slide cover made the icon vanish for the press. The scrub
+   arm was already safe because .scrub-hover is pointer-only — which is why
+   thumbnails, whose hide rule carries the same guard, never showed the fault.
+   No media query needed: interact-hover is only ever set by a hover pointer,
+   which states the condition directly. */
+.dynamic-views .card.interact-hover .card-cover-slideshow .slideshow-icon,
+.dynamic-views
+  .card.interact-hover
+  .card-cover.multi-image.scrub-hover
+  .slideshow-icon {
+  opacity: 0;
+}
+
+/* Touch path: the JS-applied utility class is a single class and loses to
+   `.dynamic-views .slideshow-icon { opacity: 1 }`, so it needs this reinforcement.
+   Deliberately not gated on .multi-image — it also repairs the Slide-mode mobile
+   icon hide in slideshow.ts, which targets the same element and is inert without it. */
+.dynamic-views .card-cover .slideshow-icon.dynamic-views-icon-hidden {
+  opacity: 0;
 }
 
 /* Hide slideshow icon when toggle is on */

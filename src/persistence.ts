@@ -18,6 +18,34 @@ import { VALID_VIEW_VALUES, VIEW_DEFAULTS_TYPES } from './core/view-validation';
 import { getMinimumColumnsDefault } from './core/settings-schema';
 
 const VIEW_DEFAULTS_KEYS = new Set(Object.keys(VIEW_DEFAULTS));
+const PLUGIN_SETTINGS_KEYS = new Set(Object.keys(PLUGIN_SETTINGS));
+
+/**
+ * Strip stale keys and default-valued keys from stored plugin settings.
+ * Only PluginSettings keys are allowed. Returns true if any changes were made.
+ *
+ * Writes are already sparse, so a default-valued key can only arrive from an
+ * older build or a hand-edited data.json — and nothing rewrites pluginSettings
+ * until the user changes some setting, so it has to be stripped on load.
+ */
+function cleanupPluginSettings(settings: Record<string, unknown>): boolean {
+  let changed = false;
+
+  for (const key of Object.keys(settings)) {
+    if (!PLUGIN_SETTINGS_KEYS.has(key)) {
+      delete settings[key];
+      changed = true;
+      continue;
+    }
+
+    if (settings[key] === PLUGIN_SETTINGS[key as keyof PluginSettings]) {
+      delete settings[key];
+      changed = true;
+    }
+  }
+
+  return changed;
+}
 
 /**
  * Strip stale keys, wrong-typed values, and invalid enum values from a template's settings.
@@ -129,6 +157,15 @@ export class PersistenceManager {
         delete (this.data.pluginSettings as Record<string, unknown>)
           .preventSidebarSwipe;
       }
+      pluginSettingsDirty = true;
+    }
+
+    // Must run AFTER the preventSidebarSwipe migration above: the cleaner would
+    // delete the stale string, silently reverting the user's choice to the
+    // default `true` instead of the `false` the migration maps it to.
+    if (
+      cleanupPluginSettings(this.data.pluginSettings as Record<string, unknown>)
+    ) {
       pluginSettingsDirty = true;
     }
 

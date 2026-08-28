@@ -3,13 +3,14 @@
  */
 
 import { requestUrl } from 'obsidian';
-import {
-  SLIDESHOW_ANIMATION_MS,
-  SWIPE_DETECT_THRESHOLD,
-  SCROLL_THROTTLE_MS,
-} from './constants';
+import { SLIDESHOW_ANIMATION_MS, SWIPE_DETECT_THRESHOLD } from './constants';
 import { isExternalUrl } from './image';
 import { canHover, setupHoverIntent } from './hover-and-touch';
+import {
+  addScrollIndicatorRestore,
+  claimIndicator,
+  releaseIndicator,
+} from './multi-image-icon';
 import { brokenImageUrls, markImageBroken } from './image-loader';
 import { getOwnerWindow } from '../utils/owner-window';
 
@@ -735,8 +736,10 @@ export function setupSwipeGestures(
         e.stopPropagation();
         e.stopImmediatePropagation();
 
-        // Hide icon on horizontal swipe (mobile only)
+        // Hide icon on horizontal swipe (mobile only).
+        // claimIndicator restores the previously hidden indicator (exclusivity).
         if (isMobile && icon && !icon.hasClass('dynamic-views-icon-hidden')) {
+          claimIndicator(icon);
           icon.addClass('dynamic-views-icon-hidden');
         }
 
@@ -751,21 +754,16 @@ export function setupSwipeGestures(
     { signal, capture: true }
   );
 
-  // Show icon again when view is scrolled vertically (mobile only)
-  // Throttle to prevent battery drain from high-frequency scroll events
+  // Show icon again when view is scrolled vertically (mobile only).
+  // Shares the one throttled listener per scroll container that the scrub path
+  // registers on, so covers do not each add their own to the view.
   if (isMobile) {
     const viewContainer = coverEl.closest('.bases-view');
     if (viewContainer) {
-      let lastScrollTime = 0;
-      viewContainer.addEventListener(
-        'scroll',
-        () => {
-          const now = Date.now();
-          if (now - lastScrollTime < SCROLL_THROTTLE_MS) return;
-          lastScrollTime = now;
-          if (icon) icon.removeClass('dynamic-views-icon-hidden');
-        },
-        { signal, passive: true }
+      addScrollIndicatorRestore(
+        viewContainer,
+        () => releaseIndicator(icon),
+        signal
       );
     }
   }
@@ -825,6 +823,30 @@ export function setupImagePreload(
   );
 }
 
+/** Strip hover-zoom eligibility from every frame in an embed. */
+export function clearHoverZoomEligibility(imageEmbed: HTMLElement): void {
+  imageEmbed
+    .querySelectorAll('.slideshow-img')
+    .forEach((img) => img.classList.remove('hover-zoom-eligible'));
+}
+
+/**
+ * Drop hover zoom without easing out of it.
+ *
+ * The <img> is reused across scrub frame swaps, so letting the scale transition
+ * run would play a 140ms zoom-out over the frame the pointer just moved to.
+ * `zoom-cancel` suppresses the scale transition for the recalc that lands the
+ * scale back at 1; the next mouseenter clears it so a fresh hover animates
+ * normally. Add before removing eligibility so an interleaved recalc cannot
+ * catch the element mid-state.
+ */
+export function cancelHoverZoom(imageEmbed: HTMLElement): void {
+  imageEmbed.querySelectorAll('.slideshow-img').forEach((img) => {
+    img.classList.add('zoom-cancel');
+    img.classList.remove('hover-zoom-eligible');
+  });
+}
+
 /**
  * Setup hover zoom eligibility tracking for slideshow
  * Only the image visible when hover starts gets zoom effect
@@ -838,7 +860,25 @@ export function setupHoverZoomEligibility(
   hoverTarget.addEventListener(
     'mouseenter',
     () => {
+      // Removing the viewer overlay fires a genuine mouseenter on the card even
+      // though the pointer never left it, so re-arming here would clear
+      // zoom-cancel and animate the zoom back in on every viewer close. The
+      // state the card had before the viewer opened is the one to keep — the
+      // mouseleave guard below preserves it.
+      //
+      // Consumed rather than timed out: the re-entry fires on the user's next
+      // physical mouse move, which is unbounded (close with Escape, pause, then
+      // move). A time-based flag such as viewerDismissing expires first and the
+      // zoom replays anyway.
+      const enteredCard = hoverTarget.closest<HTMLElement>('.card');
+      if (enteredCard?.dataset.zoomResume) {
+        delete enteredCard.dataset.zoomResume;
+        return;
+      }
       const currImg = imageEmbed.querySelector('.slideshow-img-current');
+      imageEmbed
+        .querySelectorAll('.slideshow-img')
+        .forEach((img) => img.classList.remove('zoom-cancel'));
       currImg?.classList.add('hover-zoom-eligible');
     },
     { signal }
@@ -846,9 +886,17 @@ export function setupHoverZoomEligibility(
   hoverTarget.addEventListener(
     'mouseleave',
     () => {
-      imageEmbed
-        .querySelectorAll('.slideshow-img')
-        .forEach((img) => img.classList.remove('hover-zoom-eligible'));
+      // The viewer overlay's pointer-events fire mouseleave on the card while it
+      // is open. Dropping eligibility here would replay the zoom-in when the
+      // viewer closes and the pointer lands back on the card — the card never
+      // stopped being hovered. Mirrors the same guard on the card's hover-intent
+      // leave callback in shared-renderer.ts.
+      const leftCard = hoverTarget.closest<HTMLElement>('.card');
+      if (leftCard?.classList.contains('viewer-active')) return;
+      // A genuine leave ends the hover session, so any unconsumed resume marker
+      // is stale — drop it or the next real hover would skip its zoom.
+      delete leftCard?.dataset.zoomResume;
+      clearHoverZoomEligibility(imageEmbed);
     },
     { signal }
   );

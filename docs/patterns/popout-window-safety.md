@@ -61,7 +61,7 @@ getOwnerWindow(wrapper).getComputedStyle(wrapper).fontSize;
 
 ### Call sites
 
-`getOwnerWindow` is used across most of `src/core/` and `src/bases/`: `content-visibility.ts`, `hover-and-touch.ts`, `icon-alignment.ts`, `image-loader.ts`, `keyboard-nav.ts`, `poster.ts`, `property-helpers.ts`, `property-measure.ts`, `scroll-gradient.ts`, `scroll-preservation.ts`, `slideshow.ts`, `text-preview-dom.ts`, `thumbnail-scrub.ts`, `context-menu.ts`, `image-viewer.ts`, `shared-renderer.ts`, `masonry-view.ts`.
+`getOwnerWindow` is used across most of `src/core/` and `src/bases/`: `content-visibility.ts`, `hover-and-touch.ts`, `icon-alignment.ts`, `image-loader.ts`, `keyboard-nav.ts`, `poster.ts`, `property-helpers.ts`, `property-measure.ts`, `scroll-gradient.ts`, `scroll-preservation.ts`, `slideshow.ts`, `text-preview-dom.ts`, `multi-image-nav.ts`, `context-menu.ts`, `image-viewer.ts`, `shared-renderer.ts`, `masonry-view.ts`.
 
 ## `el.ownerDocument`
 

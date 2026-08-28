@@ -22,6 +22,7 @@
 @use 'card/border-colors';
 @use 'card/previews';
 @use 'card/header';
+@use 'card/url-button';
 
 // Image formats
 @use 'card/cover';
@@ -46,5 +47,4 @@
 
 // Overrides
 @use 'compact';
-@use 'plugin-settings';
 @use 'utilities';

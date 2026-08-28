@@ -2,7 +2,7 @@
 title: Image navigation
 description: Card cover image slideshow — navigation, gesture detection, animation, preloading, failed image recovery, and visibility reset.
 author: 🤖 Generated with Claude Code
-updated: 2026-08-07
+updated: 2026-08-28
 ---
 # Image navigation
 
@@ -10,7 +10,7 @@ See also: [`odkb/webkit-compositor-constraints.md`](https://github.com/churnish/
 
 ## Overview
 
-The slideshow system enables multi-image navigation on card covers in Grid and Masonry views. It supports arrow clicks, trackpad/wheel gestures, and touch swipes with animated transitions between images. The system spans two files: `src/core/slideshow.ts` (navigator, gesture detection, animation, preload, external blob cache) and `src/core/hover-and-touch.ts` (hover and touch interaction utilities). The renderer (`src/bases/shared-renderer.ts`) wires up the shared slideshow functions and owns the visibility reset IntersectionObserver.
+The slideshow system enables multi-image navigation on card covers in Grid and Masonry views. All four cover positions are eligible — top, bottom, left and right. It supports arrow clicks, trackpad/wheel gestures, and touch swipes with animated transitions between images. The system spans two files: `src/core/slideshow.ts` (navigator, gesture detection, animation, preload, external blob cache) and `src/core/hover-and-touch.ts` (hover and touch interaction utilities). The renderer (`src/bases/shared-renderer.ts`) wires up the shared slideshow functions and owns the visibility reset IntersectionObserver.
 
 ### Relationship to the image viewer
 
@@ -26,8 +26,29 @@ The two share the global `brokenImageUrls` skip set, but not the navigator's clo
 | File                             | Role                                                                  |
 | -------------------------------- | --------------------------------------------------------------------- |
 | `src/core/slideshow.ts`        | Navigator, gesture detection, animation, preload, external blob cache |
+| `src/core/multi-image-nav.ts`  | Scrub engine: touch swipe-to-advance, hover scrub helpers, visibility reset IO |
+| `src/core/multi-image-icon.ts` | Corner icon hidden state: exclusivity slot, restore, shared scroll listener |
 | `src/core/hover-and-touch.ts`  | Hover and touch interaction utilities                                 |
-| `styles/card/_slideshow.scss`    | Animation keyframes, nav arrows, icon, boundary dimming               |
+| `styles/card/_slideshow.scss`    | Animation keyframes, nav arrows, icon, hover zoom cancel              |
+
+## Cover navigation modes
+
+Multi-image covers navigate in one of two modes, chosen by the `Navigation` style setting (`dynamic-views-cover-navigation`). All four cover positions honour both.
+
+| Mode | Body class | Interaction | Engine |
+|---|---|---|---|
+| Scrub (default) | `dynamic-views-cover-navigation-scrub` | Pointer X position across the cover picks the frame; touch swipes advance one image | `multi-image-nav.ts`, shared with thumbnails |
+| Slide | `dynamic-views-cover-navigation-slide` | Hover arrows, wheel/trackpad gestures, touch swipe | `slideshow.ts`, described by the rest of this document |
+
+`isCoverScrubMode()` in `style-settings.ts` reads the mode by elimination — it returns `true` unless the `-slide` class is present, so the default holds with Style Settings absent. The mode is part of `getStyleSettingsHash()`, so switching it re-renders cards.
+
+Scrub mode reuses the thumbnail path wholesale: `renderCoverWrapper` creates a plain `.card-cover` and hands `renderImage` the capped URL array, which builds the dual `slideshow-img` pair, wires hover scrub and `setupTouchSwipeNavigation`, and calls `setViewerImageSet`. The cover gets `.multi-image` and, unless the icon is hidden, a `.slideshow-icon`. It does NOT get nav arrows or wheel gestures. It does get the hover zoom, applied as `scale` rather than `transform` so it cannot fight the frame slide animation, and only on the frame the hover started on — the first frame change cancels it.
+
+The `Disable navigation` toggle (`dynamic-views-cover-disable-navigation`) still kills both modes, on every platform. The mode dropdown itself is hidden on phones, where hover does not exist and the two modes reduce to the same touch swipe.
+
+### Image cap
+
+Both covers and thumbnails cap at `MAX_MULTI_IMAGES` (10) from `src/core/constants.ts`. It is a compile-time constant, applied in `content-loader.ts` (embed limit + final slice), `image-extraction.ts` (probe and result bounds), and at both `renderImage` call sites. There is no user-facing setting for it.
 
 ## Navigator state
 
@@ -173,6 +194,33 @@ Touch events use `capture: true` and call `stopPropagation()` + `stopImmediatePr
 
 Mobile icon is hidden during horizontal swipe (`.dynamic-views-icon-hidden`) and shown again on vertical scroll of the view container (throttled to `SCROLL_THROTTLE_MS`).
 
+### Indicator exclusivity and restore
+
+`multi-image-icon.ts` holds the hidden indicator in one module-scope `activeIndicator`. `claimIndicator()` sets it and restores the previously hidden one, so at most one indicator is hidden at a time across every card, every mode, and every open view. `restoreActiveIndicator()` is the argument-free counterpart — safe to call when nothing is hidden. `releaseIndicator(el)` is the targeted form used by the scroll trigger: it always removes the class from the element passed, and clears the slot only if that element still holds it.
+
+The state lives in its own module because both engines need it and `multi-image-nav.ts` already imports `getCachedBlobUrl` and `preloadImageBatch` from `slideshow.ts` — putting the state in either would make a cycle. `multi-image-icon.ts` imports from neither.
+
+Four triggers bring the icon back:
+
+| Trigger | Wired in | Gating |
+|---|---|---|
+| Another card's swipe claims the indicator | `claimIndicator()`, `multi-image-icon.ts` | Ungated — reached only from the touch swipe path |
+| Vertical scroll of `.bases-view` | `addScrollIndicatorRestore()`, `multi-image-icon.ts` | Ungated, throttled to `SCROLL_THROTTLE_MS` |
+| Tap anywhere that is not a cover or thumbnail | `setupIndicatorRestoreTriggers()`, `src/bases/utils.ts` | `Platform.isMobile` |
+| The view's pane stops being the active leaf | `setupIndicatorRestoreTriggers()`, `src/bases/utils.ts` | `Platform.isMobile` |
+
+The visibility reset IntersectionObserver is **not** among them. `observeScrubReset` runs the reset closure `setupTouchSwipeNavigation` returns, which restores the image to frame 0 but never touches `activeIndicator` — a card that scrolls out and back gets its icon back through the scroll trigger it necessarily crossed, not through the observer.
+
+The last two are called once per view from the Grid and Masonry constructors, alongside the other container-level pointer wiring. They live for the view's lifetime rather than a render's: `containerEl` is created once and only emptied on re-render, so one delegated listener covers every card without accumulating, and `register`/`registerEvent` tear both down with the view.
+
+Two details are load-bearing. The tap listener uses **capture phase** — card handlers call `stopPropagation()`, so a bubble-phase listener on the container would never see a tap that landed on a card. And it listens for **`pointerdown`, not `click`**, so it also fires for a tap that turns into a scroll or a long press. Taps inside `.card-cover` or `.card-thumbnail` are skipped: the user may still be working that image.
+
+Only the wiring is platform-gated — a touch swipe is the only thing that hides the icon. `restoreActiveIndicator()` itself is platform-agnostic, so the existing paths can share it.
+
+Both modes go through the same slot. `setupTouchSwipeNavigation` (scrub) and `setupSwipeGestures` (slide) each call `claimIndicator()` immediately before adding `dynamic-views-icon-hidden`, which are the only two places in `src/` that add the class. Each also registers its restore through `addScrollIndicatorRestore()`, so a view with covers in both modes still carries one throttled scroll listener, not one per cover. Exclusivity therefore holds across modes: a slide swipe restores an icon a scrub hid, and the reverse.
+
+The gates stay at the call sites, and they are not the same gate. Slide checks the `is-mobile` body class before hiding and before registering its scroll restore; scrub reaches the hide only through `isTouchPointer(e)` and registers its scroll restore unconditionally. The shared module is deliberately platform-agnostic and imposes neither.
+
 ## Undo window (First-to-Last-to-First)
 
 ### Problem
@@ -242,9 +290,10 @@ Both paths splice broken URLs from the image array via the `onBroken` callback. 
 `setupHoverIntent()` in [hover-and-touch.ts](../../src/core/hover-and-touch.ts) requires a `mousemove` event after `mouseenter` to activate. Prevents false triggers when elements scroll under a stationary cursor.
 
 - **Wheel gesture guard**: On hover-capable devices (`(hover: hover)`), wheel events in `setupSwipeGestures` require `.interact` on the card before processing. Touch-primary devices bypass the guard (hover intent is never set up there). When the guard blocks an event, all gesture state is reset to prevent stale accumulation.
-- **Arrow visibility**: Gated by `.interact` class on the card (set by the shared hover intent system in both renderers)
+- **Arrow visibility**: Hover-only, with no style setting to change it — gated by the `.interact` class on the card (set by the shared hover intent system in both renderers)
 - **Image preload**: Fires on hover intent activation (deduped with `preloadGuard`)
-- **Hover zoom eligibility**: `.hover-zoom-eligible` set on `mouseenter` to the current image, cleared from all images on `mouseleave`, cleared from old image (now `.slideshow-img-next`) after animation completes via the callback returned by `setupHoverZoomEligibility()`
+- **Hover zoom eligibility**: `.hover-zoom-eligible` set on `mouseenter` to the current image, cleared from all images on `mouseleave` — unless the card carries `viewer-active`, since the open viewer overlay fires `mouseleave` on a card the pointer never left, and dropping eligibility there replays the zoom-in when the viewer closes — cleared from old image (now `.slideshow-img-next`) after animation completes via the callback returned by `setupHoverZoomEligibility()`. Covers only — thumbnails do not zoom — and the card, not the image, is the session boundary.
+- **Zoom cancel**: a frame change drops the zoom outright instead of easing out of it. `cancelHoverZoom()` adds `.zoom-cancel` — which suppresses the scale transition — before removing `.hover-zoom-eligible`, so the scale lands back at 1 within a single recalc rather than animating a zoom-out over the frame the pointer just moved to. The next `mouseenter` strips `.zoom-cancel` from every frame in the same recalc that marks the current one eligible, so a fresh hover animates normally.
 
 ## Visibility reset
 
@@ -299,6 +348,7 @@ Abort behavior:
 | Constant                 | Value | Purpose                                           |
 | ------------------------ | ----- | ------------------------------------------------- |
 | `SLIDESHOW_ANIMATION_MS` | 300   | Animation fallback duration (ms)                  |
+| `MAX_MULTI_IMAGES`       | 10    | Cap on images per multi-image cover or thumbnail  |
 | `UNDO_WINDOW_MS`         | 2500  | First-to-Last-to-First undo detection window (ms) |
 | `WHEEL_SWIPE_THRESHOLD`  | 5     | Accumulated deltaX to trigger navigation          |
 | `WHEEL_GESTURE_GAP_MS`   | 150   | Quiet period for gesture end detection (ms)       |
@@ -325,3 +375,5 @@ Abort behavior:
 10. **Visibility reset only on hidden-to-visible transition.** `wasHidden` flag prevents reset on initial intersection or repeated visible states.
 11. **Wheel gesture guard matches hover intent gate.** The renderer gates `setupHoverIntent` behind `matchMedia('(hover: hover)')`. The wheel guard in `setupSwipeGestures` uses the same media query — if one is skipped, both are.
 12. **Gesture state reset on hover intent guard.** When the wheel handler's hover intent guard blocks an event, `accumulatedDeltaX`, `navigatedThisGesture`, `lastDeltaX`, `gestureResetTimeout`, and decay state are all reset. Without this, stale state from blocked events would leak into the next accepted gesture.
+13. **At most one indicator hidden at a time.** `activeIndicator` is a single module-scope reference, not a set — `claimIndicator()` restores the previous one before taking it. Calling `restoreActiveIndicator()` when nothing is hidden is a no-op.
+14. **One `activeIndicator` in the codebase.** It lives only in `multi-image-icon.ts`; scrub and slide both mutate it through that module's exports. A second copy in either engine would silently break exclusivity between the modes.

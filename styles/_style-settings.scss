@@ -617,8 +617,8 @@ settings:
                 label: Disable
                 value: dynamic-views-show-cover-placeholder-none
     -
-        id: dynamic-views-side-cover-height
-        title: Side cover height
+        id: dynamic-views-left-right-cover-height
+        title: Left/right cover height
         description: Minimum height for cards with left or right cover position. Set to 0 to let cards shrink to fit content.
         type: variable-number-slider
         default: 150
@@ -684,37 +684,24 @@ settings:
         description: Do not cycle through cover images.
         type: class-toggle
     -
-        id: dynamic-views-slideshow-arrows
-        title: Navigation arrows
-        description: Visibility of left/right arrows on slideshow covers.
+        id: dynamic-views-cover-navigation
+        title: Navigation
+        description: How multi-image covers move between images. Desktop only.
         type: class-select
         allowEmpty: false
-        default: dynamic-views-slideshow-arrows-hover
+        default: dynamic-views-cover-navigation-scrub
         options:
             -
-                label: Show
-                value: dynamic-views-slideshow-arrows-show
+                label: Scrub
+                value: dynamic-views-cover-navigation-scrub
             -
-                label: Show on hover
-                value: dynamic-views-slideshow-arrows-hover
-            -
-                label: Hide
-                value: dynamic-views-slideshow-arrows-hide
+                label: Slide
+                value: dynamic-views-cover-navigation-slide
     -
         id: dynamic-views-hide-cover-icon
         title: Hide icon
         description: Do not show icon on covers with multiple images.
         type: class-toggle
-    -
-        id: dynamic-views-slideshow-max-images
-        title: Image count
-        description: Limit number of images in cover slideshows.
-        type: variable-number-slider
-        default: 10
-        min: 2
-        max: 24
-        step: 1
-        format: ''
     -
         id: dates-heading
         title: Dates
@@ -2547,6 +2534,33 @@ settings:
                 label: Default
                 value: dynamic-views-view-background-default
             -
+                label: Accent
+                value: dynamic-views-view-background-accent
+            -
+                label: Red
+                value: dynamic-views-view-background-red
+            -
+                label: Orange
+                value: dynamic-views-view-background-orange
+            -
+                label: Yellow
+                value: dynamic-views-view-background-yellow
+            -
+                label: Green
+                value: dynamic-views-view-background-green
+            -
+                label: Cyan
+                value: dynamic-views-view-background-cyan
+            -
+                label: Blue
+                value: dynamic-views-view-background-blue
+            -
+                label: Purple
+                value: dynamic-views-view-background-purple
+            -
+                label: Pink
+                value: dynamic-views-view-background-pink
+            -
                 label: Flexoki
                 value: dynamic-views-view-background-flexoki
             -
@@ -2683,15 +2697,11 @@ body:not(.dynamic-views-property-size-custom)
 body:not(.dynamic-views-property-name-size-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-property-name-size-custom'],
-body.dynamic-views-slideshow-arrows-show
-  .style-settings-container
-  .setting-item[data-id='dynamic-views-hide-cover-icon'],
 body.dynamic-views-cover-disable-navigation
   .style-settings-container
   .setting-item:is(
-    [data-id='dynamic-views-slideshow-arrows'],
-    [data-id='dynamic-views-hide-cover-icon'],
-    [data-id='dynamic-views-slideshow-max-images']
+    [data-id='dynamic-views-cover-navigation'],
+    [data-id='dynamic-views-hide-cover-icon']
   ),
 body:not(.dynamic-views-subtitle-color-custom)
   .style-settings-container
@@ -2720,6 +2730,9 @@ body.dynamic-views-round-covers
 body.is-phone
   .style-settings-container
   .setting-item[data-id='dynamic-views-image-viewer-constrain-to-pane'],
+body.is-phone
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-cover-navigation'],
 body.dynamic-views-thumbnail-disable-navigation
   .style-settings-container
   .setting-item[data-id='dynamic-views-hide-thumbnail-icon'],
@@ -2762,7 +2775,7 @@ body.dynamic-views-hide-group-result-count
   border-bottom-left-radius: var(--setting-items-radius);
 }
 
-// Cover: navigation arrows, hide icon and image count all hide when navigation is
+// Cover: the navigation mode and hide-icon rows both hide when navigation is
 // disabled → cover-disable-navigation becomes visually last
 body.dynamic-views-cover-disable-navigation
   .style-settings-container

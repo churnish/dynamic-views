@@ -14,7 +14,7 @@ export interface MasonryLayoutParams {
   cardSize: number; // Represents minimum width; actual width may be larger to fill space
   minColumns: number;
   gap: number;
-  heights?: number[]; // Optional pre-measured heights to avoid reflows in grouped mode
+  heights?: number[]; // Pre-measured heights — all production callers provide them; the DOM-read fallback is a safety net
 }
 
 export interface IncrementalMasonryParams {
@@ -60,12 +60,34 @@ export function calculateMasonryDimensions(params: {
     Math.floor((containerWidth + gap) / (cardSize + gap))
   );
 
-  const cardWidth =
+  // Clamp: degenerate panes (narrower than the gaps alone) must not yield negative widths
+  const cardWidth = Math.max(
+    0,
     columns > 0
       ? (containerWidth - gap * (columns - 1)) / columns
-      : containerWidth;
+      : containerWidth
+  );
 
   return { columns, cardWidth };
+}
+
+/** Index of the shortest column — the greedy placement target. */
+function findShortestColumn(columnHeights: number[]): number {
+  let shortest = 0;
+  let minHeight = columnHeights[0];
+  for (let i = 1; i < columnHeights.length; i++) {
+    if (columnHeights[i] < minHeight) {
+      minHeight = columnHeights[i];
+      shortest = i;
+    }
+  }
+  return shortest;
+}
+
+// Subtract the trailing gap after the last row; guard empty columns; round to avoid float accumulation
+function finalizeContainerHeight(columnHeights: number[], gap: number): number {
+  const maxHeight = columnHeights.length > 0 ? Math.max(...columnHeights) : 0;
+  return Math.round(maxHeight > 0 ? maxHeight - gap : 0);
 }
 
 /**
@@ -77,23 +99,15 @@ export function calculateMasonryLayout(
   params: MasonryLayoutParams
 ): MasonryLayoutResult {
   const { cards, heights: preHeights } = params;
-  // Validate inputs - clamp negative values to 0
+  // Validate inputs - clamp negative values to 0 (calculateMasonryDimensions clamps its own inputs)
   const containerWidth = Math.max(0, params.containerWidth);
-  const cardSize = Math.max(0, params.cardSize);
-  const minColumns = Math.max(1, params.minColumns);
   const gap = Math.max(0, params.gap);
-
-  // Calculate number of columns
-  const columns = Math.max(
-    minColumns,
-    Math.floor((containerWidth + gap) / (cardSize + gap))
-  );
-
-  // Calculate card width based on columns
-  const cardWidth =
-    columns > 0
-      ? (containerWidth - gap * (columns - 1)) / columns
-      : containerWidth;
+  const { columns, cardWidth } = calculateMasonryDimensions({
+    containerWidth: params.containerWidth,
+    cardSize: params.cardSize,
+    minColumns: params.minColumns,
+    gap: params.gap,
+  });
 
   // Initialize column heights
   const columnHeights: number[] = new Array(columns).fill(0) as number[];
@@ -108,15 +122,7 @@ export function calculateMasonryLayout(
       : cards.map((card) => card.offsetHeight);
 
   for (let index = 0; index < cards.length; index++) {
-    // Find shortest column - track index during search
-    let shortestColumn = 0;
-    let minHeight = columnHeights[0];
-    for (let i = 1; i < columnHeights.length; i++) {
-      if (columnHeights[i] < minHeight) {
-        minHeight = columnHeights[i];
-        shortestColumn = i;
-      }
-    }
+    const shortestColumn = findShortestColumn(columnHeights);
 
     // Calculate position
     const left = shortestColumn * (cardWidth + gap);
@@ -130,11 +136,7 @@ export function calculateMasonryLayout(
     columnHeights[shortestColumn] += cardHeight + gap;
   }
 
-  // Calculate container height (subtract trailing gap after last row)
-  // Guard against negative height when no cards exist
-  // Round to nearest pixel to avoid floating point accumulation errors
-  const maxHeight = columnHeights.length > 0 ? Math.max(...columnHeights) : 0;
-  const containerHeight = Math.round(maxHeight > 0 ? maxHeight - gap : 0);
+  const containerHeight = finalizeContainerHeight(columnHeights, gap);
 
   return {
     positions,
@@ -146,31 +148,6 @@ export function calculateMasonryLayout(
     heights,
     columnAssignments,
   };
-}
-
-/**
- * Apply masonry layout directly to DOM elements via inline styles
- */
-export function applyMasonryLayout(
-  container: HTMLElement,
-  cards: HTMLElement[],
-  result: MasonryLayoutResult
-): void {
-  // Set container properties using CSS custom properties
-  container.classList.add('masonry-container');
-  container.style.setProperty(
-    '--masonry-height',
-    `${result.containerHeight}px`
-  );
-
-  // Position each card using inline styles
-  cards.forEach((card, index) => {
-    const pos = result.positions[index];
-    card.classList.add('masonry-positioned');
-    card.style.width = `${result.cardWidth}px`;
-    card.style.left = `${pos.left}px`;
-    card.style.top = `${pos.top}px`;
-  });
 }
 
 /**
@@ -202,15 +179,7 @@ export function calculateIncrementalMasonryLayout(
       : newCards.map((card) => card.offsetHeight);
 
   for (let index = 0; index < newCards.length; index++) {
-    // Find shortest column - track index during search
-    let shortestColumn = 0;
-    let minHeight = columnHeights[0];
-    for (let i = 1; i < columnHeights.length; i++) {
-      if (columnHeights[i] < minHeight) {
-        minHeight = columnHeights[i];
-        shortestColumn = i;
-      }
-    }
+    const shortestColumn = findShortestColumn(columnHeights);
 
     // Calculate position
     const left = shortestColumn * (cardWidth + gap);
@@ -224,11 +193,7 @@ export function calculateIncrementalMasonryLayout(
     columnHeights[shortestColumn] += cardHeight + gap;
   }
 
-  // Subtract trailing gap after last row
-  // Guard against negative height when columns are empty
-  // Round to nearest pixel to avoid floating point accumulation errors
-  const maxHeight = columnHeights.length > 0 ? Math.max(...columnHeights) : 0;
-  const containerHeight = Math.round(maxHeight > 0 ? maxHeight - gap : 0);
+  const containerHeight = finalizeContainerHeight(columnHeights, gap);
 
   return {
     positions,
@@ -310,8 +275,7 @@ export function repositionWithStableColumns(params: StableRepositionParams): {
     columnHeights[col] += newHeights[i] + gap;
   }
 
-  const maxH = columns > 0 ? Math.max(...columnHeights) : 0;
-  const containerHeight = Math.round(maxH > 0 ? maxH - gap : 0);
+  const containerHeight = finalizeContainerHeight(columnHeights, gap);
 
   return { positions, containerHeight, columnHeights, columnAssignments };
 }
@@ -327,15 +291,7 @@ export function computeGreedyColumnHeights(
 ): number[] {
   const columnHeights = new Array(columns).fill(0) as number[];
   for (let i = 0; i < heights.length; i++) {
-    let shortestCol = 0;
-    let minH = columnHeights[0];
-    for (let c = 1; c < columns; c++) {
-      if (columnHeights[c] < minH) {
-        minH = columnHeights[c];
-        shortestCol = c;
-      }
-    }
-    columnHeights[shortestCol] += heights[i] + gap;
+    columnHeights[findShortestColumn(columnHeights)] += heights[i] + gap;
   }
   return columnHeights;
 }

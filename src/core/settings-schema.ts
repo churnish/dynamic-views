@@ -460,15 +460,17 @@ export function getBasesViewOptions(
       displayName: 'View',
       items: [
         {
-          // Both keys persist in the .base file so a synced vault keeps a
-          // separate gap per form factor; only the current one is editable.
+          // Hidden on phone: a phone pane is too narrow for the gap to be worth tuning,
+          // and the key is desktop/tablet only. Must hide rather than fall through —
+          // otherwise a phone would edit the desktop value.
           type: 'slider',
           displayName: 'Card gap',
-          key: Platform.isPhone ? 'cardGapPhone' : 'cardGapDesktop',
+          key: 'cardGapDesktop',
           min: 0,
           max: 64,
           step: 1,
-          default: Platform.isPhone ? d.cardGapPhone : d.cardGapDesktop,
+          default: d.cardGapDesktop,
+          shouldHide: () => Platform.isPhone,
         },
         {
           type: 'dropdown',
@@ -689,7 +691,6 @@ export function readBasesSettings(
       return defaults.minimumColumns === 1 ? 1 : 2;
     })(),
     cardGapDesktop: getNumber('cardGapDesktop', defaults.cardGapDesktop),
-    cardGapPhone: getNumber('cardGapPhone', defaults.cardGapPhone),
     cssclasses: getString('cssclasses', defaults.cssclasses),
   };
 
@@ -798,7 +799,6 @@ export function extractBasesTemplate(
       return mergedDefaults.minimumColumns;
     })(),
     cardGapDesktop: getNumber('cardGapDesktop', mergedDefaults.cardGapDesktop),
-    cardGapPhone: getNumber('cardGapPhone', mergedDefaults.cardGapPhone),
     cssclasses: getString('cssclasses', mergedDefaults.cssclasses),
   };
 

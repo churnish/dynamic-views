@@ -100,7 +100,7 @@ Defined in `shared-renderer.ts`. Called on every `onDataUpdated()` callback, out
 
 | Variable | Source | Notes |
 |---|---|---|
-| `--dynamic-views-card-spacing-desktop` / `-phone` | `settings.cardGapDesktop` / `cardGapPhone` | Only the current platform's variable is written (`Platform.isPhone`). Feeds both the `gap` rules in `_grid-view.scss` and `getCardSpacing()`. Written only when the value changes, because each write must be followed by `clearStyleSettingsCache()` |
+| `--dynamic-views-card-spacing-desktop` / `-phone` | `settings.cardGapDesktop` / the fixed `PHONE_CARD_GAP` constant | Only the current platform's variable is written (`Platform.isPhone`). Feeds both the `gap` rules in `_grid-view.scss` and `getCardSpacing()`. Written only when the value changes, because each write must be followed by `clearStyleSettingsCache()` |
 
 These are per-view — each Bases leaf's container gets its own values. `textPreviewLines`, `imageRatio`, and `thumbnailSize` are in `CSS_ONLY_SETTINGS_KEYS` (excluded from the render hash — CSS-only changes skip full DOM rebuild). `titleLines` and `subtitleLines` are NOT in that set — they also trigger a full re-render because they toggle the `title-single-line` and `subtitle-scroll` classes, which affect card layout and, for the subtitle, which scroll gradients get wired up at render time. The function also toggles classes for `posterDisplayMode` (`poster-mode-fade`/`poster-mode-overlay`) and `imageFit` (`image-fit-crop`/`image-fit-contain`), which are in `CSS_ONLY_SETTINGS_KEYS` despite being class toggles rather than CSS variables.
 
@@ -108,9 +108,8 @@ These are per-view — each Bases leaf's container gets its own values. `textPre
 
 Functions in `style-settings.ts` read `--dynamic-views-*` variables from `document.body` via `getComputedStyle()` for use in JS layout calculations:
 
-- `getCardSpacing()` — reads `--dynamic-views-card-spacing-desktop` or `--dynamic-views-card-spacing-phone`. The container element is authoritative: `applyViewContainerStyles()` writes the per-view gap setting there as an inline style, so the container read comes first and wins everywhere — including embeds, where the CSS `gap` rules also apply. Only when the container carries no value does it fall back to `--size-4-2` (inside `.internal-embed`) or to the `body`-level value.
+- `getCardSpacing()` — reads `--dynamic-views-card-spacing-desktop` or `--dynamic-views-card-spacing-phone`. The container element is authoritative: `applyViewContainerStyles()` writes the per-view gap setting (desktop and tablet) or the fixed `PHONE_CARD_GAP` constant (phone) there as an inline style, so the container read comes first and wins everywhere — including embeds, where the CSS `gap` rules also apply. Only when the container carries no value does it fall back to `--size-4-2` (inside `.internal-embed`) or to the `body`-level value.
 - `getCompactBreakpoint()` — reads `--dynamic-views-compact-breakpoint`.
-- `getSlideshowMaxImages()` — reads `--dynamic-views-slideshow-max-images`.
 - `getDatetimeFormat()`, `getDateFormat()`, `getTimeFormat()` — read `variable-text` format strings.
 - `getListSeparator()`, `getEmptyValueMarker()` — read `variable-text` string tokens.
 

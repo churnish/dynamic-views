@@ -12,6 +12,7 @@
 - **Card views**: NEVER use the term 'card view' (singular). Use 'Grid' or 'Masonry' instead. To refer to both collectively, use 'card views' (plural).
 - **Avoid 'base'**: NEVER use 'base' to mean 'default' in comments, docs, file names, function/class/variable names, or any user-facing text — ambiguous with Obsidian's Bases core plugin. Use synonyms like 'standard', 'core', and 'initial' instead.
 - **Style Settings**: NEVER abbreviate to 'SS' in comments, docs, or user-facing text. ALWAYS use the full name 'Style Settings'. To refer to a singular option, use 'style setting' (lowercase).
+- **Slide vs scrub**: In multi-image navigation contexts, 'Slide' refers ONLY to the slideshow navigation mode and 'scrub' ONLY to position-driven frame changes. 'Swipe' is the touch gesture and works in both modes. NEVER pair them as 'swipe/slide'. Motion descriptions elsewhere (full screen bar slide, slide-in animations) are unaffected.
 - **Text preview**: When referring to the Markdown-stripped text shown on cards, ALWAYS use 'text preview' NOT 'preview'. Use 'previews' (plural) ONLY when referring to both text preview and thumbnail image format collectively.
 - **Properties**: In user-facing text, use 'properties' (NOT 'frontmatter', 'front-matter', or 'YAML') when referring to YAML metadata at the top of Markdown files. 'Frontmatter' and 'YAML' are acceptable in code, comments, docs, and tests.
 - **Markdown**: 'Markdown' is a proper noun and MUST be capitalized.

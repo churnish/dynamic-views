@@ -1,0 +1,20 @@
+// Shared colour-preset list.
+//
+// Consumed by the card background loop, its hover counterpart, the shadow colour
+// gate (all three in card/_core.scss) and the view background loop
+// (_grid-masonry-shared.scss). Every consumer must offer the same nine colours in
+// the same order, so the list lives here rather than being repeated — adding a
+// colour is then a one-line change that reaches all of them.
+//
+// Quoted because red/orange/green/etc. are CSS colour keywords: a bare list turns
+// them into Sass colour values and interpolation warns. `custom` is not a member —
+// shadow-color-gate() appends it, and every other consumer gives it its own rule,
+// since it reads a user-supplied variable rather than a theme colour.
+//
+// This module emits NO CSS, so `@use`-ing it from any partial cannot disturb the
+// cascade order main.scss establishes. A partial that `@use`d a rule-emitting
+// module would pull that module's output to the earlier position, which matters
+// here: several rules in this stylesheet tie on specificity and rely on source
+// order (see the Flat + Weaken clamp in _hover-and-touch.scss).
+$preset-colors:
+  'accent', 'red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple', 'pink';

@@ -1,11 +1,5 @@
 @use 'sass:list';
-
-/* Shadow colour preset names. Quoted because red/orange/green/etc. are CSS colour
-   keywords — a bare list turns them into Sass colour values and interpolation
-   warns. `custom` is appended by shadow-color-gate() but has its own preset rule,
-   since it reads a user-supplied variable rather than a theme colour. */
-$shadow-colors:
-  'accent', 'red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple', 'pink';
+@use '../color-presets' as *;
 
 /* Builds the :is() gate for the shadow tier rebuild. Base and hover gates come
    from this one list so they cannot drift out of parity with the preset rules —
@@ -13,7 +7,7 @@ $shadow-colors:
    colour variable unset. */
 @function shadow-color-gate($infix: '') {
   $sel: ();
-  @each $c in list.append($shadow-colors, 'custom') {
+  @each $c in list.append($preset-colors, 'custom') {
     $sel: list.append(
       $sel,
       '.dynamic-views-card-shadow-color#{$infix}-#{$c}',
@@ -49,7 +43,7 @@ $shadow-colors:
     align-items: flex-start;
   }
 
-  /* Grid: title-group grows horizontally inside card-header to fill space beside URL icon */
+  /* Grid: title-group grows horizontally inside card-header to fill space beside URL button */
   .dynamic-views-grid .card-header .card-title-block {
     flex-grow: 1;
   }
@@ -79,10 +73,7 @@ body.dynamic-views-card-background-strong .dynamic-views {
 }
 
 /* Card background color presets — 7% tint over primary (matches canvas node tint) */
-$card-bg-colors:
-  'accent', 'red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple', 'pink';
-
-@each $color in $card-bg-colors {
+@each $color in $preset-colors {
   body.dynamic-views-card-background-#{$color} .dynamic-views {
     --card-bg: color-mix(
       in srgb,
@@ -92,8 +83,8 @@ $card-bg-colors:
   }
 }
 
-/* Hover counterparts — same tint, applied on the card rather than the container so it wins over the inherited resting value. Kept here beside the resting loop so both share one $card-bg-colors list, matching how the shadow colour presets pair up. */
-@each $color in $card-bg-colors {
+/* Hover counterparts — same tint, applied on the card rather than the container so it wins over the inherited resting value. Kept here beside the resting loop so both share one $preset-colors list, matching how the shadow colour presets pair up. */
+@each $color in $preset-colors {
   body.dynamic-views-card-background-hover-#{$color}
     .dynamic-views
     .card.interact {
@@ -225,7 +216,7 @@ body.dynamic-views-card-shadow-color-custom
 /* Shadow color on hover presets — set a separate variable on the hovered card.
    Default emits no rule, so an unset hover colour keeps whatever the base colour
    resolved to. */
-@each $c in $shadow-colors {
+@each $c in $preset-colors {
   body.dynamic-views-card-shadow-color-hover-#{$c}
     .workspace-leaf-content[data-type='bases']
     .dynamic-views

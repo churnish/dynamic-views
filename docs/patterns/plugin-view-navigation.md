@@ -126,12 +126,14 @@ leaf.view.containerEl.querySelectorAll('.dynamic-views .card').length
 | `has-card-content` | Card has text preview or thumbnail |
 | `has-properties-bottom` | Properties rendered below content |
 | `has-header` | Card has a header (title/subtitle) |
-| `has-url-icon` | Card renders a URL icon in its header |
+| `has-url-icon` | Card renders a URL button in its header |
+| `has-title-block` | Card header carries a title or subtitle, not just the URL button |
 | `compact-mode` | Compact card layout |
 | `compact-stacked` | Compact with stacked layout |
 | `content-hidden` | Card content hidden (content-visibility) |
 | `card-fade-in` | Fade-in animation class |
 | `image-ready` | Cover/thumbnail image loaded |
+| `multi-image` | On `.card-cover`/`.card-thumbnail` — scrubbable multi-image surface |
 | `masonry-positioned` | Absolutely positioned in masonry layout |
 
 ### Container modifier classes

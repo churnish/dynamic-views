@@ -30,6 +30,19 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      # Gated here rather than via `needs:` on the Tests workflow: that one is
+      # triggered by branch pushes, so a tag push never runs it and there would
+      # be nothing to depend on. Without these steps a tag ships whatever it is
+      # given — esbuild strips types without checking them.
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm test
+
       - name: Build
         run: npm run build
 

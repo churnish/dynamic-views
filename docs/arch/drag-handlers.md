@@ -2,7 +2,7 @@
 title: Drag handlers
 description: Drag handler factory system, platform quirks, hover suppression strategy, and dataset freshness pattern for stale closures.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-10
+updated: 2026-08-27
 ---
 # Drag handlers
 
@@ -14,7 +14,7 @@ The plugin supports four drag types, all implemented as factory functions in [`d
 
 | Factory | Drag source | DataTransfer content | Notes |
 |---|---|---|---|
-| `createTagDragHandler` | Tag chip | `text/plain`: `#tag` | Nullifies `app.dragManager.draggable` so editor's dragover accepts via else-path |
+| `createTagDragHandler` | Tag | `text/plain`: `#tag` | Nullifies `app.dragManager.draggable` so editor's dragover accepts via else-path |
 | `createCardDragHandler` | Card / title | Obsidian link drag | Delegates to `app.dragManager.dragLink` |
 | `createExternalLinkDragHandler` | External link `<a>` | `text/plain`: URL, or `[caption](url)` when caption differs from URL | Uses `DRAG_MARKER` MIME for `text/uri-list` suppression |
 | `createUrlButtonDragHandlers` | URL button `<a>` | `text/plain`: URL | Returns `{ onDragStart, onDragEnd, onTouchStart }` + registers mousedown internally |
@@ -35,19 +35,23 @@ The `getData` patch returns `''` for `text/uri-list` when `DRAG_MARKER` is prese
 
 ## Hover suppression on dragstart
 
-Two JS-toggled classes control hover effects: `interact`, `poster-hover-active`. Both are removed on dragstart, but with constraints:
+Three JS-toggled classes control hover effects: `interact`, `interact-hover` (the hover-input-only half — see [hover-and-touch.md](../patterns/hover-and-touch.md)), and `poster-hover-active`. All are removed on dragstart, but with constraints:
 
-**Card-level handlers** (`createCardDragHandler`, Bases `handleDrag`): remove both synchronously via `clearCardHoverState()`.
+**Card-level handlers** (`createCardDragHandler`, Bases `handleDrag`): remove all three synchronously via `clearCardHoverState()`.
 
-**URL button handlers** (`createUrlButtonDragHandlers`): remove `interact` synchronously, but **defer** `poster-hover-active` removal via `setTimeout(0)`. This is because `poster-hover-active` controls `pointer-events: auto` on `.card-content` — synchronous removal sets `pointer-events: none`, aborting the drag before the drag system takes over. The deferred removal runs after dragstart completes.
+**URL button handlers** (`createUrlButtonDragHandlers`): remove `interact` and `interact-hover` synchronously, but **defer** `poster-hover-active` removal via `setTimeout(0)`. This is because `poster-hover-active` controls `pointer-events: auto` on `.card-content` — synchronous removal sets `pointer-events: none`, aborting the drag before the drag system takes over. The deferred removal runs after dragstart completes.
 
 The deferred `setTimeout(0)` also sets `pointer-events: none` on the icon itself, clearing the stuck `:hover` pseudo-class (Chromium keeps `:hover` on the drag source throughout the drag operation — see platform quirks).
 
 ## WebKit touch handling
 
-WebKit native touch drags bypass the HTML5 DnD API entirely — `dragstart` and `dragend` never fire (see `ios-webkit-quirks.md`). Only drop-target events fire on the receiving element. Cleanup logic in `onDragEnd` (tooltip removal, pointer-events restore, body class removal) needs an alternative path.
+WebKit native touch drags only partly follow the HTML5 DnD API. `dragend` never fires (see `ios-webkit-quirks.md`), so cleanup logic in `onDragEnd` (tooltip removal, pointer-events restore, body class removal) needs an alternative path — only drop-target events reach the receiving element.
 
-**`onTouchStart` fallback**: Registers a document-level `drop` listener that runs the same `cleanup` function as `onDragEnd`. A `touchend` listener (also `{ once: true }`) removes the `drop` listener if the touch ends without initiating a drag.
+`dragstart` **does** fire for the URL button. Measured on iPadOS, the sequence is `touchstart` → `touchcancel` at ~165ms (the system drag taking the gesture over) → `dragstart` at ~321ms. What never fires for a drag gesture is `touchend`.
+
+**`onTouchStart` fallback**: Registers a document-level `drop` listener that runs the same `cleanup` function as `onDragEnd`. A `touchend` listener (also `{ once: true }`) removes the `drop` listener if the touch ends without initiating a drag — safe precisely because `touchend` is absent once a drag starts.
+
+**Long-press context menu (`Platform.isIosApp` only)**: `onDragStart` additionally calls `app.dragManager.onDragStart()`. WebKit dispatches no `contextmenu` for a touch long press; Obsidian's `DragManager.onDragEnd` synthesises one when a *registered* drag ends without having moved more than 5px, so registering here is what makes the card menu reachable from the URL button (#430). Gated to WebKit: on desktop the registration would replace the native two-line link drag ghost that the handler's `DataTransfer` setup exists to produce.
 
 **Deferred tooltip interception**: Obsidian creates a `.tooltip` element from the icon's `aria-label` ~1-2s after native drag ends — well after `drop` fires. The `cleanup` function installs a MutationObserver on `document.body` that watches for tooltip creation, scoped to `urlValue` text match to avoid removing unrelated tooltips. The observer disconnects after 3 seconds.
 

@@ -107,11 +107,10 @@ pm.setPluginSettings(settings);  // Merges sparse — only non-default values pe
 | Key | Type | Default (Grid) | Default (Masonry) | Values | Notes |
 |---|---|---|---|---|---|
 | `minimumColumns` | `1 \| 2` | `1` | `2` | `1`, `2` | Bases YAML: `'one'`/`'two'` strings |
-| `cardGapDesktop` | `number` | `8` | `8` | 0–64 px | Gap between cards. Also sets the view edge inset, floored at 12px. Slider shown when `!Platform.isPhone` |
-| `cardGapPhone` | `number` | `6` | `6` | 0–64 px | Gap between cards. Also sets the view edge inset, floored at 12px. Slider shown when `Platform.isPhone` |
+| `cardGapDesktop` | `number` | `8` | `8` | 0–64 px | Gap between cards. Also sets the view edge inset, floored at 12px. Slider hidden on phone |
 | `cssclasses` | `string` | `''` | `''` | — | Comma-separated CSS classes |
 
-Both gap keys persist in the `.base` YAML regardless of platform — `.base` files sync across devices, so each form factor keeps its own value. Only the current platform's slider is emitted into the schema.
+The card gap is a desktop and tablet setting only. Phone uses a fixed 6px gap (`PHONE_CARD_GAP` in `src/core/constants.ts`), and the slider is hidden there — a phone pane is too narrow for the gap to be worth tuning. `cardGapDesktop` still persists in the `.base` YAML on every platform, so a phone editing a synced view leaves the desktop value alone.
 
 ## CSS-only settings
 
@@ -135,7 +134,7 @@ The `cssclasses` setting adds classes to the `.dynamic-views` container. A CSS s
 
 **Limitations**: Only `variable-number-slider` Style Settings options work with this pattern — they use CSS variables that inherit through the DOM. `class-toggle` and `class-select` options use body classes read via `document.body.classList`, which cannot be overridden per-container.
 
-**Card gap is no longer a `cssclasses` case**: `cardGapDesktop`/`cardGapPhone` are per-view settings. `applyViewContainerStyles()` writes `--dynamic-views-card-spacing-desktop|-phone` as an inline style on the container, which beats any `cssclasses` helper class by specificity. Use the Card gap slider instead.
+**Card gap is no longer a `cssclasses` case**: `cardGapDesktop` is a per-view setting. `applyViewContainerStyles()` writes `--dynamic-views-card-spacing-desktop|-phone` as an inline style on the container, which beats any `cssclasses` helper class by specificity. Use the Card gap slider instead (desktop and tablet — the phone gap is fixed).
 
 ## Resolution order
 

@@ -220,6 +220,24 @@ body.dynamic-views-show-cover-placeholder-none
   display: none;
 }
 
+/* Give the card its own bottom padding back when the wrapper above is hidden.
+   Grid cover-bottom cards trade padding-bottom for --cover-inset-computed (1px
+   by default) in card/_cover-elements.scss, on the assumption that a cover sits
+   flush at the card's bottom edge. An imageless card whose placeholder wrapper
+   is hidden has nothing there, so that trade leaves its content 1px from the
+   edge while the other three sides keep the full padding. Grid only — the
+   padding rule it corrects is itself scoped to .dynamic-views-grid. */
+body.dynamic-views-show-cover-placeholder-masonry
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-bottom.image-format-cover.has-cover-wrapper-placeholder,
+body.dynamic-views-show-cover-placeholder-none
+  .dynamic-views
+  .dynamic-views-grid
+  .card.card-cover-bottom.image-format-cover.has-cover-wrapper-placeholder {
+  padding-bottom: var(--dynamic-views-card-padding, 8px);
+}
+
 /* Masonry contain mode + fixed cover height + placeholder enabled: show placeholder */
 body:is(
     .dynamic-views-fixed-cover-height,
@@ -258,20 +276,4 @@ body:is(
   .card.image-format-cover:not(.image-ready).card-cover-bottom
   .card-cover-wrapper.card-cover-wrapper-placeholder {
   display: block;
-}
-
-/* Masonry with placeholders disabled: zero title-subtitle gap (higher specificity to beat card-body gap) */
-body.dynamic-views-show-cover-placeholder-grid
-  .dynamic-views
-  .dynamic-views-masonry
-  .card.image-format-cover.has-cover-wrapper-placeholder
-  .card-title
-  + .card-subtitle,
-body.dynamic-views-show-cover-placeholder-none
-  .dynamic-views
-  .dynamic-views-masonry
-  .card.image-format-cover.has-cover-wrapper-placeholder
-  .card-title
-  + .card-subtitle {
-  margin-top: 0;
 }

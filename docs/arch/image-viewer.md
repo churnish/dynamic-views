@@ -2,7 +2,7 @@
 title: Image viewer
 description: Dual-mode image viewer architecture — gesture systems (hand-rolled desktop wheel/pointer, native mobile touch), keyboard handler map, arrow navigation, constrained vs fullscreen modes, touch and drag-out gating, cleanup lifecycle, and invariants.
 author: 🤖 Generated with Claude Code
-updated: 2026-08-10
+updated: 2026-08-26
 ---
 # Image viewer
 
@@ -215,12 +215,12 @@ Two render sites in `shared-renderer.ts` populate it, both with the already-capp
 
 | Site | Array | Cap |
 |---|---|---|
-| `renderSlideshow` | `imageUrls` (already `slideshowUrls`) | `getSlideshowMaxImages()` |
-| `renderImage` | `scrubbableUrls`, when non-null | 10 |
+| `renderSlideshow` | `imageUrls` (already `slideshowUrls`) | `MAX_MULTI_IMAGES` |
+| `renderImage` | `scrubUrls`, when non-null | `MAX_MULTI_IMAGES` |
 
-`scrubbableUrls` being non-null already encodes the thumbnail + multi-image + scrubbing-enabled gate, so no extra condition is needed. Every other format — plain covers, posters, backdrops, single-image thumbnails — registers nothing, and the viewer is inert there.
+`scrubUrls` is capped and gated by the caller — thumbnails check their own scrubbing setting, covers check the navigation mode — so `renderImage` needs no extra condition. Every other format — Slide-mode covers aside, plus posters, backdrops, single-image thumbnails and single-image covers — registers nothing, and the viewer is inert there.
 
-**The viewer steps a snapshot, not the live array.** The `WeakMap` stores the array the renderer passed, by reference; the copy is taken in `openImageViewer` (`viewerImageSets.get(embedEl)?.slice()`). Taking it at open rather than at registration is both cheaper — cards whose viewer never opens pay for no copy — and better ordered, since URLs at indices 1+ are validated only on hover or first touch and the broken ones are spliced out of this very array before the copy is made. Both source arrays are spliced in place by the card's broken-URL recovery while the viewer may be open (`createPreloadBrokenHandler` for slideshows, the `tryNextImage` and `nextImg` error handlers for scrubbable thumbnails). Holding the live array would silently shift `currentIndex` mid-session and could shrink the set below the `length > 1` gate evaluated at open. Broken entries are still skipped — via the global `brokenImageUrls`, not via array mutation.
+**The viewer steps a snapshot, not the live array.** The `WeakMap` stores the array the renderer passed, by reference; the copy is taken in `openImageViewer` (`viewerImageSets.get(embedEl)?.slice()`). Taking it at open rather than at registration is both cheaper — cards whose viewer never opens pay for no copy — and better ordered, since URLs at indices 1+ are validated only on hover or first touch and the broken ones are spliced out of this very array before the copy is made. Both source arrays are spliced in place by the card's broken-URL recovery while the viewer may be open (`createPreloadBrokenHandler` for slideshows, the `tryNextImage` and `nextImg` error handlers for scrubbable covers and thumbnails). Holding the live array would silently shift `currentIndex` mid-session and could shrink the set below the `length > 1` gate evaluated at open. Broken entries are still skipped — via the global `brokenImageUrls`, not via array mutation.
 
 ### Index independence
 
@@ -285,8 +285,8 @@ Because these maps are module-scope, a probe that removes a clone with `el.remov
 
 `closeImageViewer()` handles two post-close restorations:
 
-- **Hover intent**: Restores `.interact` on the original card to work around an Electron hit-testing issue where `:hover` and `mouseenter` are unreliable after clone overlay removal. The `restoreHoverIntent` parameter (default `true`) is `false` when a new viewer pre-empts the current one.
-- **Thumbnail scrub resume**: Tracks cursor position in the `viewerCursorPositions` `WeakMap` (set by a `mousemove` listener on the overlay during open). On close, dispatches synthetic `mousemove` to resume slideshow scrubbing if cursor is still over a multi-image thumbnail. Uses `requestAnimationFrame` to handle Preact re-render race conditions. Dispatches `mouseleave` if cursor is out of bounds.
+- **Hover intent**: Restores `.interact` and `.interact-hover` on the original card to work around an Electron hit-testing issue where `:hover` and `mouseenter` are unreliable after clone overlay removal. The `restoreHoverIntent` parameter (default `true`) is `false` when a new viewer pre-empts the current one. When the cursor is outside the card both classes are removed instead — the `pointerleave` that would normally clear them already fired under the overlay and will not fire again, and a stranded `.interact-hover` holds the image zoom open.
+- **Scrub resume**: Tracks cursor position in the `viewerCursorPositions` `WeakMap` (set by a `mousemove` listener on the overlay during open). On close, dispatches a synthetic `pointermove` to resume scrubbing if the cursor is still over a multi-image cover or thumbnail, and a `pointerleave` if it is out of bounds. Both must be `PointerEvent`s carrying `pointerType: 'mouse'` — the scrub handlers bind `pointermove`/`pointerleave` and gate on `isHoverPointer`, so a `MouseEvent` reaches no listener and fails silently.
 
 ## Key types
 

@@ -126,7 +126,7 @@ describe('handlePosterTapReveal', () => {
       const card = makeCardWithPoster(false);
       const e = makeMouseEvent(card);
 
-      handlePosterTapReveal(e, card, 'default');
+      handlePosterTapReveal(e, card, false);
 
       expect(card.classList.contains('poster-revealed')).toBe(true);
       expect(card.classList.contains('interact')).toBe(true);
@@ -136,7 +136,7 @@ describe('handlePosterTapReveal', () => {
       const card = makeCardWithPoster(false);
       const e = makeMouseEvent(card);
 
-      handlePosterTapReveal(e, card, 'default');
+      handlePosterTapReveal(e, card, false);
 
       expect(e.preventDefault).toHaveBeenCalled();
       expect(e.stopPropagation).toHaveBeenCalled();
@@ -156,7 +156,7 @@ describe('handlePosterTapReveal', () => {
       container.appendChild(card2);
 
       const e = makeMouseEvent(card2);
-      handlePosterTapReveal(e, card2, 'default');
+      handlePosterTapReveal(e, card2, false);
 
       // card1 should be dismissed
       expect(card1.classList.contains('poster-revealed')).toBe(false);
@@ -169,7 +169,7 @@ describe('handlePosterTapReveal', () => {
       const card = makeCardWithPoster(false);
       const e = makeMouseEvent(card);
 
-      expect(handlePosterTapReveal(e, card, 'default')).toBe(true);
+      expect(handlePosterTapReveal(e, card, false)).toBe(true);
     });
   });
 
@@ -182,7 +182,7 @@ describe('handlePosterTapReveal', () => {
         toString: () => '',
       } as Selection);
 
-      handlePosterTapReveal(e, card, 'default');
+      handlePosterTapReveal(e, card, false);
 
       expect(card.classList.contains('poster-revealed')).toBe(false);
       expect(card.classList.contains('interact')).toBe(false);
@@ -196,7 +196,7 @@ describe('handlePosterTapReveal', () => {
         toString: () => '',
       } as Selection);
 
-      handlePosterTapReveal(e, card, 'default');
+      handlePosterTapReveal(e, card, false);
 
       expect(e.stopPropagation).toHaveBeenCalled();
       expect(e.preventDefault).not.toHaveBeenCalled();
@@ -210,7 +210,7 @@ describe('handlePosterTapReveal', () => {
         toString: () => '',
       } as Selection);
 
-      expect(handlePosterTapReveal(e, card, 'default')).toBe(true);
+      expect(handlePosterTapReveal(e, card, false)).toBe(true);
     });
   });
 
@@ -219,7 +219,7 @@ describe('handlePosterTapReveal', () => {
       const card = makeCardNoPoster();
       const e = makeMouseEvent(card);
 
-      expect(handlePosterTapReveal(e, card, 'default')).toBe(false);
+      expect(handlePosterTapReveal(e, card, false)).toBe(false);
     });
 
     it('returns false when clicking interactive element (a)', () => {
@@ -229,7 +229,7 @@ describe('handlePosterTapReveal', () => {
       card.appendChild(link);
       const e = makeMouseEvent(link);
 
-      expect(handlePosterTapReveal(e, card, 'default')).toBe(false);
+      expect(handlePosterTapReveal(e, card, false)).toBe(false);
     });
 
     it('returns false when clicking interactive element (button)', () => {
@@ -239,7 +239,7 @@ describe('handlePosterTapReveal', () => {
       card.appendChild(button);
       const e = makeMouseEvent(button);
 
-      expect(handlePosterTapReveal(e, card, 'default')).toBe(false);
+      expect(handlePosterTapReveal(e, card, false)).toBe(false);
     });
 
     it('returns false when clicking .tag element', () => {
@@ -250,7 +250,7 @@ describe('handlePosterTapReveal', () => {
       card.appendChild(tag);
       const e = makeMouseEvent(tag);
 
-      expect(handlePosterTapReveal(e, card, 'default')).toBe(false);
+      expect(handlePosterTapReveal(e, card, false)).toBe(false);
     });
 
     it('returns false when clicking .clickable-icon element', () => {
@@ -261,7 +261,7 @@ describe('handlePosterTapReveal', () => {
       card.appendChild(icon);
       const e = makeMouseEvent(icon);
 
-      expect(handlePosterTapReveal(e, card, 'default')).toBe(false);
+      expect(handlePosterTapReveal(e, card, false)).toBe(false);
     });
 
     it('returns false when text is selected', () => {
@@ -272,10 +272,10 @@ describe('handlePosterTapReveal', () => {
         toString: () => 'selected text',
       } as Selection);
 
-      expect(handlePosterTapReveal(e, card, 'default')).toBe(false);
+      expect(handlePosterTapReveal(e, card, false)).toBe(false);
     });
 
-    it('returns false on text-target with openFileAction title', () => {
+    it('returns false on text-target with open-on-title', () => {
       const card = makeCardWithPoster(true);
       card.classList.add('interact');
       const subtitle = document.createElement('div');
@@ -286,7 +286,7 @@ describe('handlePosterTapReveal', () => {
         toString: () => '',
       } as Selection);
 
-      expect(handlePosterTapReveal(e, card, 'title')).toBe(false);
+      expect(handlePosterTapReveal(e, card, true)).toBe(false);
     });
   });
 });

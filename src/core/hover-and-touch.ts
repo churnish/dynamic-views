@@ -9,7 +9,18 @@
  *   Optional shouldActivate() narrows activation to part of the element.
  */
 
+import { SCRUB_DIRECTION_THRESHOLD, SWIPE_PRESS_DEFER_MS } from './constants';
 import { getOwnerWindow } from '../utils/owner-window';
+
+/**
+ * Surfaces where touch navigates images instead of pressing the card.
+ *
+ * Slide-mode covers carry `card-cover-slideshow` rather than `multi-image`, so
+ * both spellings belong here — listing only the latter let a Slide swipe hold
+ * the press highlight for the whole gesture.
+ */
+const SWIPE_SURFACE_SELECTOR =
+  '.card-thumbnail.multi-image, .card-cover.multi-image, .card-cover-slideshow';
 
 /** Whether any connected pointer supports hover (includes pen). Popout-safe when element provided. */
 export function canHover(el?: Element | null): boolean {
@@ -103,25 +114,69 @@ export function setupTouchPress(
 ): void {
   let activatedAt = 0;
   let timer: number | null = null;
+  // Pending press on a swipe surface, held until the gesture reveals itself
+  let deferTimer: number | null = null;
+  let startX = 0;
+  let startY = 0;
+
+  const cancelPendingPress = () => {
+    if (deferTimer === null) return;
+    window.clearTimeout(deferTimer);
+    deferTimer = null;
+  };
 
   el.addEventListener(
     'pointerdown',
     (e) => {
       if (!isTouchPointer(e)) return;
-      // Multi-image thumbnails use touch for scrub gestures, not card interaction
-      if ((e.target as HTMLElement)?.closest?.('.card-thumbnail.multi-image'))
-        return;
       // Suppress interact from image viewer dismiss tap (cooldown set by closeImageViewer)
       if (el.dataset.viewerDismissing) return;
       // Caller may restrict which part of the element responds to a press
       if (shouldActivate && !shouldActivate(e)) return;
-      activatedAt = Date.now();
-      onActivate();
+
+      const activate = () => {
+        activatedAt = Date.now();
+        onActivate();
+      };
+
+      // On a surface that also swipes, a press and a swipe are identical at
+      // pointerdown. Activating now would flash the highlight on every swipe;
+      // never activating would deny a genuine long press its feedback. Waiting
+      // lets the swipe declare itself by moving, and the pointermove below
+      // cancels the pending press when it does.
+      if (!(e.target as HTMLElement)?.closest?.(SWIPE_SURFACE_SELECTOR)) {
+        activate();
+        return;
+      }
+      startX = e.clientX;
+      startY = e.clientY;
+      cancelPendingPress();
+      deferTimer = window.setTimeout(() => {
+        deferTimer = null;
+        activate();
+      }, SWIPE_PRESS_DEFER_MS);
+    },
+    { signal, passive: true }
+  );
+
+  el.addEventListener(
+    'pointermove',
+    (e) => {
+      if (deferTimer === null || !isTouchPointer(e)) return;
+      // Either axis counts: a horizontal drag is a swipe, a vertical one is a
+      // scroll, and neither should read as a press.
+      if (
+        Math.abs(e.clientX - startX) > SCRUB_DIRECTION_THRESHOLD ||
+        Math.abs(e.clientY - startY) > SCRUB_DIRECTION_THRESHOLD
+      )
+        cancelPendingPress();
     },
     { signal, passive: true }
   );
 
   const deactivate = () => {
+    // A lift or cancel before the defer elapsed means the press never happened
+    cancelPendingPress();
     if (!activatedAt) return;
     const remaining = Math.max(0, 100 - (Date.now() - activatedAt));
     if (remaining > 0) {
@@ -139,5 +194,6 @@ export function setupTouchPress(
   el.addEventListener('pointercancel', deactivate, { signal, passive: true });
   signal.addEventListener('abort', () => {
     if (timer) window.clearTimeout(timer);
+    cancelPendingPress();
   });
 }

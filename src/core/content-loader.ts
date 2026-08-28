@@ -3,7 +3,7 @@ import { VALID_IMAGE_EXTENSIONS } from '../constants';
 import { processImagePaths, resolveInternalImagePaths } from './image';
 import { extractImageEmbeds } from './image-extraction';
 import { loadNotePreview } from './text-preview';
-import { getSlideshowMaxImages } from '../utils/style-settings';
+import { MAX_MULTI_IMAGES } from './constants';
 
 // Track in-flight loads - Map to Promises so concurrent requests can await
 const inFlightTextPreviews = new Map<string, Promise<string>>();
@@ -106,9 +106,6 @@ export async function loadImageForEntry(
     return;
   }
 
-  // Hoist before cache key — maxImages affects output (embed limit + final slice)
-  const maxImages = getSlideshowMaxImages();
-
   // If another view is loading this path with same settings, await its result
   // Composite key includes all parameters that affect output:
   // - imagePropertyValues: the property images themselves are the primary
@@ -118,7 +115,6 @@ export async function loadImageForEntry(
   //   images on screen until the app restarts.
   // - showFileImages: determines whether embeds are extracted
   // - embedOptions: determines which embed types (YouTube, CardLink) are included
-  // - maxImages: determines embed count limit and final image slice
   // - youtubeTargetWidth: selects the YouTube rung, so it changes the resolved
   //   URL — without it two views at different card sizes share one wrong result
   const embedKey = embedOptions
@@ -128,7 +124,7 @@ export async function loadImageForEntry(
   // two distinct value lists can collapse onto one key the way they would
   // with a space separator.
   const propertyKey = imagePropertyValues.map((v) => String(v)).join('\x00');
-  const cacheKey = `${path}|${propertyKey}|${showFileImages}|${embedKey}|${maxImages}`;
+  const cacheKey = `${path}|${propertyKey}|${showFileImages}|${embedKey}`;
   const existing = inFlightImages.get(cacheKey);
   if (existing) {
     const result = await existing;
@@ -170,7 +166,7 @@ export async function loadImageForEntry(
       if (showFileImages === 'always') {
         // Pull from properties first, then append in-note embeds
         // Skip parsing if property already has max images
-        if (validImages.length < maxImages) {
+        if (validImages.length < MAX_MULTI_IMAGES) {
           const embedImages = await extractImageEmbeds(file, app, embedOptions);
           validImages = [...validImages, ...embedImages];
         }
@@ -186,7 +182,7 @@ export async function loadImageForEntry(
 
       if (validImages.length > 0) {
         // Limit images to slideshow max to avoid loading excess images
-        const limitedImages = validImages.slice(0, maxImages);
+        const limitedImages = validImages.slice(0, MAX_MULTI_IMAGES);
         // Return as array if multiple, string if single
         return {
           images: limitedImages.length > 1 ? limitedImages : limitedImages[0],

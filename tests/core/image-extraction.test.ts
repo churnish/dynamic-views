@@ -1,13 +1,7 @@
 import { vi } from 'vitest';
 import { extractImageEmbeds } from '../../src/core/image-extraction';
-import { getSlideshowMaxImages } from '../../src/utils/style-settings';
 import { clearYouTubeThumbnailCache } from '../../src/core/youtube-preview';
 import { App, TFile } from 'obsidian';
-
-// Mock style settings
-vi.mock('../../src/utils/style-settings', () => ({
-  getSlideshowMaxImages: vi.fn(() => 10),
-}));
 
 /** The subset of the mock `Image` from `tests/setup.ts` these tests drive. */
 interface MockImage {
@@ -593,7 +587,6 @@ image: https://example.com/cover.png
         vi.useFakeTimers();
         (global as any).__imageInstances = [];
         (global as any).__lastImage = null;
-        vi.mocked(getSlideshowMaxImages).mockReturnValue(10);
       });
 
       afterEach(() => {
@@ -637,8 +630,20 @@ image: https://example.com/cover.png
 
       it('should resolve past the pre-start cap lazily', async () => {
         // A YouTube embed that resolves to nothing fills no result slot, so the
-        // loop can run further than the cap's worth of pre-started probes
-        vi.mocked(getSlideshowMaxImages).mockReturnValue(1);
+        // loop can run further than the cap's worth of pre-started probes.
+        // The cap is a compile-time constant, so it is mocked with the
+        // non-hoisted form — a file-wide `vi.mock` would drop the sibling tests
+        // below the two concurrent probes they need.
+        vi.resetModules();
+        vi.doMock('../../src/core/constants', async (importOriginal) => ({
+          ...(await importOriginal<
+            typeof import('../../src/core/constants')
+          >()),
+          MAX_MULTI_IMAGES: 1,
+        }));
+        const { extractImageEmbeds } =
+          await import('../../src/core/image-extraction');
+
         mockApp.vault.cachedRead = vi
           .fn()
           .mockResolvedValue(
@@ -657,6 +662,8 @@ image: https://example.com/cover.png
         await succeedProbe(VIDEO_B);
 
         expect(await promise).toEqual([thumbnail(VIDEO_B)]);
+
+        vi.doUnmock('../../src/core/constants');
       });
 
       it('should start no probes when YouTube is disabled', async () => {

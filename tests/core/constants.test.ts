@@ -1,6 +1,7 @@
 import { computeHoverScale, MAX_HOVER_SCALE } from '../../src/core/constants';
 
 describe('constants', () => {
+  // Expectations below hard-code the arithmetic for HOVER_GROWTH_PX === 4. Deriving them from the constant instead would make the tests tautological, so if that value changes these need updating by hand.
   describe('computeHoverScale', () => {
     it('returns empty string for height = 0', () => {
       expect(computeHoverScale(0)).toBe('');

@@ -40,4 +40,10 @@ jobs:
 
       - run: npm install
 
+      - run: npm run lint
+
+      # esbuild strips types without checking them, so nothing else in the
+      # pipeline would notice a type error.
+      - run: npx tsc --noEmit
+
       - run: npm test

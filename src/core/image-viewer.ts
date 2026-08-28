@@ -26,7 +26,6 @@ import {
   getVideoIdFromThumbnailUrl,
   getYouTubeThumbnailUrl,
 } from './youtube-preview';
-import { getOwnerWindow } from '../utils/owner-window';
 
 /** Wheel event listener options (stored for proper cleanup) */
 const WHEEL_OPTIONS: AddEventListenerOptions = { passive: false };
@@ -254,54 +253,63 @@ function closeImageViewer(
         if (contains(cardEl.getBoundingClientRect())) {
           // Cursor is over the card — restore without re-triggering transitions
           cardEl.classList.add('interact-restore');
-          cardEl.classList.add('interact');
+          // interact-hover rides along with interact everywhere the hover
+          // lifecycle moves it, so the zoom that keys on it survives a viewer
+          // round trip the same way the rest of the hover styling does.
+          cardEl.classList.add('interact', 'interact-hover');
           cardEl
             .closest('.masonry-container, .bases-cards-group')
             ?.classList.add('has-hover-card');
           void cardEl.offsetHeight;
           cardEl.classList.remove('interact-restore');
+          // Removing the overlay makes Chromium fire a genuine mouseenter on the
+          // card under the stationary cursor, which the hover zoom would read as
+          // a fresh hover and animate in again. Covers only — nothing else arms
+          // that zoom. Consumed by the enter handler in core/slideshow.ts rather
+          // than timed out, because the enter waits on the user's next physical
+          // mouse move and may arrive long after any timeout would have lapsed.
+          if (original.closest('.card-cover')) cardEl.dataset.zoomResume = '1';
         } else {
           // Cursor outside card — remove hover state that was preserved
-          // during viewer open (pointerleave was suppressed by viewer-active)
-          cardEl.classList.remove('interact');
+          // during viewer open (pointerleave was suppressed by viewer-active).
+          // interact-hover must go with interact: the pointer has left, and a
+          // stranded one would hold the image zoom open for good — pointerleave
+          // already fired under the overlay and will not fire again.
+          cardEl.classList.remove('interact', 'interact-hover');
           cardEl.classList.remove('poster-hover-active');
           deferContainerHoverDrop(cardEl);
         }
       }
 
-      // Resume thumbnail scrubbing at last cursor position, or reset if cursor
-      // is outside the thumbnail (e.g. dismissed via keyboard or moved away)
-      const thumbnailEl = original.closest<HTMLElement>(
-        '.card-thumbnail.multi-image'
+      // Resume scrubbing at last cursor position, or reset if cursor is outside
+      // the cover/thumbnail (e.g. dismissed via keyboard or moved away)
+      const scrubEl = original.closest<HTMLElement>(
+        '.card-thumbnail.multi-image, .card-cover.multi-image'
       );
-      if (thumbnailEl && cursor) {
-        if (contains(thumbnailEl.getBoundingClientRect())) {
+      if (scrubEl && cursor) {
+        // Both dispatches below must stay PointerEvents: the scrub handlers in
+        // shared-renderer.ts bind `pointermove`/`pointerleave`, so a mouse
+        // equivalent lands on no listener and does nothing — silently, which is
+        // exactly how this regressed unnoticed once the handlers were rebound.
+        // `pointerType: 'mouse'` is load-bearing too: both handlers gate on
+        // `isHoverPointer(e)`, which rejects touch and pressured pen.
+        if (contains(scrubEl.getBoundingClientRect())) {
           // Recalculate scrub position for current cursor coordinates
-          thumbnailEl.dispatchEvent(
-            new MouseEvent('mousemove', {
+          scrubEl.dispatchEvent(
+            new PointerEvent('pointermove', {
               clientX: cursor.x,
               clientY: cursor.y,
+              pointerType: 'mouse',
               bubbles: false,
             })
           );
-          // Preact re-renders overwrite img.src via microtask reconciliation.
-          // Re-apply the scrubbed src (updated by the handler above) after
-          // Preact finishes.
-          if (thumbnailEl.dataset.scrubbedSrc) {
-            getOwnerWindow(thumbnailEl).requestAnimationFrame(() => {
-              const img =
-                thumbnailEl.querySelector<HTMLImageElement>(
-                  '.slideshow-img-current'
-                ) ?? thumbnailEl.querySelector<HTMLImageElement>('img');
-              if (img?.isConnected && thumbnailEl.dataset.scrubbedSrc) {
-                img.src = thumbnailEl.dataset.scrubbedSrc;
-              }
-            });
-          }
         } else {
-          // Cursor outside thumbnail — trigger reset to first image
-          thumbnailEl.dispatchEvent(
-            new MouseEvent('mouseleave', { bubbles: false })
+          // Cursor outside the cover/thumbnail — trigger reset to first image
+          scrubEl.dispatchEvent(
+            new PointerEvent('pointerleave', {
+              pointerType: 'mouse',
+              bubbles: false,
+            })
           );
         }
       }
@@ -333,7 +341,7 @@ function closeImageViewer(
  * @param app - Obsidian app instance
  * @param viewerCleanupFns - Map storing cleanup functions
  * @param viewerClones - Map storing original → clone element mappings
- * @param openFileAction - How card clicks should open files ("card" or "title")
+ * @param openOnTitle - Whether the title, rather than the card, opens the file
  */
 export function handleImageViewerTrigger(
   e: MouseEvent,
@@ -341,7 +349,7 @@ export function handleImageViewerTrigger(
   app: App,
   viewerCleanupFns: Map<HTMLElement, () => void>,
   viewerClones: Map<HTMLElement, HTMLElement>,
-  openFileAction: 'card' | 'title'
+  openOnTitle: boolean
 ): void {
   // Always stop propagation to prevent third-party plugins (e.g. Image Toolkit)
   e.stopPropagation();
@@ -356,12 +364,12 @@ export function handleImageViewerTrigger(
     'dynamic-views-image-viewer-disabled'
   );
   if (isViewerDisabled) {
-    // When viewer disabled, only open file if openFileAction is "card"
-    if (openFileAction === 'card') {
+    // When viewer disabled, only open-on-card opens the file — with open-on-title
+    // an image click has no action
+    if (!openOnTitle) {
       const newLeaf = e.metaKey || e.ctrlKey;
       void app.workspace.openLinkText(cardPath, '', newLeaf);
     }
-    // If openFileAction is "title", do nothing (image click has no action)
     return;
   }
   const embedEl = e.currentTarget as HTMLElement;
@@ -1462,8 +1470,9 @@ function openImageViewer(
     // (shared-renderer.ts) has already unwound its scope first
     app.keymap.pushScope(viewerScope);
 
-    // Track cursor position over overlay so closeImageViewer has fresh coordinates
-    // for the synthetic mousemove that resumes thumbnail scrubbing
+    // Track cursor position over overlay so closeImageViewer has fresh
+    // coordinates for the synthetic pointermove that resumes scrubbing on a
+    // multi-image cover or thumbnail
     cloneEl.addEventListener('mousemove', (e: MouseEvent) => {
       viewerCursorPositions.set(embedEl, { x: e.clientX, y: e.clientY });
     });

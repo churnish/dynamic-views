@@ -5,68 +5,6 @@
 import { App, Menu, Notice, Platform, TFile, setIcon } from 'obsidian';
 import { getOwnerWindow } from '../utils/owner-window';
 
-/**
- * Show context menu for external links (URLs)
- * Matches vanilla Obsidian external link menu
- */
-export function showExternalLinkContextMenu(
-  e: MouseEvent,
-  url: string,
-  displayText?: string
-): void {
-  e.stopPropagation();
-  e.preventDefault();
-
-  const win = getOwnerWindow(e.target as HTMLElement);
-  const menu = new Menu();
-
-  menu.addItem((item) =>
-    item
-      .setTitle('Open link in default browser')
-      .setIcon('lucide-globe-2')
-      .onClick(() => {
-        win.open(url, '_blank', 'noopener,noreferrer');
-      })
-  );
-
-  menu.addSeparator();
-
-  // "Copy" copies display text when present, raw URL for bare links
-  menu.addItem((item) =>
-    item
-      .setTitle('Copy')
-      .setIcon('lucide-copy')
-      .onClick(async () => {
-        try {
-          await win.navigator.clipboard.writeText(
-            displayText ? `[${displayText}](${url})` : url
-          );
-        } catch {
-          new Notice('Failed to copy to clipboard');
-        }
-      })
-  );
-
-  menu.addSeparator();
-
-  menu.addItem((item) =>
-    item
-      .setTitle('Copy URL')
-      .setIcon('lucide-link')
-      .onClick(async () => {
-        try {
-          await win.navigator.clipboard.writeText(url);
-          // Notice on success — "Copy" is silent to match native behavior
-          new Notice('URL copied to your clipboard');
-        } catch {
-          new Notice('Failed to copy to clipboard');
-        }
-      })
-  );
-
-  menu.showAtMouseEvent(e);
-}
-
 // Obsidian icon names for desktop context menu items
 const ICON_NAMES = {
   filePlus: 'file-plus',
@@ -76,39 +14,20 @@ const ICON_NAMES = {
   trash: 'trash-2',
 } as const;
 
-// Desktop menu structure (defined at module scope to avoid recreation)
-const DESKTOP_MENU_STRUCTURE: Array<{
-  items: string[];
-  separator?: boolean;
-}> = [
-  {
-    items: ['Open in new tab', 'Open to the right', 'Open in new window'],
-    separator: true,
-  },
-  {
-    items: ['Rename...', 'Move file to...', 'Bookmark...'],
-    separator: true,
-  },
-  {
-    items: ['Copy Obsidian URL', 'Copy path', 'Copy relative path'],
-    separator: true,
-  },
-  // Note: Fourth group items are dynamic (reveal title varies by platform)
-  // and will be constructed at runtime
-];
-
-// Mobile menu structure (defined at module scope to avoid recreation)
-const MOBILE_MENU_STRUCTURE: Array<{
-  items: string[];
-  separator?: boolean;
-}> = [
-  { items: ['Open link', 'Open in new tab'], separator: true },
-  {
-    items: ['Rename...', 'Move file to...', 'Bookmark...'],
-    separator: true,
-  },
-  { items: ['Copy Obsidian URL'], separator: true },
-  { items: ['Share'], separator: true },
+// Native's own order for a file menu — `addSections` in the file explorer.
+// '' is the bucket for items that declare no section; sections absent from this
+// list render after everything, which is where native puts them.
+const MENU_SECTION_ORDER: readonly string[] = [
+  'title',
+  'open',
+  'action-primary',
+  'action',
+  'info',
+  'info.copy',
+  'view',
+  'system',
+  '',
+  'danger',
 ];
 
 /**
@@ -134,7 +53,8 @@ export function showFileContextMenu(
   e: MouseEvent,
   app: App,
   file: TFile,
-  path: string
+  path: string,
+  url?: string
 ): void {
   e.stopPropagation();
   e.preventDefault();
@@ -144,11 +64,17 @@ export function showFileContextMenu(
 
   // Build menu based on platform
   if (isMobile) {
-    // Mobile: Match vanilla Obsidian mobile menu
+    // Mobile: Match vanilla Obsidian mobile menu, except that "Open link" is
+    // offered on every platform rather than phone only as native does. Cards
+    // here are frequently image-only, or an image covers most of the card, and
+    // with the image viewer enabled a press on the image opens the viewer
+    // instead of the note. This entry is then the only dependable way to open
+    // the note, so it must be present everywhere — not a platform nicety.
     menu.addItem((item) =>
       item
         .setTitle('Open link')
         .setIcon('lucide-file')
+        .setSection('open')
         .onClick(() => {
           void app.workspace.openLinkText(path, '', false);
         })
@@ -158,10 +84,26 @@ export function showFileContextMenu(
       item
         .setTitle('Open in new tab')
         .setIcon('lucide-file-plus')
+        .setSection('open')
         .onClick(() => {
           void app.workspace.openLinkText(path, '', 'tab');
         })
     );
+
+    // Tablet only, matching native: where phone offers "Open link", tablet
+    // offers the pane action. The desktop fallback that builds this sits behind
+    // `if (!isMobile)`, and file-menu supplies no pane actions on mobile, so
+    // without this the item simply never exists and the group renders alone.
+    if (!Platform.isPhone)
+      menu.addItem((item) =>
+        item
+          .setTitle('Open to the right')
+          .setIcon(`lucide-${ICON_NAMES.splitVertical}`)
+          .setSection('open')
+          .onClick(() => {
+            void app.workspace.openLinkText(path, '', 'split');
+          })
+      );
 
     menu.addSeparator();
 
@@ -169,6 +111,7 @@ export function showFileContextMenu(
       item
         .setTitle('Rename...')
         .setIcon('lucide-edit-3')
+        .setSection('action')
         .onClick(async () => {
           try {
             await app.fileManager.promptForFileRename(file);
@@ -186,6 +129,7 @@ export function showFileContextMenu(
       item
         .setTitle('Share')
         .setIcon('lucide-arrow-up-right')
+        .setSection('action')
         .onClick(() => {
           app.openWithDefaultApp(path);
         })
@@ -203,6 +147,7 @@ export function showFileContextMenu(
         .setTitle('Delete file')
         .setIcon('lucide-trash-2')
         .setWarning(true)
+        .setSection('danger')
         .onClick(async () => {
           try {
             await app.fileManager.trashFile(file);
@@ -214,6 +159,22 @@ export function showFileContextMenu(
   } else {
     // Desktop: Let Obsidian build menu in correct order, then modify in RAF
     app.workspace.trigger('file-menu', menu, file, 'file-explorer');
+  }
+
+  // A URL target gets native's own link actions merged into this menu rather than
+  // a menu of its own — matches Bases, and inherits any url-menu contributions
+  // (the iPhone-only "Open link" item among them) without restating them here.
+  if (url) {
+    // Tag whatever native appends so the rebuild can float the link actions to
+    // the front of their section, which is where native shows them when the
+    // click target was a link. Diffing menu.items is the only way to tell them
+    // apart afterwards — they carry no marker of their own.
+    const menuItems = (menu as unknown as { items?: { dom?: HTMLElement }[] })
+      .items;
+    const before = menuItems?.length ?? 0;
+    app.workspace.handleExternalLinkContextMenu(menu, url);
+    for (const added of menuItems?.slice(before) ?? [])
+      if (added.dom) added.dom.dataset.dvLinkAction = '1';
   }
 
   menu.showAtMouseEvent(e);
@@ -232,9 +193,9 @@ export function showFileContextMenu(
   const titlesToRemove = isMobile
     ? new Set([
         'Merge entire file with...',
-        'Open to the right',
+        // Tablet keeps "Open to the right" — native shows it in the first group.
+        ...(Platform.isPhone ? ['Open to the right'] : []),
         'Open in new window',
-        'Copy path',
         'Copy relative path',
         'Open in default app',
         'Reveal in Finder',
@@ -252,8 +213,11 @@ export function showFileContextMenu(
     if (!menuDoc.body.contains(menuEl)) return;
 
     try {
-      // Add filename label at top for mobile (matching vanilla)
-      if (isMobile) {
+      // Filename label, phone only. Native gates this on isPhone, not isMobile —
+      // `Workspace.prototype.handleLinkContextMenu` reads
+      // `rd.isPhone && e.addItem(... .setSection("title").setIsLabel(true))`.
+      // A tablet gets no label, so isMobile showed one where native shows none.
+      if (Platform.isPhone) {
         const menuScroll = menuEl.querySelector('.menu-scroll');
         if (menuScroll && menuScroll.firstChild) {
           // Create label group at the top of the menu
@@ -271,12 +235,6 @@ export function showFileContextMenu(
             cls: 'menu-item-title',
             text: getFilename(path),
           });
-
-          // Add separator after label. Detached creation — inserted as a
-          // sibling via after(), not appended, so createDiv() cannot be used.
-          const separator = menuDoc.createElement('div');
-          separator.className = 'menu-separator';
-          labelGroup.after(separator);
         }
       }
 
@@ -305,6 +263,7 @@ export function showFileContextMenu(
         const createMenuItem = (
           title: string,
           icon: string,
+          section: string,
           onClick: () => void,
           isWarning = false
         ): HTMLElement => {
@@ -314,6 +273,15 @@ export function showFileContextMenu(
           item.className = isWarning
             ? 'menu-item tappable is-warning'
             : 'menu-item tappable';
+          // Items built here bypass Menu.addItem(), so the section native would
+          // have stamped on them has to be set by hand for the rebuild to bucket
+          // them alongside their native counterparts.
+          item.dataset.section = section;
+          // Marks a stand-in for a core action. Core populates a menu before any
+          // plugin does, so within a section native's own entries come first —
+          // but these are built after the file-menu trigger and would otherwise
+          // append behind plugin items. The rebuild hoists them back.
+          item.dataset.dvCoreStandIn = '1';
           const iconDiv = item.createDiv({ cls: 'menu-item-icon' });
           setIcon(iconDiv, icon);
           item.createDiv({ cls: 'menu-item-title', text: title });
@@ -337,12 +305,30 @@ export function showFileContextMenu(
         };
 
         // Create custom items that file-menu doesn't provide
+        // Present on desktop too, unlike native. An image-only or image-dominant
+        // card hands its presses to the image viewer, so this is the only
+        // dependable way to open the note from such a card. Created before
+        // "Open in new tab" so it leads the opening actions.
+        if (!itemsByTitle.has('Open link')) {
+          itemsByTitle.set(
+            'Open link',
+            createMenuItem('Open link', 'file', 'open', () => {
+              void app.workspace.openLinkText(path, '', false);
+            })
+          );
+        }
+
         if (!itemsByTitle.has('Open in new tab')) {
           itemsByTitle.set(
             'Open in new tab',
-            createMenuItem('Open in new tab', ICON_NAMES.filePlus, () => {
-              void app.workspace.openLinkText(path, '', 'tab');
-            })
+            createMenuItem(
+              'Open in new tab',
+              ICON_NAMES.filePlus,
+              'open',
+              () => {
+                void app.workspace.openLinkText(path, '', 'tab');
+              }
+            )
           );
         }
 
@@ -352,6 +338,7 @@ export function showFileContextMenu(
             createMenuItem(
               'Open to the right',
               ICON_NAMES.splitVertical,
+              'open',
               () => {
                 void app.workspace.openLinkText(path, '', 'split');
               }
@@ -362,7 +349,7 @@ export function showFileContextMenu(
         if (!itemsByTitle.has('Rename...')) {
           itemsByTitle.set(
             'Rename...',
-            createMenuItem('Rename...', ICON_NAMES.edit, () => {
+            createMenuItem('Rename...', ICON_NAMES.edit, 'action', () => {
               app.fileManager.promptForFileRename(file).catch(() => {
                 new Notice('Failed to rename file');
               });
@@ -370,10 +357,12 @@ export function showFileContextMenu(
           );
         }
 
-        // Create custom "Open in default app" (native can freeze)
+        // Create custom "Open in default app" (native can freeze). Native puts
+        // its own in `system`, so the replacement claims that section too.
         const openInDefaultApp = createMenuItem(
           'Open in default app',
           ICON_NAMES.arrowUpRight,
+          'system',
           () => {
             app.openWithDefaultApp(path);
           }
@@ -386,6 +375,7 @@ export function showFileContextMenu(
             createMenuItem(
               'Delete file',
               ICON_NAMES.trash,
+              'danger',
               () => {
                 app.fileManager.trashFile(file).catch(() => {
                   new Notice('Failed to delete file');
@@ -400,159 +390,100 @@ export function showFileContextMenu(
       // Check menu still exists after creating custom items
       if (!menuDoc.body.contains(menuEl)) return;
 
-      // Use pre-defined menu structure, adding dynamic fourth group for desktop
-      let menuStructure: Array<{
-        items: string[];
-        separator?: boolean;
-      }>;
-
-      if (isMobile) {
-        menuStructure = MOBILE_MENU_STRUCTURE;
-      } else {
-        // Detect platform-specific reveal title for desktop fourth group
-        const revealTitles = [
-          'Reveal in Finder',
-          'Show in Explorer',
-          'Show in system explorer',
-          'Reveal in file explorer',
-        ];
-        let revealTitle = 'Reveal in Finder';
-        for (const title of revealTitles) {
-          if (itemsByTitle.has(title)) {
-            revealTitle = title;
-            break;
-          }
-        }
-
-        // Build desktop structure with dynamic fourth group
-        menuStructure = [
-          ...DESKTOP_MENU_STRUCTURE,
-          {
-            items: [
-              'Open in default app',
-              revealTitle,
-              'Reveal file in navigation',
-            ],
-            separator: true,
-          },
-        ];
-      }
-
-      // Collect plugin items (items not in our structure and not in titlesToRemove)
-      const knownItems = new Set(menuStructure.flatMap((g) => g.items));
-      knownItems.add('Delete file');
-      titlesToRemove.forEach((t) => knownItems.add(t));
-      const pluginItems: HTMLElement[] = [];
+      // Bucket every surviving item by the section native stamped on it. Reading
+      // data-section instead of matching titles is what lets a third-party item
+      // land where native would have put it, with no per-plugin knowledge here.
+      // A submenu head that Menu.sort() synthesises for a dotted section — core
+      // folds every `info.copy` item into a "Copy path" submenu — is built with
+      // setTitle/setIcon only, so it carries no section and would fall in with
+      // the sectionless leftovers. Its real slot lives only inside native's sort
+      // loop and cannot be read back, but every such head belongs to a dotted
+      // section under `info`, so route it there — measured in native's own file
+      // explorer menu, where the sectionless "Copy path" head renders in the
+      // SAME group as the `info` items, and alone only when there are none.
+      const sectionBuckets = new Map<string, HTMLElement[]>();
       itemsByTitle.forEach((item, title) => {
-        if (!knownItems.has(title)) {
-          pluginItems.push(item);
-        }
+        if (titlesToRemove.has(title)) return;
+        const section =
+          item.dataset.section ??
+          (item.classList.contains('has-submenu') ? 'info' : '');
+        const bucket = sectionBuckets.get(section);
+        if (bucket) bucket.push(item);
+        else sectionBuckets.set(section, [item]);
       });
 
-      // Clear menu content (preserve label group for mobile)
+      // Order inside each section: the link actions native adds for a link
+      // target, then our stand-ins for core actions, then plugin items. Native
+      // gets this for free — link handling and core both run before plugins —
+      // but both of ours are built after the file-menu trigger and would
+      // otherwise trail. Stable within each rank, so native's own relative
+      // order survives.
+      const sectionRank = (item: HTMLElement): number =>
+        item.dataset.dvLinkAction ? 0 : item.dataset.dvCoreStandIn ? 1 : 2;
+      sectionBuckets.forEach((items, section) => {
+        const ranks = items.map(sectionRank);
+        if (ranks.every((r) => r === ranks[0])) return;
+        sectionBuckets.set(
+          section,
+          items
+            .map((item, i) => ({ item, rank: ranks[i], i }))
+            .sort((a, b) => a.rank - b.rank || a.i - b.i)
+            .map((x) => x.item)
+        );
+      });
+
+      // Declared sections first, then any section native does not declare, in
+      // first-appearance order — native renders those after everything else.
+      const orderedSections = [
+        ...MENU_SECTION_ORDER.filter((section) => sectionBuckets.has(section)),
+        ...[...sectionBuckets.keys()].filter(
+          (section) => !MENU_SECTION_ORDER.includes(section)
+        ),
+      ];
+
+      // Clear menu content (preserve the phone-only label group)
       // Note: We store references before clearing innerHTML, then re-append
       // the detached nodes. This is intentional - detached DOM nodes remain
       // valid and can be re-appended to preserve the label without cloning.
-      if (isMobile) {
-        // Use .closest() instead of :has() for broader browser compatibility
-        const labelGroup = menuScroll
-          .querySelector('.is-label')
-          ?.closest('.menu-group');
-        const labelSep = labelGroup?.nextElementSibling;
-        menuScroll.innerHTML = '';
-        if (labelGroup) {
-          menuScroll.appendChild(labelGroup);
-          if (labelSep?.classList.contains('menu-separator')) {
-            menuScroll.appendChild(labelSep);
-          }
+      // Use .closest() instead of :has() for broader browser compatibility
+      const labelGroup = Platform.isPhone
+        ? menuScroll.querySelector('.is-label')?.closest('.menu-group')
+        : null;
+      menuScroll.innerHTML = '';
+
+      // Every separator in the menu comes from this one flag: it is set once a
+      // group has been appended, so a separator is only ever emitted between two
+      // non-empty groups. Empty buckets never exist (a bucket is created by its
+      // first item), so there is no leading, trailing or orphaned separator to
+      // clean up afterwards.
+      let needsSeparator = false;
+
+      if (labelGroup) {
+        menuScroll.appendChild(labelGroup);
+        needsSeparator = true;
+      }
+
+      // Native starts a new group only when the TOP-LEVEL section changes —
+      // `Menu.prototype.sort` compares `section.split('.')[0]` — so `info` and
+      // `info.copy` share one group instead of being split by a separator.
+      let currentGroupEl: HTMLDivElement | null = null;
+      let currentTopLevelSection: string | null = null;
+
+      for (const section of orderedSections) {
+        const items = sectionBuckets.get(section);
+        if (!items) continue;
+        const topLevelSection = section.split('.')[0];
+        if (!currentGroupEl || topLevelSection !== currentTopLevelSection) {
+          if (needsSeparator) menuScroll.createDiv({ cls: 'menu-separator' });
+          currentGroupEl = menuScroll.createDiv({ cls: 'menu-group' });
+          currentTopLevelSection = topLevelSection;
+          needsSeparator = true;
         }
-      } else {
-        menuScroll.innerHTML = '';
+        for (const item of items) currentGroupEl.appendChild(item);
       }
 
-      // Rebuild menu in order
-      for (const group of menuStructure) {
-        // Detached creation — the append is conditional on hasItems. createDiv()
-        // would inject empty .menu-group elements and shift separator placement
-        // in the empty-group cleanup pass below.
-        const groupEl = menuDoc.createElement('div');
-        groupEl.className = 'menu-group';
-        let hasItems = false;
-
-        for (const title of group.items) {
-          const item = itemsByTitle.get(title);
-          if (item && !titlesToRemove.has(title)) {
-            groupEl.appendChild(item);
-            hasItems = true;
-          }
-        }
-
-        if (hasItems) {
-          menuScroll.appendChild(groupEl);
-          if (group.separator) {
-            menuScroll.createDiv({ cls: 'menu-separator' });
-          }
-        }
-      }
-
-      // Add plugin items
-      if (pluginItems.length > 0) {
-        const pluginGroup = menuScroll.createDiv({ cls: 'menu-group' });
-        pluginItems.forEach((item) => pluginGroup.appendChild(item));
-        menuScroll.createDiv({ cls: 'menu-separator' });
-      }
-
-      // Add Delete file at end
-      const deleteItem = itemsByTitle.get('Delete file');
-      if (deleteItem) {
-        const deleteGroup = menuScroll.createDiv({ cls: 'menu-group' });
-        deleteGroup.appendChild(deleteItem);
-      }
-
-      // Check menu still exists before cleanup operations
+      // Check menu still exists before measuring it
       if (!menuDoc.body.contains(menuEl)) return;
-
-      // Remove empty menu groups and orphaned separators
-      const menuGroups = menuEl.querySelectorAll('.menu-group');
-      menuGroups.forEach((group) => {
-        if (group.children.length === 0) {
-          const prev = group.previousElementSibling;
-          const next = group.nextElementSibling;
-          // Remove separator before empty group
-          if (prev?.classList.contains('menu-separator')) {
-            prev.remove();
-          }
-          // Remove separator after empty group
-          if (next?.classList.contains('menu-separator')) {
-            next.remove();
-          }
-          group.remove();
-        }
-      });
-
-      // Clean up consecutive separators (can occur after item removal)
-      let prevWasSeparator = false;
-      const separators = menuEl.querySelectorAll('.menu-separator');
-      separators.forEach((sep) => {
-        if (prevWasSeparator) {
-          sep.remove();
-        } else {
-          prevWasSeparator = true;
-        }
-        // Reset if next sibling is not a separator
-        if (
-          sep.nextElementSibling &&
-          !sep.nextElementSibling.classList.contains('menu-separator')
-        ) {
-          prevWasSeparator = false;
-        }
-      });
-
-      // Remove trailing separator at menu end
-      const lastMenuChild = menuScroll.lastElementChild;
-      if (lastMenuChild?.classList.contains('menu-separator')) {
-        lastMenuChild.remove();
-      }
 
       // Reposition menu at mouse location, adjusted for new size
       const rect = menuEl.getBoundingClientRect();

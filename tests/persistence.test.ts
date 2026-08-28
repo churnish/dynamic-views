@@ -13,7 +13,7 @@ vi.mock('../src/constants', () => ({
   PLUGIN_SETTINGS_CHANGE: 'dynamic-views-plugin-settings',
   PLUGIN_SETTINGS: {
     randomizeAction: 'shuffle',
-    openFileAction: 'card',
+    openOnTitle: false,
     openRandomInNewTab: true,
     smartTimestamp: true,
     createdTimeProperty: 'created time',
@@ -162,7 +162,9 @@ describe('PersistenceManager', () => {
       await manager.load();
 
       expect(manager.getPluginSettings().preventSidebarSwipe).toBe(true);
-      expect(mockPlugin.saveData).not.toHaveBeenCalled();
+      // The migration leaves booleans alone, but `true` is the default, so the
+      // generic cleaner strips the key and that save is the one seen here
+      expect(mockPlugin.saveData).toHaveBeenCalled();
     });
 
     it('should not migrate when already boolean false', async () => {
@@ -173,6 +175,67 @@ describe('PersistenceManager', () => {
 
       expect(manager.getPluginSettings().preventSidebarSwipe).toBe(false);
       expect(mockPlugin.saveData).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('cleanupPluginSettings (via load)', () => {
+    /** Stored plugin settings after load, or `undefined` once none remain */
+    const savedPluginSettings = () =>
+      (
+        (mockPlugin.saveData as Mock).mock.calls[0][0] as Record<
+          string,
+          unknown
+        >
+      ).pluginSettings as Record<string, unknown> | undefined;
+
+    it.each(['card', 'title'])(
+      'should strip the removed openFileAction key stored as %s',
+      async (stored) => {
+        mockPlugin.loadData = vi.fn().mockResolvedValue({
+          pluginSettings: { openFileAction: stored },
+        });
+        await manager.load();
+
+        const settings = manager.getPluginSettings() as unknown as Record<
+          string,
+          unknown
+        >;
+        expect(settings.openFileAction).toBeUndefined();
+        expect(settings.openOnTitle).toBe(false);
+        expect(savedPluginSettings()).toBeUndefined();
+      }
+    );
+
+    it('should strip an unknown key', async () => {
+      mockPlugin.loadData = vi.fn().mockResolvedValue({
+        pluginSettings: {
+          someRemovedSetting: 'whatever',
+          randomizeAction: 'random',
+        },
+      });
+      await manager.load();
+
+      expect(savedPluginSettings()).toEqual({ randomizeAction: 'random' });
+    });
+
+    it('should strip a key whose value equals its default but keep one that differs', async () => {
+      mockPlugin.loadData = vi.fn().mockResolvedValue({
+        pluginSettings: { smartTimestamp: true, folderCommands: false },
+      });
+      await manager.load();
+
+      expect(savedPluginSettings()).toEqual({ folderCommands: false });
+    });
+
+    it('should run after the preventSidebarSwipe migration, not clobber it', async () => {
+      mockPlugin.loadData = vi.fn().mockResolvedValue({
+        pluginSettings: { preventSidebarSwipe: 'disabled' },
+      });
+      await manager.load();
+
+      // Stripping the stale string first would fall back to the default `true`
+      expect(manager.getPluginSettings().preventSidebarSwipe).toBe(false);
+      expect(savedPluginSettings()).toEqual({ preventSidebarSwipe: false });
     });
   });
 

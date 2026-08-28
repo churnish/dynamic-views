@@ -271,4 +271,4 @@ When a file's content changes and the image URL differs between old and new `Car
 
 This drives the update strategy in `updateCardsInPlace`:
 - **Image changed** → full card replacement via `renderCard` (image DOM is too intertwined with cover/slideshow/aspect-ratio to patch)
-- **Image unchanged** → surgical `updateCardContent()` (title, subtitle, properties, text preview, URL icon, structural classes)
+- **Image unchanged** → surgical `updateCardContent()` (title, subtitle, properties, text preview, URL button, structural classes)

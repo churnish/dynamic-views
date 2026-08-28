@@ -7,6 +7,8 @@ import {
   getSortMethod,
   setupBasesSwipePrevention,
   estimatePaneRange,
+  getTopmostVisibleGroupIndex,
+  scrollToGroupIndex,
 } from '../../src/bases/utils';
 import { Notice } from 'obsidian';
 
@@ -299,19 +301,22 @@ describe('handleTemplateToggle', () => {
         configurable: true,
       });
 
-      handleTemplateToggle(
-        config as any,
-        'grid',
-        plugin as any,
-        initializedRef,
-        cooldownRef
-      );
+      // finally, not a trailing statement — the patch is on a prototype shared by every
+      // later test in this file, so an early throw here would leak into all of them.
+      try {
+        handleTemplateToggle(
+          config as any,
+          'grid',
+          plugin as any,
+          initializedRef,
+          cooldownRef
+        );
 
-      // The detached container should now be in document.body
-      expect(noticeContainer.isConnected).toBe(true);
-
-      // Restore
-      delete (Notice.prototype as any).containerEl;
+        // The detached container should now be in document.body
+        expect(noticeContainer.isConnected).toBe(true);
+      } finally {
+        delete (Notice.prototype as any).containerEl;
+      }
     });
   });
 });
@@ -647,7 +652,7 @@ describe('cleanUpBaseFile — card gap keys', () => {
     id: 'abc123-Cards',
   };
 
-  it('preserves non-default numeric gap values for both platforms', async () => {
+  it('preserves a non-default desktop gap and strips the retired phone gap', async () => {
     const view = await cleanView({
       ...baseView,
       cardGapDesktop: 20,
@@ -655,7 +660,7 @@ describe('cleanUpBaseFile — card gap keys', () => {
     });
 
     expect(view.cardGapDesktop).toBe(20);
-    expect(view.cardGapPhone).toBe(14);
+    expect('cardGapPhone' in view).toBe(false);
   });
 
   it('deletes a non-numeric gap value via the type check', async () => {
@@ -666,10 +671,12 @@ describe('cleanUpBaseFile — card gap keys', () => {
     });
 
     expect('cardGapDesktop' in view).toBe(false);
-    expect(view.cardGapPhone).toBe(14);
+    expect('cardGapPhone' in view).toBe(false);
   });
 
-  it('drops gap values that match the defaults (sparse YAML)', async () => {
+  // cardGapDesktop is dropped as sparse (matches its default); cardGapPhone is
+  // dropped as an unrecognised key, since the phone gap is no longer a setting.
+  it('drops a default desktop gap and the retired phone gap', async () => {
     const view = await cleanView({
       ...baseView,
       cardGapDesktop: 8,
@@ -678,5 +685,92 @@ describe('cleanUpBaseFile — card gap keys', () => {
 
     expect('cardGapDesktop' in view).toBe(false);
     expect('cardGapPhone' in view).toBe(false);
+  });
+});
+
+/** jsdom does no layout, so every rect is zeros unless stubbed. */
+function stubRectTop(el: HTMLElement, top: () => number): void {
+  el.getBoundingClientRect = () => ({ top: top() }) as unknown as DOMRect;
+}
+
+/** Mirrors the real nesting — `.dynamic-views` > `.dynamic-views-grid` > sections.
+ *  A flat stub would pass even against a `:scope >` query. The pane sits at viewport
+ *  y=0, so each section reports its absolute top minus the current scroll. */
+function buildGroupedView(
+  sectionTops: number[],
+  grouped = true
+): { scrollEl: HTMLElement; container: HTMLElement } {
+  const scrollEl = document.createElement('div');
+  scrollEl.className = 'bases-view';
+  stubRectTop(scrollEl, () => 0);
+
+  const container = document.createElement('div');
+  container.className = 'dynamic-views dynamic-views-bases-container';
+  if (grouped) container.classList.add('is-grouped');
+  scrollEl.appendChild(container);
+
+  const layout = document.createElement('div');
+  layout.className = 'dynamic-views-grid';
+  container.appendChild(layout);
+
+  for (const top of sectionTops) {
+    const section = document.createElement('div');
+    section.className = 'dynamic-views-group-section';
+    stubRectTop(section, () => top - scrollEl.scrollTop);
+    layout.appendChild(section);
+  }
+
+  return { scrollEl, container };
+}
+
+describe('getTopmostVisibleGroupIndex', () => {
+  it('returns null when the container is not grouped', () => {
+    const { scrollEl, container } = buildGroupedView([0, 1000], false);
+    expect(getTopmostVisibleGroupIndex(scrollEl, container)).toBeNull();
+  });
+
+  it('returns null when a grouped container has no sections', () => {
+    const { scrollEl, container } = buildGroupedView([]);
+    expect(getTopmostVisibleGroupIndex(scrollEl, container)).toBeNull();
+  });
+
+  it('returns 0 when the pane is at the top', () => {
+    const { scrollEl, container } = buildGroupedView([0, 1000, 2000]);
+    scrollEl.scrollTop = 0;
+    expect(getTopmostVisibleGroupIndex(scrollEl, container)).toBe(0);
+  });
+
+  it('returns 1 when the pane is scrolled into the second section', () => {
+    const { scrollEl, container } = buildGroupedView([0, 1000, 2000]);
+    scrollEl.scrollTop = 1200;
+    expect(getTopmostVisibleGroupIndex(scrollEl, container)).toBe(1);
+  });
+
+  it('returns the last index when the pane is past the last section top', () => {
+    const { scrollEl, container } = buildGroupedView([0, 1000, 2000]);
+    scrollEl.scrollTop = 2500;
+    expect(getTopmostVisibleGroupIndex(scrollEl, container)).toBe(2);
+  });
+
+  it('falls back to 0 when the pane sits above the first section top', () => {
+    const { scrollEl, container } = buildGroupedView([40, 1000]);
+    scrollEl.scrollTop = 0;
+    expect(getTopmostVisibleGroupIndex(scrollEl, container)).toBe(0);
+  });
+});
+
+describe('scrollToGroupIndex', () => {
+  it('scrolls to the absolute top of a section in range', () => {
+    const { scrollEl, container } = buildGroupedView([12, 1000, 2000]);
+    scrollEl.scrollTop = 500;
+    scrollToGroupIndex(scrollEl, container, 2);
+    expect(scrollEl.scrollTop).toBe(2000);
+  });
+
+  it('leaves scrollTop untouched for an out-of-range index', () => {
+    const { scrollEl, container } = buildGroupedView([12, 1000]);
+    scrollEl.scrollTop = 500;
+    scrollToGroupIndex(scrollEl, container, 5);
+    expect(scrollEl.scrollTop).toBe(500);
   });
 });

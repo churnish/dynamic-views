@@ -17,14 +17,15 @@ The plugin's styles are authored as SCSS partials compiled via Dart Sass (`npm r
  2. Foundation                 _variables, _focus, _container
  3. View layout                _grid-masonry-shared, _full-screen, _grid-view
  4. Overlays                   _image-viewer
- 5. Card internals             card/_core, card/_previews, card/_header
+ 5. Card internals             card/_core, card/_previews, card/_header,
+                               card/_url-button
  6. Image formats              card/_cover, card/_cover-elements, card/_cover-placeholders,
                                card/_cover-side, card/_images, card/_backdrop,
                                card/_poster, card/_slideshow
  7. Data display               _properties, _property-colors, _tags, _hover-and-touch,
                                _text-interaction, _scroll-gradient
  8. View types                  _masonry-view
- 9. Overrides                  _compact, _plugin-settings, _utilities
+ 9. Overrides                  _compact, _utilities
 ```
 
 ### Why this sequence matters
@@ -45,7 +46,7 @@ The plugin's styles are authored as SCSS partials compiled via Dart Sass (`npm r
 
 8. **View types specialize layout.** `_masonry-view` overrides Grid-oriented defaults with masonry-specific rules (absolute positioning, `overflow: clip`).
 
-9. **Overrides are last.** `_compact` uses `@container` queries (requiring `container-type` from step 4) to override card layout at narrow widths. `_plugin-settings` styles the plugin settings tab (outside `.dynamic-views`). `_utilities` provides one-off utility classes and programmatic state classes that may override rules from any earlier partial.
+9. **Overrides are last.** `_compact` uses `@container` queries (requiring `container-type` from step 4) to override card layout at narrow widths. `_utilities` provides one-off utility classes and programmatic state classes that may override rules from any earlier partial.
 
 ## File categories
 
@@ -65,9 +66,11 @@ Structural rules for view containers: container queries, view padding, group hea
 
 The image viewer overlay — fixed-position, full-screen, appended to `body`. Loaded between view layout and card internals because it sits above the card layer but below Obsidian's notice layer.
 
-### Card internals (`card/_core`, `card/_previews`, `card/_header`)
+### Card internals (`card/_core`, `card/_previews`, `card/_header`, `card/_url-button`)
 
 Card container structure: flexbox layout, padding, backgrounds, borders, border-color presets, fade-in animation, content spacing, thumbnail sizing, text preview truncation, and header layout. These are format-agnostic — they apply to all cards regardless of image format.
+
+`card/_url-button` carries everything that paints or positions the URL button, and must load immediately after `card/_header` — several of its rules tie with header rules on specificity, so the relative order of the two files is load-bearing. The header keeps the layout the URL button forces on it: the header's icon strip and the `.card-body` give-backs.
 
 ### Image formats (`card/_cover*`, `card/_images`, `card/_backdrop`, `card/_poster`, `card/_slideshow`)
 
@@ -81,9 +84,9 @@ Property row layout, paired column measurement, color presets (generated via Sas
 
 `_masonry-view` converts Grid-oriented card rules to masonry absolute positioning, container sizing, and `overflow: clip`. Loaded after data display so it can override card layout rules established in earlier groups.
 
-### Overrides (`_compact`, `_plugin-settings`, `_utilities`)
+### Overrides (`_compact`, `_utilities`)
 
-Final rules that override or specialize earlier declarations. `_compact` applies narrow-pane breakpoints via `@container` queries. `_plugin-settings` styles the plugin settings tab (outside `.dynamic-views`). `_utilities` collects one-off utility classes, programmatic state classes, and embed overrides.
+Final rules that override or specialize earlier declarations. `_compact` applies narrow-pane breakpoints via `@container` queries. `_utilities` collects one-off utility classes, programmatic state classes, and embed overrides.
 
 ## Dependency relationships
 

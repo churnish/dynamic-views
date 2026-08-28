@@ -36,7 +36,6 @@ export const VIEW_DEFAULTS_RANGES: Record<string, [number, number]> = {
   subtitleLines: [1, 5],
   textPreviewLines: [1, 10],
   cardGapDesktop: [0, 64],
-  cardGapPhone: [0, 64],
   thumbnailSize: [64, 128],
   imageRatio: [0.25, 2.5],
 };

@@ -44,6 +44,7 @@ import {
   initializeScrollGradients,
   initializeScrollGradientsForCards,
 } from '../core/scroll-gradient';
+import { clipPosterStaticOverflowBatch } from '../core/poster';
 import {
   calculateMasonryLayout,
   calculateMasonryDimensions,
@@ -80,6 +81,7 @@ import {
 } from '../core/constants';
 import {
   setupBasesSwipePrevention,
+  setupIndicatorRestoreTriggers,
   setupStyleSettingsObserver,
   getStyleSettingsHash,
   getSortMethod,
@@ -94,6 +96,7 @@ import {
   cleanUpBaseFile,
   shouldProcessDataUpdate,
   handleTemplateToggle,
+  scrollToGroupIndex,
 } from './utils';
 import {
   initializeContainerFocus,
@@ -283,6 +286,10 @@ export class DynamicViewsMasonryView extends BasesView {
   get viewScrollEl(): HTMLElement {
     return this.scrollEl;
   }
+  /** Set by toggleShuffleActiveView before it triggers a re-render. `groupIndex: null`
+   *  means scroll to the very top; a number means align that group section with the pane
+   *  top. Consumed and cleared by the render the shuffle triggers. */
+  pendingShuffleScroll: { groupIndex: number | null } | null = null;
 
   // Masonry-specific state
   private updateLayoutRef: {
@@ -858,6 +865,14 @@ export class DynamicViewsMasonryView extends BasesView {
     this.selectionScoping = setupSelectionScoping(() => this.containerEl);
     this.register(this.selectionScoping.cleanup);
 
+    // Restore a swipe-hidden multi-image indicator on tap-elsewhere / focus loss
+    setupIndicatorRestoreTriggers(
+      this.containerEl,
+      this.app,
+      (e) => this.registerEvent(e),
+      (c) => this.register(c)
+    );
+
     // Setup scroll preservation (handles tab switching, scroll tracking, reset detection)
     if (this.leafId) {
       this.scrollPreservation = new ScrollPreservation({
@@ -1138,6 +1153,8 @@ export class DynamicViewsMasonryView extends BasesView {
         this.masonryContainer?.children.length &&
         changedPaths.size === 0
       ) {
+        // Drop the shuffle target — no full render here to consume it.
+        this.pendingShuffleScroll = null;
         const propsSnapshot = JSON.stringify(visibleProperties);
         scheduleLateConfigRechecks(
           () => this.config?.getOrder?.() ?? [],
@@ -1181,6 +1198,9 @@ export class DynamicViewsMasonryView extends BasesView {
         pathsUnchanged &&
         orderUnchanged
       ) {
+        // Cleared before the await: the version bail below can return without
+        // reaching the full-render consumption site.
+        this.pendingShuffleScroll = null;
         await this.updateCardsInPlace(
           changedPaths,
           allEntries,
@@ -1214,6 +1234,8 @@ export class DynamicViewsMasonryView extends BasesView {
           this.renderState.lastSettingsHashExcludingOrder;
 
       if (isPropertyReorderOnly) {
+        // Drop the shuffle target — no full render here to consume it.
+        this.pendingShuffleScroll = null;
         this.updatePropertyOrder(visibleProperties, settings, sortMethod);
         this.renderState.lastRenderHash = renderHash;
         this.renderState.lastSettingsHash = settingsHash;
@@ -1228,9 +1250,16 @@ export class DynamicViewsMasonryView extends BasesView {
       // Save scroll anchor before rebuild (config change restore).
       // Skip when order changed (sort/group flip) — anchor would land at the
       // card's new position, flinging the user to an unexpected location.
+      // A shuffle leaves paths and order untouched, so the anchor would otherwise be
+      // captured and win over the pending shuffle target.
       let configChangeAnchor: ScrollAnchor | null = null;
       let configChangeColumns = this.lastLayoutColumnCount;
-      if (this.virtualItems.length > 0 && pathsUnchanged && orderUnchanged) {
+      if (
+        this.virtualItems.length > 0 &&
+        pathsUnchanged &&
+        orderUnchanged &&
+        !this.pendingShuffleScroll
+      ) {
         this.updateCachedGroupOffsets(true);
         configChangeAnchor = getScrollAnchor(
           this.virtualItems,
@@ -1689,7 +1718,23 @@ export class DynamicViewsMasonryView extends BasesView {
       this.setupInfiniteScroll(settings);
 
       // Restore scroll position after render
-      if (!this.restoreEphemeralScroll()) {
+      if (this.pendingShuffleScroll) {
+        const { groupIndex } = this.pendingShuffleScroll;
+        this.pendingShuffleScroll = null;
+        this.scrollPreservation?.clearSavedPosition();
+        // restoreEphemeralScroll() is skipped on this path, and it is what normally
+        // consumes this state — clear it here or the next render restores a stale
+        // position and yanks the view off the shuffle target.
+        this.scrollRestoreState = null;
+        // groupIndex 0 collapses to scrollTop 0: the first section's absolute top is
+        // the container's padding inset, so aligning to it would jump a user who is
+        // already at the top.
+        if (groupIndex === null || groupIndex === 0) {
+          this.scrollEl.scrollTop = 0;
+        } else {
+          scrollToGroupIndex(this.scrollEl, this.containerEl, groupIndex);
+        }
+      } else if (!this.restoreEphemeralScroll()) {
         if (configChangeAnchor) {
           this.updateCachedGroupOffsets(true);
           const anchorTop = getAnchorTop(
@@ -3601,6 +3646,8 @@ export class DynamicViewsMasonryView extends BasesView {
     settings: ResolvedSettings,
     sortMethod: string
   ): void {
+    const rebuiltPropertyCardEls: HTMLElement[] = [];
+
     for (const item of this.virtualItems) {
       // Rebuild CardData with new settings (cheap: property lookups only).
       // Preserves cached textPreview and imageUrl from previous render.
@@ -3623,9 +3670,21 @@ export class DynamicViewsMasonryView extends BasesView {
           item.entry,
           settings
         );
+        rebuiltPropertyCardEls.push(item.el);
       }
       // Unmounted cards: cardData updated; next mount uses new order
     }
+
+    // Property DOM was rebuilt in place, so neither renderCard's clip nor the dimension-gated card ResizeObserver re-clips — the card's outer box never changed.
+    const clippableCards = rebuiltPropertyCardEls.filter(
+      (c) =>
+        c.classList.contains('image-format-poster') &&
+        (c.classList.contains('has-poster')
+          ? !!c.closest('.poster-static')
+          : !!c.closest('.dynamic-views-grid'))
+    );
+    if (clippableCards.length > 0)
+      clipPosterStaticOverflowBatch(clippableCards);
 
     if (this.masonryContainer) {
       initializeScrollGradients(this.masonryContainer);
@@ -3674,6 +3733,8 @@ export class DynamicViewsMasonryView extends BasesView {
     );
 
     // Rebuild CardData and update DOM for each changed card
+    const contentUpdatedCardEls: HTMLElement[] = [];
+
     for (const path of changedPaths) {
       const freshEntry = changedEntries.find((e) => e.file.path === path);
       if (!freshEntry) continue;
@@ -3745,6 +3806,7 @@ export class DynamicViewsMasonryView extends BasesView {
               freshEntry,
               settings
             );
+            contentUpdatedCardEls.push(item.el);
           }
         }
       }
@@ -3775,6 +3837,17 @@ export class DynamicViewsMasonryView extends BasesView {
     if (anyHeightChanged && !this.correctionBlocked('ignore')) {
       this.remeasureAndReposition();
     }
+
+    // Property DOM was rebuilt in place, so neither renderCard's clip nor the dimension-gated card ResizeObserver re-clips — the card's outer box never changed. Replaced cards are excluded: renderCard already clipped them.
+    const clippableCards = contentUpdatedCardEls.filter(
+      (c) =>
+        c.classList.contains('image-format-poster') &&
+        (c.classList.contains('has-poster')
+          ? !!c.closest('.poster-static')
+          : !!c.closest('.dynamic-views-grid'))
+    );
+    if (clippableCards.length > 0)
+      clipPosterStaticOverflowBatch(clippableCards);
 
     // Re-initialize gradients unconditionally (content changed even if height didn't)
     if (this.masonryContainer) {

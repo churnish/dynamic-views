@@ -8,6 +8,11 @@ import {
   toggleShuffleActiveView,
 } from '../../src/core/randomize';
 import { App } from 'obsidian';
+// Imported by path, not from 'obsidian' — tsc types that specifier from the real
+// obsidian.d.ts, which has no notice log. Same module instance either way.
+import { noticeLog, resetNoticeLog } from '../__mocks__/obsidian';
+
+const NO_ACTIVE_VIEW = 'No active base';
 
 describe('randomize', () => {
   describe('shuffleArray', () => {
@@ -323,12 +328,13 @@ describe('randomize', () => {
     beforeEach(() => {
       mockApp = new App();
       mockApp.workspace.openLinkText = vi.fn().mockResolvedValue(undefined);
+      resetNoticeLog();
     });
 
     it('should show notice when no active Bases view', async () => {
       mockApp.workspace.getMostRecentLeaf = vi.fn().mockReturnValue(null);
       await openRandomFile(mockApp, false);
-      // Notice constructor should be called (tested via mock in setup)
+      expect(noticeLog).toEqual([NO_ACTIVE_VIEW]);
     });
 
     it('should return early when no entries', async () => {
@@ -425,8 +431,7 @@ describe('randomize', () => {
 
     beforeEach(() => {
       mockApp = new App();
-      // Suppress console.log in tests
-      vi.spyOn(console, 'log').mockImplementation(() => {});
+      resetNoticeLog();
     });
 
     afterEach(() => {
@@ -436,7 +441,7 @@ describe('randomize', () => {
     it('should show notice when no active Bases view', () => {
       mockApp.workspace.getMostRecentLeaf = vi.fn().mockReturnValue(null);
       toggleShuffleActiveView(mockApp);
-      // Notice shown (tested via mock)
+      expect(noticeLog).toEqual([NO_ACTIVE_VIEW]);
     });
 
     it('should toggle shuffle on Dynamic Views Grid view', () => {

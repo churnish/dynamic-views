@@ -56,38 +56,28 @@ export default defineConfig([
     },
   },
 
-  // tests/ keeps unused-import/unused-variable checks (the two rules that catch
-  // real test-tree rot) but relaxes everything that only fires because mocks and
-  // fixtures deliberately use patterns production code should not.
+  // tests/ relaxes only what fires because mocks and fixtures deliberately use patterns production code should not. Roughly 100 rules stay on, including no-unused-vars, which is inherited from the **/*.ts block above rather than set here.
   {
-    files: ['tests/**/*.ts'],
+    // Matches the '!tests/**' un-ignore exactly. A narrower glob such as tests/**/*.ts leaves every other extension under tests/ linted as production code with no relaxation — the deleted styleMock.js was that case, and vitest.config.ts already includes tests/**/*.test.tsx.
+    files: ['tests/**'],
     rules: {
-      // obsidianmd/* encodes plugin-runtime constraints (no innerHTML, deferred
-      // views, etc.) that don't apply to test fixtures and mocks.
+      // The obsidianmd rules that fire here are popout-window and DOM-helper preferences jsdom fixtures cannot honour — prefer-active-doc, prefer-create-el, no-global-this, no-tfile-tfolder-cast, no-static-styles-assignment. Note innerHTML is NOT among them: it is policed by no-unsanitized/*, a separate plugin left enabled.
       ...Object.fromEntries(
         Object.keys(obsidianmd.rules).map((rule) => [
           `obsidianmd/${rule}`,
           'off',
         ])
       ),
-      // `any` is how the mocks model Obsidian's API surface without reimplementing
-      // its types, which cascades into "unsafe" findings on every access of one.
+      // `any` is how the mocks model Obsidian's API surface without reimplementing its types, which cascades into "unsafe" findings on every access of one.
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unsafe-argument': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',
-      // `expect(mock.method).toHaveBeenCalledWith(...)` passes a method reference
-      // without calling it — the idiomatic Vitest assertion pattern, not a `this`
-      // scoping bug.
+      // `expect(mock.method).toHaveBeenCalledWith(...)` passes a method reference without calling it — the idiomatic Vitest assertion pattern, not a `this` scoping bug.
       '@typescript-eslint/unbound-method': 'off',
-      // Fires on casts that are redundant only because the surrounding mock/plugin
-      // value is already typed `any`; no behavioral signal in a fixture-heavy file.
-      '@typescript-eslint/no-unnecessary-type-assertion': 'off',
-      // Awaiting a synchronous helper is harmless and common when a test suite
-      // covers both sync and async call sites with the same `await` pattern.
-      '@typescript-eslint/await-thenable': 'off',
+      // Deliberate divergence from first-line-is-title, which also disables no-unnecessary-type-assertion and await-thenable here. Measured per repo: that tree has 8 and 17 violations respectively, this one has zero — and no-unnecessary-type-assertion is what surfaced the eight redundant casts removed alongside this block, so it earns its keep. Do not re-sync by re-adding them.
     },
   },
 

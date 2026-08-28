@@ -27,24 +27,41 @@
 
     .card-backdrop {
       position: absolute;
-      inset: calc(
-        var(--backdrop-inset) - var(--dynamic-views-card-padding, 8px)
-      );
+      /* Absolutely positioned children resolve inset against the containing
+         block's PADDING box, and .card has border: none, so that edge is the
+         card's outer edge — no padding compensation is owed. Subtracting it
+         put the wrapper a full padding outside the card on every side, which
+         Chromium hid by clipping and WebKit exposed. */
+      inset: var(--backdrop-inset);
       z-index: 0;
       pointer-events: none;
       /* Own rounded clip so the image is anti-aliased at corners
          (card overflow:hidden alone produces jagged edges in Chromium) */
       overflow: hidden;
+      /* A rounded rect inset by N from a corner of radius R has radius R - N.
+         Carried the same bogus padding term as the inset above. */
       border-radius: calc(
-        var(--dynamic-views-card-border-radius, 8px) +
-          var(--dynamic-views-card-padding, 8px) - var(--backdrop-inset)
+        var(--dynamic-views-card-border-radius, 8px) - var(--backdrop-inset)
       );
+
+      /* The wrapper bleeds past the card and relies on a rounded clip, but the
+         backdrop image carries a filter, and WebKit gives a filtered element
+         its own compositing layer that an ancestor rounded overflow clip does
+         not reach — square corners past the card there, correct in Chromium.
+         Clipping the image directly needs no ancestor cooperation. Poster has
+         the same wrapper geometry but no filter on its image and does not show
+         the fault, so it is deliberately left alone. */
+      img {
+        border-radius: inherit;
+      }
     }
   }
 }
 
 /* Backdrop hover zoom — transition on desktop only (avoid compositor
-   layer promotion on touch), scale trigger fires for both hover and touch. */
+   layer promotion on touch). The transition stays outside the trigger's gate:
+   transitions are bidirectional, so one that only existed while the card was
+   hovered would animate the zoom in and snap it out. */
 @media (any-hover: hover) {
   body.dynamic-views-backdrop-hover-zoom
     .dynamic-views
@@ -57,10 +74,11 @@
   }
 }
 
-/* Backdrop: zoom on card hover intent */
+/* Backdrop: zoom on card hover intent — interact-hover, not interact, so a
+   finger press never zooms while a trackpad or hovering pen still does. */
 body.dynamic-views-backdrop-hover-zoom
   .dynamic-views
-  .card.image-format-backdrop.interact
+  .card.image-format-backdrop.interact-hover
   .card-backdrop
   img {
   transform: scale(1.05);
