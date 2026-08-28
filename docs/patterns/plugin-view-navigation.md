@@ -2,7 +2,7 @@
 title: Plugin view navigation
 description: Definitive reference for navigating Dynamic Views plugin views and elements across platforms — view identification, DOM hierarchy, correct selectors, full-screen elements, platform-specific probing patterns, and which interactions synthetic events cannot drive.
 author: 🤖 Generated with Claude Code
-updated: 2026-08-10
+updated: 2026-08-28
 ---
 # Plugin view navigation
 
@@ -282,7 +282,7 @@ Several interactions cannot be driven from `eval`, and each fails by doing nothi
 | Keyboard shortcuts | Yes, **dispatched on `window`** | Obsidian's keymap listener is capture-phase on `window`. A `KeyboardEvent` dispatched on `document` never reaches it and the shortcut appears dead. |
 | Card click, image-embed click | Yes | `el.click()` is enough to open the viewer. |
 | Hover-to-start keyboard nav | No | `mouseover`/`mouseenter` do not arm it; focus stays off the cards. |
-| Thumbnail scrubbing | Partly | `mousemove` triggers the cached-blob swap but never advances the frame — scrubbing is touch-driven. |
+| Multi-image scrub and swipe | Yes, **as `PointerEvent`s** | A `pointermove` carrying `pointerType: 'mouse'` advances the hover scrub, and a `pointerdown`/`pointermove`/`pointerup` sequence carrying `pointerType: 'touch'` advances the swipe. `mousemove` does nothing: the handlers listen for `pointermove` and filter on `pointerType`, so a mouse event never reaches them. |
 | Long-press image drag | No | A WebKit affordance with no synthetic equivalent, and absent under desktop mobile emulation. Device only. |
 | Pointer capture / drag panning | No | Synthetic `PointerEvent`s create no active pointer, so `setPointerCapture` throws. Use a trusted-input driver. |
 

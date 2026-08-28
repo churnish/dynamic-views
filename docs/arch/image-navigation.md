@@ -48,6 +48,16 @@ Scrub mode reuses the thumbnail path wholesale: `renderCoverWrapper` creates a p
 
 The `Disable navigation` toggle (`dynamic-views-cover-disable-navigation`) still kills both modes, on every platform. The mode dropdown itself is hidden on phones, where hover does not exist and the two modes reduce to the same touch swipe.
 
+### URL button dead zone
+
+Some layouts park the URL button over the image, where it sits directly in the pointer's path. `getDeadRect()` and `pointInRect()` inside `renderImage` ([shared-renderer.ts](../../src/bases/shared-renderer.ts)) carve out a rectangle around that button which the hover scrub ignores.
+
+- **Eligibility is an intersection test.** The button's rect is tested against the image's rect, and no zone exists when the two do not overlap. The layouts that keep the button in the header away from the image are exactly the ones that need no zone, so naming none of them keeps layouts nobody has thought of yet correct for free.
+- **Geometry comes from live rects.** The zone is flush to the card's top and right edges, inset from the button on the left by the button's own right-hand gap and below it by the button's own top gap, then clipped to the image on every side. Card padding is a Style Settings slider and the button's box is bigger on mobile, so any literal would be wrong at most settings.
+- **`pointermove` freezes the frame, it does not reset it.** While the pointer is inside the zone the handler returns before computing an index, so travelling to the button no longer drags the frame along with the pointer. The frame the user scrubbed to is still the one on screen when they come back.
+- **A `pointerleave` inside the zone is not a leave.** The button is not a descendant of the image, so moving onto it fires `pointerleave` on the image. When the event's coordinates fall inside the zone the handler returns early: no reset to the first image, no `.scrub-hover` removal, no rect invalidation, and no touch state sync. Clipping the zone to the image is what tells the two exits apart — a pointer moving onto the button reports a point inside the image, while a geometric exit reports one outside it altogether.
+- **The zone is measured once per hover.** `cachedDeadRect` is `undefined` until first needed and `null` for a card that has none. It is invalidated alongside `cachedRect` on `pointerenter` and on a real `pointerleave`, so a button that `updateUrlButton()` has added or removed since the last hover cannot leave a stale zone behind.
+
 ### Image cap
 
 Both covers and thumbnails cap at `MAX_MULTI_IMAGES` (10) from `src/core/constants.ts`. It is a compile-time constant, applied in `content-loader.ts` (embed limit + final slice), `image-extraction.ts` (probe and result bounds), and at both `renderImage` call sites. There is no user-facing setting for it.

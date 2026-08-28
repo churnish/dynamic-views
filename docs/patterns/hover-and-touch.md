@@ -1,10 +1,9 @@
 ---
-
-## description: Complete inventory of all hover and touch interactions, their gating mechanism, pointer type support, and CSS/JS implementation — reference for adding, modifying, or debugging hover/touch behavior.
-
+title: Hover and touch interactions
+description: Complete inventory of all hover and touch interactions, their gating mechanism, pointer type support, and CSS/JS implementation — reference for adding, modifying, or debugging hover/touch behavior.
 author: Generated with Claude Code
-updated: 2026-08-27
-
+updated: 2026-08-28
+---
 # Hover and touch interactions
 
 See also: [`odkb/webkit-compositor-constraints.md`](https://github.com/churnish/odkb/blob/main/webkit-compositor-constraints.md)
@@ -21,8 +20,9 @@ Both use `any-hover` to include pen-capable devices.
 canHover(el?)                        <- JS gate: matchMedia('(any-hover: hover)')
     |
     +- setupHoverIntent()            <- pointer events + isHoverPointer() filter
-    |   +- .interact                 <- class on card (shared with touch)
-    |   +- .interact-hover           <- class on card (hover input only)
+    |   +- setInteractSource(el, 'hover', ...)
+    |       +- .interact-hover       <- source flag (hover input only)
+    |       +- .interact             <- derived union
     |
     +- enableScrubbing               <- render-time boolean
     |   +- onPointerEnter/Move/Leave + isHoverPointer() filter
@@ -34,8 +34,9 @@ canHover(el?)                        <- JS gate: matchMedia('(any-hover: hover)'
 
 ```
 setupTouchPress()                    <- pointer events, isTouchPointer() filter
-+- .interact                        <- class on card (shared with hover)
-                                     -- never .interact-hover
++- setInteractSource(el, 'press', ...)
+    +- .interact-press              <- source flag
+    +- .interact                    <- derived union (never .interact-hover)
 ```
 
 ```
@@ -43,38 +44,62 @@ setupTouchPress()                    <- pointer events, isTouchPointer() filter
     +- .interact scoped            <- compound selector (JS class + browser state)
 ```
 
-## `.interact` vs `.interact-hover`
+## `.interact` and its source classes
 
-Two card classes, one lifecycle. `interact` means "the user is engaging this card"; `interact-hover` means "and the input doing it can hover".
+`.interact` means "the user is engaging this card". Three independent interactions can say so, and each owns a flag class:
+
+| Source | Flag class | Set by |
+| --- | --- | --- |
+| `'hover'` | `.interact-hover` | `setupHoverIntent` (`shared-renderer.ts`), the image viewer close, released by `drag.ts` |
+| `'press'` | `.interact-press` | `setupTouchPress` (`shared-renderer.ts`) |
+| `'reveal'` | `.interact-reveal` | `handlePosterTapReveal` (`poster.ts`) |
+
+`.interact` is **derived** — it is the union of the three flags, recomputed by `setInteractSource(el, source, active)` in `hover-and-touch.ts`. Nothing writes `.interact` directly.
+
+### Why the union exists
+
+The sources run concurrently. A tablet with a trackpad wires hover intent *and* touch press to the same card, so a finger tap and a stationary trackpad pointer can hold it at once. When each source wrote `.interact` itself, every exit was unconditional: the tap's release stripped the class while the pointer still hovered, and the card could not recover — `setupHoverIntent`'s `hasMoved` latch only re-arms on a `pointerleave`/`pointerenter` round trip, so only leaving and re-entering the card fixed it.
+
+Deriving `.interact` from the flags makes each exit answer for its own source only.
+
+`.interact-restore` is **not** a source. It sets `transition: none` and is added and removed around a forced reflow inside one synchronous block in `closeImageViewer` — a transition suppressor, nothing more.
+
+The image viewer is not a source either. `viewer-active` makes the hover-intent and poster-hover deactivations in `shared-renderer.ts` early-return, so the real `pointerleave` is swallowed under the overlay and never fires again; the viewer's close is standing in for that missing exit, and it moves the **hover** source only.
+
+### `.interact` vs `.interact-hover` in CSS
 
 | | `.interact` | `.interact-hover` |
 | --- | --- | --- |
-| Set by `setupHoverIntent` | Yes | Yes |
-| Set by `setupTouchPress` | Yes | **No** |
-| Meaning | Hover OR touch press | Hover input only (mouse, trackpad, pen in hover range) |
+| Set by `setupHoverIntent` | Yes (via the union) | Yes |
+| Set by `setupTouchPress` | Yes (via the union) | **No** |
+| Meaning | Hover OR touch press OR poster reveal | Hover input only (mouse, trackpad, pen in hover range) |
 | Gates | Hover colors, card background, elevation, cursors, slideshow arrows | Cover, poster and backdrop image zoom |
 
-`interact-hover` is always a subset of `interact` — nothing sets it alone. Selectors that should answer both a mouse and a finger keep using `interact`; only effects that must never fire from a finger use `interact-hover`.
+`interact-hover` is always a subset of `interact` — nothing sets it alone. Selectors that should answer both a mouse and a finger keep using `interact`; only effects that must never fire from a finger use `interact-hover`. The same split applies to JS reads: `hasInteractSource(el, 'hover')` answers for the hover source alone, which is what the slideshow wheel guard needs — reading the union would let a finger press unlock a trackpad gesture.
 
-### Why it exists
+### Why `interact-hover` exists
 
 Image zoom on a touch press looks like a glitch, but no device-level test can suppress it. `@media (any-hover: hover)` and `Platform.isMobile` describe the *device*, and an iPad with a trackpad is simultaneously hover-capable and touch-capable — a device test either kills the zoom for the trackpad or keeps it for the finger.
 
 The correct predicate is the input that produced the event, and `setupHoverIntent` already applies it: every listener is filtered through `isHoverPointer()`, which rejects touch and pressured pen. `interact-hover` simply publishes that filter's verdict as a class the CSS can read. On the same iPad, a trackpad move zooms and a finger press does not.
 
-### Removal sites
+### Write sites
 
-A stranded `interact-hover` holds a card zoomed after the pointer has gone, so it must be removed everywhere a hover-derived teardown removes `interact`:
+Every one of these goes through `setInteractSource`. A stranded `interact-hover` holds a card zoomed after the pointer has gone, so the hover source needs an exit on every path where `pointerleave` will not arrive:
 
-| Site | What it does |
-| --- | --- |
-| `shared-renderer.ts` hover intent deactivate | Removes both on `pointerleave` (after the `viewer-active` early return) |
-| `image-viewer.ts` viewer close, cursor outside card | Removes both — `pointerleave` already fired under the overlay and will not fire again |
-| `image-viewer.ts` viewer close, cursor over card | Re-adds both, keeping the subset invariant |
-| `drag.ts` `HOVER_CLASSES` (`clearCardHoverState`) | Removes both on dragstart — a drag captures the pointer, so no `pointerleave` arrives |
-| `drag.ts` URL button dragstart | Removes both synchronously (`poster-hover-active` stays deferred) |
+| Site | Source | What it does |
+| --- | --- | --- |
+| `shared-renderer.ts` hover intent activate/deactivate | `hover` | Claims on the first `pointermove`, releases on `pointerleave` (after the `viewer-active` early return) |
+| `shared-renderer.ts` touch press activate/deactivate | `press` | Claims on `pointerdown`, releases after the min-visible window |
+| `poster.ts` `handlePosterTapReveal` | `reveal` | Claims on the revealing tap, releases on the dismissing tap and when another card takes the reveal |
+| `image-viewer.ts` close, cursor over card | `hover` | Re-claims — standing in for the `pointerenter` the overlay ate. Hover only, never press or reveal |
+| `image-viewer.ts` close, cursor outside card | `hover` | Releases — `pointerleave` already fired under the overlay and will not fire again |
+| `drag.ts` card, tag and property-link dragstart | `hover` | Releases on dragstart — a drag captures the pointer, so no `pointerleave` arrives |
+| `drag.ts` URL button dragstart | `hover` | Releases synchronously (`poster-hover-active` stays deferred) |
 
-Two sites deliberately do **not** touch it. `setupTouchPress`'s deactivate removes only `interact` — stripping `interact-hover` there would snap the zoom off mid-hover on a hybrid device, and `setupHoverIntent`'s `hasMoved` latch would not re-arm until the pointer left and re-entered. `handlePosterTapReveal` (`poster.ts`) likewise removes only `interact`: it is a tap-derived teardown with the pointer still on the card, and the eventual `pointerleave` clears both.
+The viewer close is gated on `canHover(embedEl)`, not on `Platform` — a tablet with a trackpad is `Platform.isMobile` **and** hover-capable, and gating on the platform left exactly those devices holding state with no path out of it.
+
+`setupTouchPress` and `handlePosterTapReveal` never touch the hover source. Releasing it from a tap would snap the zoom off mid-hover on a hybrid device, and `setupHoverIntent`'s `hasMoved` latch would not re-arm until the pointer left and re-entered.
 
 ## Pointer type support
 
@@ -135,7 +160,8 @@ Pressure is only checked for `pen` — mouse and touch are filtered by `pointerT
 | **Poster image zoom**                                                      | CSS `.interact-hover` scoped                      | Same                                                 | -- (tap-to-reveal uses `.poster-revealed`) |
 | **Tag hover colors**                                                       | CSS `.interact .tag:is(:hover, :active)`          | Same                                                 | `.interact` + `:active`             |
 | **Property link hover**                                                    | CSS `.interact .property a:is(:hover, :active)`   | Same                                                 | `.interact` + `:active`             |
-| **URL button hover bg**                                                      | CSS `.interact .card-title-url-icon:is(:hover, :active)` | Same                                           | `.interact` + `:active`             |
+| **URL button hover bg** (in header, no image behind it)                     | CSS `.card.interact-hover .card-title-url-icon:is(:hover, :active)` | Same                                | -- (never set by touch)             |
+| **URL button hover bg** (over a cover, poster or backdrop)                  | CSS `.interact` scoped, one arm per image format  | Same                                                 | `.interact` + `:active`             |
 | **Title underline** (open-on-title)                                        | CSS `.interact .card-title a:is(:hover, :active)` in `@media (any-hover: hover)` | Same                                    | -- (touch gets `:active` opacity)   |
 | **Title link press opacity** (open-on-title)                               | CSS `.card-title a:active` (brief flash on click)  | Same                                                 | CSS `.card-title a:active` (sustained on press) |
 | **Pointer cursor gating**                                                  | CSS `.interact` scoped (hover-only)               | Same                                                 | --                                   |
@@ -148,8 +174,8 @@ Pressure is only checked for `pen` — mouse and touch are filtered by `pointerT
 | **Cover/thumbnail scrubbing** (touch)                                      | --                                                 | --                                                    | `.scrub-hover` (horizontal swipe > 10px) |
 | **Slideshow wheel gesture guard**                                          | `requiresHoverIntent` flag via `canHover`         | Same                                                 | --                                   |
 | **Image preload on hover** (slideshow + scrubbing images)                  | `setupHoverIntent` (no `canHover` gate)           | Same                                                 | --                                   |
-| **Hover state restore after closing image viewer**                         | Re-adds `.interact` + `.interact-hover` on dismiss | Same                                                | --                                   |
-| **Drag hover cleanup** -- strips `.interact`, `.interact-hover`, `.poster-hover-active` on drag start | Reactive cleanup (not a gate)   | Same                                                 | --                                   |
+| **Hover state restore after closing image viewer**                         | Re-claims the `hover` source on dismiss           | Same                                                 | --                                   |
+| **Drag hover cleanup** -- releases the `hover` source and strips `.poster-hover-active` on drag start | Reactive cleanup (not a gate)   | Same                                                 | --                                   |
 | **Keyboard nav activation** -- hover-to-start                              | `setupHoverIntent` via `canHover`                 | Same                                                 | --                                   |
 | **Card container z-index stacking** -- `.has-hover-card`                   | `setupHoverIntent` (Bases only)                   | Same                                                 | `setupTouchPress` (Bases only)       |
 | **Non-card UI hovers** (plugin settings)                                   | CSS bare `:hover` in `@media (any-hover: hover)`  | CSS `:hover` fires for pen proximity                 | system `:active`                     |
@@ -162,13 +188,13 @@ Pressure is only checked for `pen` — mouse and touch are filtered by `pointerT
 | -------------------- | --------------------------------------- | ---------------------------------------- |
 | `shared-renderer.ts` | Card hover intent (Bases)               | `canHover(cardEl)`                       |
 | `shared-renderer.ts` | Card touch press (Bases)                | Always (pointer events filter internally)|
-| `hover-and-touch.ts` | Card touch press suppression on a scrub surface | `closest('.card-thumbnail.multi-image, .card-cover.multi-image')` |
+| `hover-and-touch.ts` | Card touch press suppression on a swipe surface | `closest(SWIPE_SURFACE_SELECTOR)` -- `.card-thumbnail.multi-image, .card-cover.multi-image, .card-cover-slideshow` |
 | `shared-renderer.ts` | Poster hover intent (Bases)             | `canHover(cardEl)`                       |
 | `shared-renderer.ts` | Scrubbing gate, covers + thumbnails (Bases) | No gate (multi-image + setting/mode)  |
 | `shared-renderer.ts` | Hover scrub handlers (Bases)            | `isHoverPointer(e)`                      |
 | `multi-image-nav.ts` | Touch scrub handlers (shared)           | `isTouchPointer(e)`                      |
 | `multi-image-nav.ts` | Scrub visibility reset IO (shared)      | Shared per-window IO via `getOwnerWindow`|
-| `slideshow.ts`       | Wheel gesture hover guard               | `canHover(coverEl)`                      |
+| `slideshow.ts`       | Wheel gesture hover guard               | `canHover(coverEl)` + `hasInteractSource(cardEl, 'hover')` |
 | `slideshow.ts`       | Image preload on hover                  | No gate (benign on touch)                |
 
 
@@ -182,12 +208,13 @@ Pressure is only checked for `pen` — mouse and touch are filtered by `pointerT
 | `_properties.scss`            | List/heading segment hover (card hover unwrapped)                |
 | `_utilities.scss`             | Embed block hover (suppresses box-shadow + edit button) |
 | `card/_core.scss`             | (Card border/shadow hover unwrapped)                             |
-| `card/_header.scss`           | URL button pointer-events gating, drag suppression                 |
+| `card/_header.scss`           | Title underline (open-on-title)                                  |
+| `card/_url-button.scss`       | URL button pointer-events gating, drag suppression (the hover background is unwrapped, keyed on `.interact-hover`) |
 | `card/_cover-elements.scss`   | Cover hover zoom transition (trigger unwrapped)                  |
 | `card/_backdrop.scss`         | Backdrop hover zoom transition (trigger unwrapped)               |
 | `card/_previews.scss`         | Scrub indicator hide                                             |
 | `card/_poster.scss`           | Content scroll, overlay reveal, content display, will-change     |
-| `card/_slideshow.scss`        | Nav arrows, icon hide, hover zoom cancel                         |
+| `card/_slideshow.scss`        | Nav arrows, cover image transition, hover zoom cancel (the multi-image icon hide is unwrapped, keyed on `.interact-hover`) |
 
 
 
@@ -199,4 +226,5 @@ Pressure is only checked for `pen` — mouse and touch are filtered by `pointerT
 4. **Non-card UI**: Add CSS inside `@media (any-hover: hover)` with bare `:hover`. No JS changes needed.
 5. **JS-gated behavior**: Check `canHover(el)` before attaching hover listeners. Use `isHoverPointer(e)` inside pointer event handlers to filter touch and pen contact.
 6. **New pointer event listeners**: Use `pointerenter`/`pointermove`/`pointerleave` -- never `mouseenter`/`mousemove`/`mouseleave`.
-7. **Touch press feedback**: Touch press is handled automatically by `setupTouchPress()` which adds/removes `.interact` on `pointerdown`/`pointerup`. No per-interaction JS is needed -- just ensure the CSS responds to `.interact`.
+7. **Touch press feedback**: Touch press is handled automatically by `setupTouchPress()`, which claims and releases the `press` source on `pointerdown`/`pointerup`. No per-interaction JS is needed -- just ensure the CSS responds to `.interact`.
+8. **A new source of `.interact`**: Add it to `InteractSource` in `hover-and-touch.ts` and write it through `setInteractSource()`. NEVER add or remove `.interact` directly -- an unconditional write strips the class while another source still holds it, and hover intent cannot re-arm without a pointer round trip.
