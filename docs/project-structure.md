@@ -40,8 +40,8 @@ dynamic-views/
 │   │   ├── image-loader.ts           # Image aspect ratio caching + fallbacks
 │   │   ├── image-viewer.ts           # Image viewer (hand-rolled zoom/pan gestures)
 │   │   ├── keyboard-nav.ts           # Keyboard focus management for cards
-│   │   ├── multi-image-icon.ts  # Multi-image corner icon hidden state: exclusivity slot, restore, shared throttled scroll listener
-│   │   ├── multi-image-nav.ts        # Touch swipe navigation with slide animation + shared visibility reset IO for multi-image covers and thumbnails
+│   │   ├── multi-image-icon.ts       # Multi-image corner icon hidden state: exclusivity slot, restore, shared throttled scroll listener
+│   │   ├── multi-image-nav.ts        # Touch swipe navigation with sliding animation, hover scrub helpers (computeScrubIndex, applyScrubImage) + shared visibility reset IO for multi-image covers and thumbnails
 │   │   ├── notebook-navigator.ts     # Notebook Navigator plugin integration
 │   │   ├── opaque-scan.ts            # Lazy per-note scan of regions where syntax is literal (fenced/indented/inline code, %% and <!-- --> comments) + cardlink block bodies
 │   │   ├── poster.ts                 # Poster format utilities (static clipping, scroll reset)

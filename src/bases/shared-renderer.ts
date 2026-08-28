@@ -933,7 +933,9 @@ export class SharedCardRenderer {
             ''
           );
           if (!(file instanceof TFile)) return;
-          showFileContextMenu(e, this.app, file, link.url);
+          // file.path, not link.url: a linktext carries no extension, and the
+          // path argument reaches openWithDefaultApp().
+          showFileContextMenu(e, this.app, file, file.path);
         },
         { signal }
       );
@@ -2872,7 +2874,7 @@ export class SharedCardRenderer {
     dragText.textContent = urlValue;
     // Store for freshness — surgical updates refresh this without
     // re-binding event listeners
-    iconEl.dataset.dvUrlValue = urlValue;
+    iconEl.dataset.dynamicViewsUrlValue = urlValue;
 
     iconEl.addEventListener(
       'click',
@@ -2892,7 +2894,7 @@ export class SharedCardRenderer {
           this.app,
           file,
           cardPath,
-          iconEl.dataset.dvUrlValue ?? urlValue
+          iconEl.dataset.dynamicViewsUrlValue ?? urlValue
         );
       },
       { signal }
@@ -2926,7 +2928,7 @@ export class SharedCardRenderer {
         }
         const dragText = existingIcon.querySelector('.dynamic-views-drag-text');
         if (dragText) dragText.textContent = card.urlValue;
-        existingIcon.dataset.dvUrlValue = card.urlValue;
+        existingIcon.dataset.dynamicViewsUrlValue = card.urlValue;
       } else {
         // A card with no header is the displayFirstAsTitle-OFF case: nothing was
         // renderable at render time, so the header has to be created now or the

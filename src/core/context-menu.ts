@@ -174,7 +174,7 @@ export function showFileContextMenu(
     const before = menuItems?.length ?? 0;
     app.workspace.handleExternalLinkContextMenu(menu, url);
     for (const added of menuItems?.slice(before) ?? [])
-      if (added.dom) added.dom.dataset.dvLinkAction = '1';
+      if (added.dom) added.dom.dataset.dynamicViewsLinkAction = '1';
   }
 
   menu.showAtMouseEvent(e);
@@ -281,7 +281,7 @@ export function showFileContextMenu(
           // plugin does, so within a section native's own entries come first —
           // but these are built after the file-menu trigger and would otherwise
           // append behind plugin items. The rebuild hoists them back.
-          item.dataset.dvCoreStandIn = '1';
+          item.dataset.dynamicViewsCoreStandIn = '1';
           const iconDiv = item.createDiv({ cls: 'menu-item-icon' });
           setIcon(iconDiv, icon);
           item.createDiv({ cls: 'menu-item-title', text: title });
@@ -419,7 +419,7 @@ export function showFileContextMenu(
       // otherwise trail. Stable within each rank, so native's own relative
       // order survives.
       const sectionRank = (item: HTMLElement): number =>
-        item.dataset.dvLinkAction ? 0 : item.dataset.dvCoreStandIn ? 1 : 2;
+        item.dataset.dynamicViewsLinkAction ? 0 : item.dataset.dynamicViewsCoreStandIn ? 1 : 2;
       sectionBuckets.forEach((items, section) => {
         const ranks = items.map(sectionRank);
         if (ranks.every((r) => r === ranks[0])) return;

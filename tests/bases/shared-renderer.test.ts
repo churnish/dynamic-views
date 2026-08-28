@@ -225,7 +225,7 @@ describe('Structural content classes', () => {
     const card = document.createElement('div');
     card.classList.add('card');
 
-    // A URL chip and a title block only ever live inside a header
+    // A URL button and a title block only ever live inside a header
     if (options.hasHeader || options.hasUrlIcon || options.hasTitleBlock) {
       const header = document.createElement('div');
       header.classList.add('card-header');
@@ -381,13 +381,13 @@ describe('Structural content classes', () => {
   });
 
   describe('has-url-icon', () => {
-    it('added when the header holds a URL chip', () => {
+    it('added when the header holds a URL button', () => {
       const card = buildCardDOM({ hasUrlIcon: true });
       syncStructuralClasses(card, bodyOf(card));
       expect(card.classList.contains('has-url-icon')).toBe(true);
     });
 
-    it('not added for a header without a chip', () => {
+    it('not added for a header without a URL button', () => {
       const card = buildCardDOM({ hasHeader: true });
       syncStructuralClasses(card, bodyOf(card));
       expect(card.classList.contains('has-url-icon')).toBe(false);
@@ -401,7 +401,7 @@ describe('Structural content classes', () => {
       expect(card.classList.contains('has-title-block')).toBe(true);
     });
 
-    it('not added for a chip-only header', () => {
+    it('not added for a header holding only a URL button', () => {
       const card = buildCardDOM({ hasUrlIcon: true });
       syncStructuralClasses(card, bodyOf(card));
       expect(card.classList.contains('has-title-block')).toBe(false);
@@ -486,7 +486,7 @@ describe('Structural content classes', () => {
   });
 });
 
-describe('updateCardContent — URL chip', () => {
+describe('updateCardContent — URL button', () => {
   const settings = () => ({ ...VIEW_DEFAULTS }) as ResolvedSettings;
 
   /** Never dereferenced: title, subtitle and property paths all bail before touching it. */
@@ -527,7 +527,7 @@ describe('updateCardContent — URL chip', () => {
         const iconEl = document.createElement('a');
         iconEl.className = 'card-title-url-icon';
         iconEl.setAttribute('href', options.urlValue);
-        iconEl.dataset.dvUrlValue = options.urlValue;
+        iconEl.dataset.dynamicViewsUrlValue = options.urlValue;
         headerEl.appendChild(iconEl);
       }
     }
@@ -538,7 +538,7 @@ describe('updateCardContent — URL chip', () => {
     return cardEl;
   }
 
-  it('creates the chip when the header exists and the URL is valid', () => {
+  it('creates the button when the header exists and the URL is valid', () => {
     const cardEl = buildCard({ header: true });
 
     makeRenderer().updateCardContent(
@@ -558,7 +558,7 @@ describe('updateCardContent — URL chip', () => {
     expect(cardEl.classList.contains('has-url-icon')).toBe(true);
   });
 
-  it('removes the chip and the emptied header when the URL goes', () => {
+  it('removes the button and the emptied header when the URL goes', () => {
     const cardEl = buildCard({ urlValue: 'https://example.com' });
 
     makeRenderer().updateCardContent(cardEl, cardData(), entry, settings());
@@ -602,7 +602,7 @@ describe('updateCardContent — URL chip', () => {
     expect(cardEl.classList.contains('has-url-icon')).toBe(true);
   });
 
-  it('refreshes an existing chip in place when the URL value changes', () => {
+  it('refreshes an existing button in place when the URL value changes', () => {
     const cardEl = buildCard({ urlValue: 'https://old.example' });
     const before = cardEl.querySelector<HTMLAnchorElement>(
       '.card-title-url-icon'
@@ -621,7 +621,7 @@ describe('updateCardContent — URL chip', () => {
     expect(after).toBe(before);
     expect(after!.getAttribute('href')).toBe('https://new.example');
     expect(after!.getAttribute('aria-label')).toBe('https://new.example');
-    expect(after!.dataset.dvUrlValue).toBe('https://new.example');
+    expect(after!.dataset.dynamicViewsUrlValue).toBe('https://new.example');
   });
 });
 

@@ -52,10 +52,17 @@ export function restoreActiveIndicator(): void {
 
 const scrollIndicatorCallbacks = new WeakMap<Element, Set<() => void>>();
 const scrollThrottleState = new WeakMap<Element, number>();
+const scrollListenerControllers = new WeakMap<Element, AbortController>();
 
 /** Register a restore callback on a scroll container. One throttled listener is
  *  shared by every card registering on that container, so cards do not
- *  accumulate listeners on the view they all sit in. */
+ *  accumulate listeners on the view they all sit in.
+ *
+ *  The listener cannot ride any single card's signal — it serves every card on
+ *  the container, so the first unmount would strand the rest. It gets its own
+ *  controller instead, aborted when the last callback deregisters. Without that,
+ *  the listener outlives the plugin: the scroll container belongs to Obsidian,
+ *  not to us, so a disable/enable cycle leaves the old module reachable. */
 export function addScrollIndicatorRestore(
   scrollContainer: Element,
   callback: () => void,
@@ -65,6 +72,8 @@ export function addScrollIndicatorRestore(
   if (!callbacks) {
     callbacks = new Set();
     scrollIndicatorCallbacks.set(scrollContainer, callbacks);
+    const controller = new AbortController();
+    scrollListenerControllers.set(scrollContainer, controller);
     scrollContainer.addEventListener(
       'scroll',
       () => {
@@ -75,11 +84,21 @@ export function addScrollIndicatorRestore(
         const cbs = scrollIndicatorCallbacks.get(scrollContainer);
         if (cbs) for (const cb of cbs) cb();
       },
-      { passive: true }
+      { passive: true, signal: controller.signal }
     );
   }
-  callbacks.add(callback);
-  signal.addEventListener('abort', () => callbacks.delete(callback), {
-    once: true,
-  });
+  const registered = callbacks;
+  registered.add(callback);
+  signal.addEventListener(
+    'abort',
+    () => {
+      registered.delete(callback);
+      if (registered.size > 0) return;
+      scrollListenerControllers.get(scrollContainer)?.abort();
+      scrollListenerControllers.delete(scrollContainer);
+      scrollIndicatorCallbacks.delete(scrollContainer);
+      scrollThrottleState.delete(scrollContainer);
+    },
+    { once: true }
+  );
 }

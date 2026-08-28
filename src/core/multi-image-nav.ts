@@ -181,9 +181,13 @@ export function setupTouchSwipeNavigation(opts: TouchSwipeOptions): () => void {
         absY <= SCRUB_DIRECTION_THRESHOLD
       )
         return;
-      // First axis to cross threshold wins — vertical locks out scrub entirely
+      // First axis to cross threshold wins — vertical locks out the swipe entirely
       directionLocked = true;
       if (absY >= absX) return;
+
+      // A zero-length set would make the wrap modulo below produce NaN. The hover
+      // path guards this at its own entry; this path had no equivalent.
+      if (imageUrls.length === 0) return;
 
       // One swipe = one image change, then lock until pointerup
       // Swipe left (negative deltaX) = next, swipe right = previous (natural scrolling)
@@ -192,7 +196,7 @@ export function setupTouchSwipeNavigation(opts: TouchSwipeOptions): () => void {
       if (scrollContainer)
         scrollContainer.classList.add('dynamic-views-scroll-locked');
       scrubEl.classList.add('scrub-hover');
-      // Hide multi-image indicator during swipe (lazy query — indicator created after setup).
+      // Hide multi-image indicator during the swipe (lazy query — indicator created after setup).
       // claimIndicator restores the previously hidden indicator (exclusivity).
       indicator ??= scrubEl.querySelector<HTMLElement>(
         '.thumbnail-indicator, .slideshow-icon'
@@ -202,7 +206,7 @@ export function setupTouchSwipeNavigation(opts: TouchSwipeOptions): () => void {
         indicator.classList.add('dynamic-views-icon-hidden');
       }
       const len = imageUrls.length;
-      // Scrubbing always wraps
+      // A swipe always wraps, unlike the hover path, which clamps
       const newIndex =
         deltaX > 0 ? (currentIndex - 1 + len) % len : (currentIndex + 1) % len;
       if (newIndex !== currentIndex) {
@@ -316,7 +320,7 @@ export function setupTouchSwipeNavigation(opts: TouchSwipeOptions): () => void {
     { signal, passive: true }
   );
 
-  // Block vertical scroll during active horizontal scrub (direction lock prevents false positives)
+  // Block vertical scroll during an active horizontal swipe (direction lock prevents false positives)
   scrubEl.addEventListener(
     'touchmove',
     (e: TouchEvent) => {

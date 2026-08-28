@@ -270,10 +270,9 @@
 
 /* Hide icon when nav buttons appear on hover, or while a scrub cover is hovered.
    Keyed on interact-hover, NOT interact: the latter is set by a touch press too,
-   so a plain tap on a Slide cover made the icon vanish for the press. The scrub
-   arm was already safe because .scrub-hover is pointer-only — which is why
-   thumbnails, whose hide rule carries the same guard, never showed the fault.
-   No media query needed: interact-hover is only ever set by a hover pointer,
+   so a plain tap on a Slide cover made the icon vanish for the press. Both arms
+   need it: .scrub-hover is added by the touch swipe path too, so it was never the
+   pointer-only guard it reads as. No media query needed: interact-hover is only ever set by a hover pointer,
    which states the condition directly. */
 .dynamic-views .card.interact-hover .card-cover-slideshow .slideshow-icon,
 .dynamic-views

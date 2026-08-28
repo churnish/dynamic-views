@@ -4,10 +4,13 @@
 // cover's top-right corner. Header and body layout that exists because of the
 // URL button — the header's icon strip and the .card-body give-backs — stays in
 // card/_header.scss.
-// Loaded immediately after card/header so the cascade order is unchanged.
+// Loaded after card/header purely to keep the two files adjacent. No other partial
+// styles .card-title-url-icon, so no cascade currently depends on this position.
 
 // Copies, not moves: card/_header.scss still interpolates all five for the
-// header/body rules it keeps, and SCSS variables do not cross partials here.
+// header/body rules it keeps. Duplicated rather than shared — a @use'd module
+// would work (card/_core.scss and card/_poster.scss both import selector
+// variables) and is the better home if a third consumer appears.
 // See card/_header.scss for what each one enumerates and why.
 $url-button-over-cover: '.card.image-format-cover:is(.card-cover-top, .card-cover-bottom).has-cover.has-url-icon:not(.has-card-content, .has-title-block)';
 $ph-body-grid: "body:is(.dynamic-views-show-cover-placeholder-grid, .dynamic-views-show-cover-placeholder-both, :not([class*='dynamic-views-show-cover-placeholder-']))";
@@ -89,7 +92,7 @@ $url-button-tr-ph: '.card.image-format-cover.has-cover-placeholder.has-url-icon:
 /* Obsidian's own hover background sits in `@media (hover: hover)`, which tests
    the PRIMARY pointer — false on a tablet whose primary input is touch, even
    with a trackpad or pen attached. The button then had no hover feedback there
-   except over an image, whose halo below carries no media gate. Supplied here
+   except over an image, whose hover background below carries no media gate. Supplied here
    instead, keyed on interact-hover: that class is only ever set by a genuine
    hover pointer, so it expresses the intent directly and needs no query. */
 .dynamic-views .card.interact-hover .card-title-url-icon:is(:hover, :active) {

@@ -26,10 +26,12 @@ The two share the global `brokenImageUrls` skip set, but not the navigator's clo
 | File                             | Role                                                                  |
 | -------------------------------- | --------------------------------------------------------------------- |
 | `src/core/slideshow.ts`        | Navigator, gesture detection, animation, preload, external blob cache |
-| `src/core/multi-image-nav.ts`  | Scrub engine: touch swipe-to-advance, hover scrub helpers, visibility reset IO |
+| `src/core/multi-image-nav.ts`  | Touch swipe-to-advance, hover scrub helpers, visibility reset IO |
 | `src/core/multi-image-icon.ts` | Corner icon hidden state: exclusivity slot, restore, shared scroll listener |
 | `src/core/hover-and-touch.ts`  | Hover and touch interaction utilities                                 |
-| `styles/card/_slideshow.scss`    | Animation keyframes, nav arrows, icon, hover zoom cancel              |
+| `styles/card/_slideshow.scss`    | Animation keyframes, nav arrows, cover icon, hover zoom cancel        |
+| `styles/card/_previews.scss`     | Thumbnail indicator: default, positioning, hidden state, hover hide, Style Settings hide |
+| `src/bases/utils.ts`             | `setupIndicatorRestoreTriggers()` — tap-elsewhere and focus-loss restore wiring |
 
 ## Cover navigation modes
 
@@ -217,7 +219,7 @@ Two details are load-bearing. The tap listener uses **capture phase** — card h
 
 Only the wiring is platform-gated — a touch swipe is the only thing that hides the icon. `restoreActiveIndicator()` itself is platform-agnostic, so the existing paths can share it.
 
-Both modes go through the same slot. `setupTouchSwipeNavigation` (scrub) and `setupSwipeGestures` (slide) each call `claimIndicator()` immediately before adding `dynamic-views-icon-hidden`, which are the only two places in `src/` that add the class. Each also registers its restore through `addScrollIndicatorRestore()`, so a view with covers in both modes still carries one throttled scroll listener, not one per cover. Exclusivity therefore holds across modes: a slide swipe restores an icon a scrub hid, and the reverse.
+Both modes go through the same slot. `setupTouchSwipeNavigation` (scrub) and `setupSwipeGestures` (slide) each call `claimIndicator()` immediately before adding `dynamic-views-icon-hidden`, which are the only two places in `src/` that add the class. Each also registers its restore through `addScrollIndicatorRestore()`, so a view with covers in both modes still carries one throttled scroll listener, not one per cover. Exclusivity therefore holds across modes: a swipe in Slide mode restores an icon a swipe in Scrub mode hid, and the reverse. Note that Scrub is both a mode name and the name of the hover mechanism — here it is the mode.
 
 The gates stay at the call sites, and they are not the same gate. Slide checks the `is-mobile` body class before hiding and before registering its scroll restore; scrub reaches the hide only through `isTouchPointer(e)` and registers its scroll restore unconditionally. The shared module is deliberately platform-agnostic and imposes neither.
 

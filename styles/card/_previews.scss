@@ -159,7 +159,7 @@ body.dynamic-views-text-preview-hyphenate .dynamic-views .card-text-preview {
     display: none;
   }
 
-  :is(.card-thumbnail, .card-cover).multi-image .thumbnail-indicator {
+  .card-thumbnail.multi-image .thumbnail-indicator {
     position: absolute;
     /* Bottom-left. The glyph's ink is inset 0.393px inside its box on every
        side, so one value on both axes reads as an equal corner gap. */
@@ -198,7 +198,8 @@ body.dynamic-views-text-preview-hyphenate .dynamic-views .card-text-preview {
   color: var(--dynamic-views-color-base-100);
 }
 
-/* Hide indicator after swipe (restored on vertical scroll) */
+/* Hide indicator after swipe. Restored by scroll, a tap elsewhere, pane focus loss,
+   or another surface claiming the slot — see multi-image-icon.ts. */
 .dynamic-views .card-thumbnail .thumbnail-indicator.dynamic-views-icon-hidden {
   opacity: 0;
 }
@@ -215,7 +216,7 @@ body.dynamic-views-text-preview-hyphenate .dynamic-views .card-text-preview {
   }
 }
 
-/* Hide scrubbing indicator when toggle is on */
+/* Hide thumbnail indicator when toggle is on */
 body.dynamic-views-hide-thumbnail-icon
   .dynamic-views
   .card-thumbnail

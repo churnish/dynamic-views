@@ -68,12 +68,12 @@ export function createExternalLinkDragHandler(
 ): (e: DragEvent) => void {
   // Store on element for freshness — Preact re-renders may update
   // link props without re-binding (see __dragBound guard)
-  el.dataset.dvLinkCaption = caption;
-  el.dataset.dvLinkUrl = url;
+  el.dataset.dynamicViewsLinkCaption = caption;
+  el.dataset.dynamicViewsLinkUrl = url;
   return (e) => {
     e.stopPropagation();
-    const c = el.dataset.dvLinkCaption ?? caption;
-    const u = el.dataset.dvLinkUrl ?? url;
+    const c = el.dataset.dynamicViewsLinkCaption ?? caption;
+    const u = el.dataset.dynamicViewsLinkUrl ?? url;
     e.dataTransfer?.clearData();
     e.dataTransfer?.setData(DRAG_MARKER, '');
     const dragText = c === u ? u : `[${c}](${u})`;
@@ -114,7 +114,7 @@ export function createUrlButtonDragHandlers(
     doc.removeEventListener('drop', cleanup);
     const body = doc.body;
     // Scope removal to matching tooltip text to avoid removing unrelated tooltips
-    const currentUrl = iconEl.dataset.dvUrlValue ?? urlValue;
+    const currentUrl = iconEl.dataset.dynamicViewsUrlValue ?? urlValue;
     for (const tip of body.querySelectorAll('.tooltip')) {
       if (tip.textContent === currentUrl) {
         tip.remove();
@@ -213,7 +213,7 @@ export function createUrlButtonDragHandlers(
         // the URL without re-binding event listeners (see __dragBound guard)
         e.dataTransfer.setData(
           'text/plain',
-          iconEl.dataset.dvUrlValue ?? urlValue
+          iconEl.dataset.dynamicViewsUrlValue ?? urlValue
         );
       }
       // WebKit dispatches no contextmenu for a touch long press; Obsidian synthesises
@@ -223,7 +223,7 @@ export function createUrlButtonDragHandlers(
       if (Platform.isIosApp) {
         app.dragManager.onDragStart(e, {
           type: 'text',
-          title: iconEl.dataset.dvUrlValue ?? urlValue,
+          title: iconEl.dataset.dynamicViewsUrlValue ?? urlValue,
           icon: 'lucide-link',
         });
         // Registered only to buy the synthesis, so hand back everything else it
