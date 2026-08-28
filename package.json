@@ -25,6 +25,7 @@
       "styles/**"
     ],
     "ignoreDependencies": [
+      "obsidian",
       "prettier",
       "sass"
     ],
