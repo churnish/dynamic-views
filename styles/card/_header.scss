@@ -523,19 +523,72 @@ body.dynamic-views-title-divider
   border-bottom: 1px solid var(--dynamic-views-background-modifier-border);
 }
 
-/* The divider matches the card border so the two read as one frame. */
-/* Poster cards keep the default token: their divider sits over an image, where a border-preset colour reads as arbitrary. */
+/* WHAT DECIDES THE DIVIDER COLOUR, and WHAT PAINTS IT, are separate concerns here. Every card publishes `--dynamic-views-divider-color`; two consumer rules below turn it into pixels, and which consumer a card gets depends only on whether its header carries the inline-end strip. Keeping the two apart is what lets an imageless poster take a border-derived colour through the background painter, which is a combination neither concern can express alone. */
+
+/* Colour, part 1 — cards WITH an image follow the tint, the way the URL button glyph does: the default token is theme-derived, so over a dark-tinted image it reads as a dark smudge rather than a divider. */
+/* The token, NOT currentColor. The card re-points --text-muted, but not `color` — an ancestor's computed colour is what currentColor inherits here, which measures rgb(34,34,34) under both tints. Reading the variable at the header re-evaluates it against the card's re-point, which is exactly how .text-icon-button gets the glyph its colour. */
+/* Split by tint on alpha alone, not colour: at full strength a 1px line spanning the card competes with the title it sits under. The glyph is a small mark and carries full weight fine; a rule does not. */
+/* Dark tint carries twice the alpha of light. A dark line on a light surface reads heavier than a light line on a dark one at matching alpha — the same asymmetry that puts the URL button hover at 20% against 7%. */
+body.dynamic-views-title-divider
+  .dynamic-views.tint-dark
+  .card.image-format-poster.has-poster
+  .card-header,
+body.theme-dark.dynamic-views-title-divider
+  .dynamic-views.tint-adapt
+  .card.image-format-poster.has-poster
+  .card-header,
+body.dynamic-views-title-divider
+  .dynamic-views.tint-dark
+  .card.image-format-backdrop.has-backdrop
+  .card-header,
+body.theme-dark.dynamic-views-title-divider
+  .dynamic-views.tint-adapt
+  .card.image-format-backdrop.has-backdrop
+  .card-header {
+  --dynamic-views-divider-color: color-mix(
+    in srgb,
+    var(--dynamic-views-text-muted) 20%,
+    transparent
+  );
+}
+
+body.dynamic-views-title-divider
+  .dynamic-views.tint-light
+  .card.image-format-poster.has-poster
+  .card-header,
+body.theme-light.dynamic-views-title-divider
+  .dynamic-views.tint-adapt
+  .card.image-format-poster.has-poster
+  .card-header,
+body.dynamic-views-title-divider
+  .dynamic-views.tint-light
+  .card.image-format-backdrop.has-backdrop
+  .card-header,
+body.theme-light.dynamic-views-title-divider
+  .dynamic-views.tint-adapt
+  .card.image-format-backdrop.has-backdrop
+  .card-header {
+  --dynamic-views-divider-color: color-mix(
+    in srgb,
+    var(--dynamic-views-text-muted) 10%,
+    transparent
+  );
+}
+
+/* Colour, part 2 — every card WITHOUT an over-image treatment matches the card border, so the divider and the frame read as one. An imageless poster or backdrop belongs here: the "a border-preset colour reads as arbitrary over a photograph" rationale has no photograph to apply to, and the tint rules above never publish a colour for it. */
 /* Thickness stays 1px — following the border's thickness would delete the line at thickness 0, which is exactly where the fallback is meant to keep it. */
 /* `min(1, thickness / 1px)` is a 0-or-1 step, so a hidden border contributes 0% of its colour and the fallback token shows through. */
-/* @supports-gated: length-by-length division in calc() is CSS Values 4 and unverified on older WebKit — ungated, an unsupported engine would make border-bottom-color invalid at computed-value time and resolve it to currentColor. */
+/* @supports-gated: length-by-length division in calc() is CSS Values 4 and unverified on older WebKit. Publishing a custom property rather than setting `border-bottom-color` directly means an unsupported engine simply leaves the variable unset, and both consumers below fall back to the default token — no invalid-at-computed-value-time resolution to currentColor to guard against. */
 @supports (
   color: color-mix(in srgb, red calc(min(1, 1px / 1px) * 100%), blue)
 ) {
   body.dynamic-views-title-divider
     .dynamic-views
-    .card.has-card-content:not(.image-format-poster)
+    .card.has-card-content:not(.image-format-poster.has-poster):not(
+      .image-format-backdrop.has-backdrop
+    )
     .card-header {
-    border-bottom-color: color-mix(
+    --dynamic-views-divider-color: color-mix(
       in srgb,
       var(--card-border-color)
         calc(
@@ -544,6 +597,40 @@ body.dynamic-views-title-divider
       var(--dynamic-views-background-modifier-border)
     );
   }
+}
+
+/* Painter 1 — EVERY poster card, with an image or without. Poster's header carries a 4px inline-end strip so the URL button's hover background has room inside `overflow: clip`; that strip is on `.image-format-poster`, NOT on `.has-poster`, so it widens the box a border paints across on every poster card alike and the line reaches 4px further right than left. A background can be sized to stop short of the strip; a border cannot be inset. Gating this on `.has-poster` left imageless poster cards painting a real border across the widened box — visibly longer on the right, and the reason this rule is scoped to the format rather than to the image. */
+/* The border stays in the box at `transparent` so it keeps contributing its 1px, leaving the header's height and the divider gap exactly as they were. `background-origin: border-box` puts the line on that same 1px row rather than one pixel above it. */
+body.dynamic-views-title-divider
+  .dynamic-views
+  .card.image-format-poster.has-card-content
+  .card-header {
+  border-bottom-color: transparent;
+  background-image: linear-gradient(
+    var(
+      --dynamic-views-divider-color,
+      var(--dynamic-views-background-modifier-border)
+    ),
+    var(
+      --dynamic-views-divider-color,
+      var(--dynamic-views-background-modifier-border)
+    )
+  );
+  background-size: calc(100% - var(--size-2-2)) 1px;
+  background-position: left bottom;
+  background-origin: border-box;
+  background-repeat: no-repeat;
+}
+
+/* Painter 2 — every other format. No inline-end strip, so the header sits flush and an ordinary border is already symmetric; measured at an equal 8px on both sides. */
+body.dynamic-views-title-divider
+  .dynamic-views
+  .card.has-card-content:not(.image-format-poster)
+  .card-header {
+  border-bottom-color: var(
+    --dynamic-views-divider-color,
+    var(--dynamic-views-background-modifier-border)
+  );
 }
 
 /* With a divider present the hover background's neighbour below is the divider

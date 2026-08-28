@@ -37,6 +37,7 @@ vi.mock('../src/constants', () => ({
     showFileImages: 'always',
     imageFormat: 'thumbnail',
     posterDisplayMode: 'fade',
+    tint: 'adapt',
     thumbnailSize: 80,
     imagePosition: 'right',
     imageFit: 'crop',

@@ -32,23 +32,6 @@ settings:
         level: 2
         collapsed: true
     -
-        id: dynamic-views-backdrop-overlay-tint
-        title: Overlay tint
-        description: Shade of backdrop overlay.
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-backdrop-color-scheme-match
-        options:
-            -
-                label: Light
-                value: dynamic-views-backdrop-color-scheme-light
-            -
-                label: Dark
-                value: dynamic-views-backdrop-color-scheme-dark
-            -
-                label: Match color scheme
-                value: dynamic-views-backdrop-color-scheme-match
-    -
         id: dynamic-views-backdrop-overlay-light
         title: Light overlay strength
         description: Opacity of light backdrop overlay.
@@ -1238,40 +1221,6 @@ settings:
         opacity: false
         default-light: '#'
         default-dark: '#'
-    -
-        id: dynamic-views-poster-fade-tint
-        title: Fade tint
-        description: Shade of poster fade gradient.
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-poster-fade-dark
-        options:
-            -
-                label: Light
-                value: dynamic-views-poster-fade-light
-            -
-                label: Dark
-                value: dynamic-views-poster-fade-dark
-            -
-                label: Match color scheme
-                value: dynamic-views-poster-fade-match
-    -
-        id: dynamic-views-poster-overlay-tint
-        title: Overlay tint
-        description: Shade of poster overlay.
-        type: class-select
-        allowEmpty: false
-        default: dynamic-views-poster-color-scheme-dark
-        options:
-            -
-                label: Light
-                value: dynamic-views-poster-color-scheme-light
-            -
-                label: Dark
-                value: dynamic-views-poster-color-scheme-dark
-            -
-                label: Match color scheme
-                value: dynamic-views-poster-color-scheme-match
     -
         id: dynamic-views-poster-overlay-light
         title: Light overlay strength
@@ -2745,15 +2694,9 @@ body:not(.dynamic-views-title-hover-color-custom)
 body:not(.dynamic-views-title-size-custom)
   .style-settings-container
   .setting-item[data-id='dynamic-views-title-size-custom'],
-body.dynamic-views-poster-color-scheme-dark
-  .style-settings-container
-  .setting-item[data-id='dynamic-views-poster-overlay-light'],
 body:not(.dynamic-views-view-background-custom)
   .style-settings-container
-  .setting-item[data-id='dynamic-views-view-background-custom'],
-body.dynamic-views-poster-color-scheme-light
-  .style-settings-container
-  .setting-item[data-id='dynamic-views-poster-overlay-dark'] {
+  .setting-item[data-id='dynamic-views-view-background-custom'] {
   display: none !important;
 }
 
@@ -2788,6 +2731,24 @@ body.dynamic-views-cover-disable-navigation
 body.dynamic-views-thumbnail-disable-navigation
   .style-settings-container
   .setting-item[data-id='dynamic-views-thumbnail-disable-navigation'] {
+  border-bottom-right-radius: var(--setting-items-radius);
+  border-bottom-left-radius: var(--setting-items-radius);
+}
+
+// Each Cards sub-heading (Card background / Card border / Card shadow) is its own
+// container, and all three END on a custom-colour row that is hidden unless that
+// colour is set to Custom — so by default the radius lands on a hidden row and the
+// sub-section renders square-bottomed. The hover colour row above it becomes
+// visually last in exactly that state, which is what these restore.
+body:not(.dynamic-views-card-background-hover-custom)
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-card-background-hover'],
+body:not(.dynamic-views-card-border-color-hover-custom)
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-card-border-color-hover'],
+body:not(.dynamic-views-card-shadow-color-hover-custom)
+  .style-settings-container
+  .setting-item[data-id='dynamic-views-card-shadow-color-hover'] {
   border-bottom-right-radius: var(--setting-items-radius);
   border-bottom-left-radius: var(--setting-items-radius);
 }

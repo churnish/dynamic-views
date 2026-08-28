@@ -147,6 +147,25 @@ describe('setupSelectionScoping', () => {
     expect(container.classList.contains('is-selecting-text')).toBe(false);
   });
 
+  it('lifts the guard on pointerup even though the selection is still live', () => {
+    const { container, cards } = buildContainer();
+    scoping = setupSelectionScoping(() => container);
+
+    // Drag in card 0 leaves a live, non-collapsed selection.
+    pointerDownOn(cards[0]);
+    stubSelection(false);
+    fireSelectionChange();
+    expect(container.classList.contains('is-selecting-text')).toBe(true);
+
+    // Releasing ends the drag. The selection stays live, but the guard must go —
+    // the browser decides selectability at the next pointerdown, and a card left
+    // at user-select: none cannot begin a selection at all.
+    document.dispatchEvent(new Event('pointerup'));
+
+    expect(container.classList.contains('is-selecting-text')).toBe(false);
+    expect(cards[0].classList.contains('is-selection-origin')).toBe(false);
+  });
+
   it('pointerup disarms so a later selectionchange does not mark', () => {
     const { container, cards } = buildContainer();
     scoping = setupSelectionScoping(() => container);

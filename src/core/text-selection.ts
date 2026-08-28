@@ -16,7 +16,9 @@ export interface SelectionScoping {
  *
  * The marker classes are applied only once the selection actually extends, not
  * on pointerdown — `.card:not(.is-selection-origin) *` invalidates styles for
- * every card and descendant, which is too expensive to pay on every click.
+ * every card and descendant, which is too expensive to pay on every click. They
+ * come off again on pointerup rather than when the selection collapses, so the
+ * guard lasts exactly as long as the drag that needs it.
  */
 export function setupSelectionScoping(
   getContainerRef: () => HTMLElement | null
@@ -46,8 +48,16 @@ export function setupSelectionScoping(
     armedCard = card && container?.contains(card) ? card : null;
   };
 
+  /* Clearing on pointerup, not on the selection collapsing, is what lets the next
+     drag start somewhere else. The guard exists to confine a drag in progress, and
+     the drag ends here — but the selection it produced stays live, so waiting for
+     `selectionchange` left every other card at `user-select: none` for as long as
+     the text stayed highlighted. The browser decides whether a drag may begin a
+     selection at pointerdown, before that collapse has fired, so it refused to
+     start one in any other card and the gesture did nothing. */
   const handlePointerUp = (): void => {
     armedCard = null;
+    clearMarks();
   };
 
   const handleSelectionChange = (): void => {

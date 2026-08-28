@@ -109,8 +109,9 @@
    --text-muted, and the mix comes out a dark smudge — so an imageless card falls
    through to Obsidian's own `.text-icon-button:hover` like every other URL button.
 
-   Backdrop is deliberately absent: its URL button is not forced to a light colour,
-   so it would hit exactly that smudge. It needs a glyph colour decided first.
+   Backdrop is included now that its glyph inherits the tint like poster's. It was
+   held out only while it still sat on the faint token, where currentColor was not
+   a forced light colour and the mix came out as that smudge.
  */
 .dynamic-views
   #{$url-button-over-cover}.interact
@@ -120,8 +121,11 @@
   .card-title-url-icon:is(:hover, :active),
 .dynamic-views
   .card.image-format-poster.has-poster.interact
+  .card-title-url-icon:is(:hover, :active),
+.dynamic-views
+  .card.image-format-backdrop.has-backdrop.interact
   .card-title-url-icon:is(:hover, :active) {
-  background-color: color-mix(in srgb, currentColor 25%, transparent);
+  background-color: color-mix(in srgb, currentColor 20%, transparent);
   /* Follows Obsidian's own button radius, so the background keeps whatever
      shape the platform gives every other icon button — a circle on mobile,
      where --button-radius resolves to a touch size. */
@@ -129,31 +133,47 @@
 }
 
 /* Light tint: the card re-points --text-muted at the tint, so currentColor is
-   near-black and the mix above lands ~3.7x heavier than the hover background
-   Obsidian itself uses (0.25 against 0.067) — a dark smudge on a light card. A
-   light tint gives --background-modifier-hover a surface to read against, which
-   is the condition the mix exists to work around, so this hands it back to
-   native's own value.
+   near-black and the 0.2 above lands ~3x heavier than the hover background
+   Obsidian itself uses (0.2 against 0.067) — a dark smudge on a light card. The
+   same mix at native's weight gives the right result without that overshoot.
 
-   Split by poster mode on purpose: the fade tint classes govern Fade and the
-   colour-scheme classes govern Overlay. OR-ing them into one selector let a
-   dark Fade match through an unrelated colour-scheme class. Both enumerate
-   their `match` arm the same way card/_poster.scss does for the palette. */
-body:is(
-    .dynamic-views-poster-fade-light,
-    .dynamic-views-poster-fade-match.theme-light
-  )
-  .dynamic-views.poster-mode-fade
+   Deliberately NOT --background-modifier-hover, even though this is the surface
+   it was designed for. That token tracks the app THEME, not the card's tint: it
+   is black 6.7% in a light theme but white 6.7% in a dark one. An explicit light
+   tint under a dark theme therefore painted white on a light card and the hover
+   vanished. currentColor already follows the tint, so mixing off it is correct
+   whether or not the two agree. Only `adapt` keeps them in step by construction.
+
+   Still split by poster mode, but only because Fade and Overlay keep separate
+   palette rule sets. One Tint setting now governs both, so there is no second
+   class family a dark Fade could match through — the earlier warning against
+   OR-ing the two families no longer applies. Each mode enumerates its `adapt`
+   arm under a theme gate, the same way card/_poster.scss does for the palette.
+
+   Backdrop takes no mode gate: it has no display-mode class and one palette rule
+   set, so the format class alone scopes it. */
+.dynamic-views.tint-light.poster-mode-fade
   .card.image-format-poster.has-poster.interact
   .card-title-url-icon:is(:hover, :active),
-body:is(
-    .dynamic-views-poster-color-scheme-light,
-    .dynamic-views-poster-color-scheme-match.theme-light
-  )
-  .dynamic-views.poster-mode-overlay
+body.theme-light
+  .dynamic-views.tint-adapt.poster-mode-fade
   .card.image-format-poster.has-poster.interact
+  .card-title-url-icon:is(:hover, :active),
+.dynamic-views.tint-light.poster-mode-overlay
+  .card.image-format-poster.has-poster.interact
+  .card-title-url-icon:is(:hover, :active),
+body.theme-light
+  .dynamic-views.tint-adapt.poster-mode-overlay
+  .card.image-format-poster.has-poster.interact
+  .card-title-url-icon:is(:hover, :active),
+.dynamic-views.tint-light
+  .card.image-format-backdrop.has-backdrop.interact
+  .card-title-url-icon:is(:hover, :active),
+body.theme-light
+  .dynamic-views.tint-adapt
+  .card.image-format-backdrop.has-backdrop.interact
   .card-title-url-icon:is(:hover, :active) {
-  background-color: var(--background-modifier-hover);
+  background-color: color-mix(in srgb, currentColor 7%, transparent);
 }
 
 /* The URL button belongs at the card's top-right in every cover layout. In these

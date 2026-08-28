@@ -47,6 +47,7 @@ export const VIEW_DEFAULTS: ViewDefaults = {
   showFileImages: 'always',
   imageFormat: 'thumbnail',
   posterDisplayMode: 'fade',
+  tint: 'adapt',
   posterInteractToReveal: false,
   thumbnailSize: 80,
   imagePosition: 'right',
@@ -83,6 +84,7 @@ export const CSS_ONLY_SETTINGS_KEYS = new Set([
   'imageRatio',
   'thumbnailSize',
   'posterDisplayMode',
+  'tint',
   'imageFit',
 ]);
 

@@ -88,16 +88,10 @@ body.dynamic-views-backdrop-hover-zoom
    jagged corner clipping in Chromium. Dark uses brightness(); light uses
    invert-brightness-invert (mathematically identical to a white overlay). */
 
-/* Dark overlay: Match color scheme (default) + Dark (forced) */
-body:is(
-    .dynamic-views-backdrop-color-scheme-dark,
-    .dynamic-views-backdrop-color-scheme-match.theme-dark,
-    :not(
-      .dynamic-views-backdrop-color-scheme-light,
-      .dynamic-views-backdrop-color-scheme-dark
-    ).theme-dark
-  )
-  .dynamic-views
+/* Dark overlay: Dark tint (forced) + Adapt under a dark theme */
+.dynamic-views.tint-dark .card.image-format-backdrop .card-backdrop img,
+body.theme-dark
+  .dynamic-views.tint-adapt
   .card.image-format-backdrop
   .card-backdrop
   img {
@@ -107,16 +101,10 @@ body:is(
     blur(var(--dynamic-views-backdrop-overlay-blur, 0px));
 }
 
-/* Light overlay: Match color scheme (default) + Light (forced) */
-body:is(
-    .dynamic-views-backdrop-color-scheme-light,
-    .dynamic-views-backdrop-color-scheme-match.theme-light,
-    :not(
-      .dynamic-views-backdrop-color-scheme-light,
-      .dynamic-views-backdrop-color-scheme-dark
-    ).theme-light
-  )
-  .dynamic-views
+/* Light overlay: Light tint (forced) + Adapt under a light theme */
+.dynamic-views.tint-light .card.image-format-backdrop .card-backdrop img,
+body.theme-light
+  .dynamic-views.tint-adapt
   .card.image-format-backdrop
   .card-backdrop
   img {
@@ -126,33 +114,17 @@ body:is(
 }
 
 /* Backdrop text color overrides (light overlay → dark text) */
-body.dynamic-views-backdrop-color-scheme-light
-  .dynamic-views
-  .card.image-format-backdrop.has-backdrop,
-body:is(
-    .dynamic-views-backdrop-color-scheme-match,
-    :not(
-      .dynamic-views-backdrop-color-scheme-light,
-      .dynamic-views-backdrop-color-scheme-dark
-    )
-  ).theme-light
-  .dynamic-views
+.dynamic-views.tint-light .card.image-format-backdrop.has-backdrop,
+body.theme-light
+  .dynamic-views.tint-adapt
   .card.image-format-backdrop.has-backdrop {
   @include overlay-text-colors('light');
 }
 
 /* Backdrop text color overrides (dark overlay → light text) */
-body.dynamic-views-backdrop-color-scheme-dark
-  .dynamic-views
-  .card.image-format-backdrop.has-backdrop,
-body:is(
-    .dynamic-views-backdrop-color-scheme-match,
-    :not(
-      .dynamic-views-backdrop-color-scheme-light,
-      .dynamic-views-backdrop-color-scheme-dark
-    )
-  ).theme-dark
-  .dynamic-views
+.dynamic-views.tint-dark .card.image-format-backdrop.has-backdrop,
+body.theme-dark
+  .dynamic-views.tint-adapt
   .card.image-format-backdrop.has-backdrop {
   @include overlay-text-colors('dark');
 }

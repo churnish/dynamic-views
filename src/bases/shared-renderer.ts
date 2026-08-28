@@ -244,6 +244,7 @@ interface LineAndModeValues {
   imageRatio?: number;
   thumbnailSize?: number;
   posterDisplayMode?: 'fade' | 'overlay';
+  tint?: 'dark' | 'light' | 'adapt';
   imageFit?: 'crop' | 'contain';
 }
 
@@ -306,13 +307,21 @@ function applyLineAndModeVariables(
     );
   }
 
-  // Both swaps run on every onDataUpdated(), so compare before touching
+  // All three swaps run on every onDataUpdated(), so compare before touching
   // classList — an unconditional remove+add invalidates style for every card.
   if (values.posterDisplayMode !== undefined) {
     const prevMode = readPosterDisplayMode(el);
     if (prevMode !== values.posterDisplayMode) {
       el.classList.remove('poster-mode-fade', 'poster-mode-overlay');
       el.classList.add(`poster-mode-${values.posterDisplayMode}`);
+    }
+  }
+
+  if (values.tint !== undefined) {
+    const next = `tint-${values.tint}`;
+    if (!el.classList.contains(next)) {
+      el.classList.remove('tint-dark', 'tint-light', 'tint-adapt');
+      el.classList.add(next);
     }
   }
 
@@ -384,6 +393,7 @@ export function applyViewContainerStyles(
     imageRatio: settings.imageRatio,
     thumbnailSize: settings.thumbnailSize,
     posterDisplayMode: settings.posterDisplayMode,
+    tint: settings.tint,
     imageFit: settings.imageFit,
   });
 
@@ -495,6 +505,11 @@ export function applyCssOnlySettings(
     rawPosterMode === 'fade' || rawPosterMode === 'overlay'
       ? rawPosterMode
       : 'fade';
+  const rawTint = config.get('tint');
+  const tint =
+    rawTint === 'dark' || rawTint === 'light' || rawTint === 'adapt'
+      ? rawTint
+      : 'adapt';
   const rawImageFit = config.get('imageFit');
   const imageFit =
     rawImageFit === 'crop' || rawImageFit === 'contain' ? rawImageFit : 'crop';
@@ -510,6 +525,7 @@ export function applyCssOnlySettings(
     imageRatio: readNumber('imageRatio'),
     thumbnailSize: readNumber('thumbnailSize'),
     posterDisplayMode,
+    tint,
     imageFit,
   });
 

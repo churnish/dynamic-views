@@ -494,6 +494,24 @@ body.dynamic-views-date-separators-unpadded .dynamic-views .date-separator {
   padding: 0;
 }
 
+/* Over an image, all three separators fade through their own colour instead of through element opacity, at the 60% that --dynamic-views-text-faint uses. Poster and backdrop composite card text over a photograph, and element opacity blends the glyph with whatever pixels sit behind it rather than with the text around it — so a separator read as a different weight from the faint text beside it depending on the image. A colour alpha fades the glyph against the text it belongs to, which is what makes the two match. */
+/* currentColor on the `color` property itself resolves to the INHERITED colour, so each separator lands at 60% of its own property's text — colour presets are honoured for free, and this stays 60% of that rather than a fixed faint token. */
+/* opacity: 1 is load-bearing: without it the generic 0.5/0.6 above still applies and the two dims multiply. */
+.dynamic-views
+  .card:is(.image-format-poster.has-poster, .image-format-backdrop.has-backdrop)
+  :is(.path-separator, .date-separator, .list-separator) {
+  color: color-mix(in srgb, currentColor 60%, transparent);
+  opacity: 1;
+}
+
+/* The 'Do not dim separators' toggle clears `opacity` only, which no longer carries the dim on these cards — without this it would silently stop working over an image. Scoped to date separators because that is all the toggle has ever governed. */
+body.dynamic-views-date-separators-solid
+  .dynamic-views
+  .card:is(.image-format-poster.has-poster, .image-format-backdrop.has-backdrop)
+  .date-separator {
+  color: inherit;
+}
+
 /* Segment underline hover: card (hover/touch intent) */
 .dynamic-views
   .card.interact
@@ -582,10 +600,10 @@ body.dynamic-views-date-separators-unpadded .dynamic-views .date-separator {
     display: inline;
   }
 
-  /* List separator styling - 0.6 opacity of property value color */
+  /* Same 0.5 as the path and date separators — all three are punctuation between values, and there is no reason for one of them to sit at a different weight. */
   .list-separator {
     color: inherit;
-    opacity: 0.6;
+    opacity: 0.5;
   }
 
   /* Odd fields (left side) */

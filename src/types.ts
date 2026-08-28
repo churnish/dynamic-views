@@ -41,6 +41,7 @@ export interface ViewDefaults {
   showFileImages: 'always' | 'if-unavailable' | 'never';
   imageFormat: 'thumbnail' | 'cover' | 'poster' | 'backdrop';
   posterDisplayMode: 'fade' | 'overlay';
+  tint: 'dark' | 'light' | 'adapt';
   posterInteractToReveal: boolean;
   thumbnailSize: number;
   imagePosition: 'left' | 'right' | 'top' | 'bottom';

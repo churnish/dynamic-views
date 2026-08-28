@@ -13,6 +13,7 @@ export const VALID_VIEW_VALUES: Partial<
   showFileImages: ['always', 'if-unavailable', 'never'],
   imageFormat: ['thumbnail', 'cover', 'poster', 'backdrop'],
   posterDisplayMode: ['fade', 'overlay'],
+  tint: ['adapt', 'dark', 'light'],
   imagePosition: ['left', 'right', 'top', 'bottom'],
   imageFit: ['crop', 'contain'],
   propertyNames: ['hide', 'inline', 'above'],

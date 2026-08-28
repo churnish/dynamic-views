@@ -206,14 +206,12 @@ body.is-ios
   -webkit-mask-image: none;
 }
 
-/* Fade tint palette. Dark is the Style Settings default, so the enumerated
-   :not() arm also covers "Style Settings not installed". Enumeration instead of
-   [class*=] so unrelated body class churn does not invalidate the rule. */
-body:is(
-    :not(.dynamic-views-poster-fade-light, .dynamic-views-poster-fade-match),
-    .dynamic-views-poster-fade-match.theme-dark
-  )
-  .dynamic-views.poster-mode-fade
+/* Fade tint palette. The Tint view setting always writes exactly one tint-*
+   class onto the container, so no absence fallback is needed — the explicit arm
+   and the theme-gated adapt arm cover every state. */
+.dynamic-views.tint-dark.poster-mode-fade .card.image-format-poster.has-poster,
+body.theme-dark
+  .dynamic-views.tint-adapt.poster-mode-fade
   .card.image-format-poster.has-poster {
   --dynamic-views-poster-fade-rgb: 0 0 0;
   --dynamic-views-poster-fade-alpha-near: 85%;
@@ -226,11 +224,9 @@ body:is(
    than dark — a white veil lifts a photo toward mid-grey long before it reaches
    paper white, so the same opacity reads as thinner and leaves dark text
    fighting the image underneath. */
-body:is(
-    .dynamic-views-poster-fade-light,
-    .dynamic-views-poster-fade-match.theme-light
-  )
-  .dynamic-views.poster-mode-fade
+.dynamic-views.tint-light.poster-mode-fade .card.image-format-poster.has-poster,
+body.theme-light
+  .dynamic-views.tint-adapt.poster-mode-fade
   .card.image-format-poster.has-poster {
   --dynamic-views-poster-fade-rgb: 255 255 255;
   --dynamic-views-poster-fade-alpha-near: 99%;
@@ -288,24 +284,28 @@ body:is(
   );
 }
 
-/* Property links drop the accent colour on poster cards: over an image it reads as low contrast against the light card text, and the accent is the one colour the fade tint cannot adapt to. The underline carries the link affordance instead. */
+/* Both over-image formats share this whole block. Backdrop re-points the same text tokens as poster through `overlay-text-colors`, sits its text over a photograph, and takes the same Tint setting — so the reason the accent has to go is identical, and so is every hover consequence that follows from removing it. Enumerated once rather than duplicated per format: the two drifted apart before when the URL button split them.
+   The `:is()` keeps specificity EXACTLY where the poster-only selectors had it — `:is()` scores its heaviest argument, and both arms carry two classes, so the (0,6,1) resting and (0,8,1) hover figures the comments below depend on are unchanged. */
+$over-image-card: '.card:is(.image-format-poster.has-poster, .image-format-backdrop.has-backdrop)';
+
+/* Property links drop the accent colour on these cards: over an image it reads as low contrast against the light card text, and the accent is the one colour the fade tint cannot adapt to. The underline carries the link affordance instead. */
 /* text-decoration is set explicitly rather than through --link-decoration because themes that null that variable (Minimal) would otherwise leave links indistinguishable from plain property text once the colour matches. */
 /* color: inherit resolves through .property-content to the property colour presets, so per-preset property colours are honoured for free. */
 /* card/poster is @use'd BEFORE properties and property-colors in main.scss, so these must EXCEED the generic link rules, not tie them: (0,6,1) here beats the (0,3,1) resting rule, and the hover arm below needs (0,8,1) to beat the (0,6,1) .interact rule. */
 .dynamic-views
-  .card.image-format-poster.has-poster
+  #{$over-image-card}
   .property
   a:is(.internal-link, .external-link) {
   color: inherit;
   text-decoration: underline;
 }
 
-/* Poster interactive text dims on hover, inverting the brighten every other hover uses (--dynamic-views-link-color-hover raises lightness 66% -> 76%; tags mix toward white). Poster text is already #fafafa on the default fade tint, so there is no headroom left to brighten into. */
-/* Mixing currentColor toward transparent rather than toward a named colour is what survives the fade tint flip: the tint sets text to #fafafa when dark and #0a0a0a when light, and reducing alpha lowers contrast against the image in both directions where a fixed lighten or darken would only work for one. */
+/* Poster interactive text dims on hover, inverting the brighten every other hover uses (--dynamic-views-link-color-hover raises lightness 66% -> 76%; tags mix toward white). Text on these cards is already near-white on a dark tint, so there is no headroom left to brighten into. */
+/* Mixing currentColor toward transparent rather than toward a named colour is what survives the tint flip: the tint sets text near-white when dark and near-black when light, and reducing alpha lowers contrast against the image in both directions where a fixed lighten or darken would only work for one. */
 /* currentColor stays unresolved inside the custom property and is substituted per element, so one declaration on the card dims each descendant from its OWN resting colour rather than from the card's. */
 /* Chosen over `opacity` because text-decoration-color follows currentColor, so the underline dims with the text, and because unresolved links already carry opacity 0.7 — a second opacity would multiply into a much heavier dim than intended. */
-.dynamic-views .card.image-format-poster.has-poster {
-  --dynamic-views-poster-hover-dim: color-mix(
+.dynamic-views #{$over-image-card} {
+  --dynamic-views-tinted-hover-dim: color-mix(
     in srgb,
     currentColor 70%,
     transparent
@@ -314,46 +314,43 @@ body:is(
 
 /* The property and subtitle colour presets own the hover colour for links AND path segments, at a specificity a poster-scoped rule cannot reach without padding the selector (theirs lands around (0,11,2) against (0,7,0) here). Repointing the three variables they read is what makes the dim stick: their rules keep winning, they just resolve to the dim. Each variable is consumed in exactly one hover rule, so nothing else moves. */
 /* Without this a segment shifts 245 -> 250 on hover under the muted preset — a change too small to read as feedback at all. */
-.dynamic-views .card.image-format-poster.has-poster {
+.dynamic-views #{$over-image-card} {
   --dynamic-views-subtitle-color-hover-color: var(
-    --dynamic-views-poster-hover-dim
+    --dynamic-views-tinted-hover-dim
   );
   --dynamic-views-property-with-name-color-hover-color: var(
-    --dynamic-views-poster-hover-dim
+    --dynamic-views-tinted-hover-dim
   );
   --dynamic-views-property-no-name-color-hover-color: var(
-    --dynamic-views-poster-hover-dim
+    --dynamic-views-tinted-hover-dim
   );
   /* The generic property link hover reaches internal and external links that the three preset rules above deliberately exclude, and it is the one path back to the accent colour this format exists to avoid. Repointing it too makes the poster hover colour single-sourced: whichever of the five competing rules wins, it resolves through the same variable. */
-  --dynamic-views-link-color-hover: var(--dynamic-views-poster-hover-dim);
+  --dynamic-views-link-color-hover: var(--dynamic-views-tinted-hover-dim);
   --dynamic-views-link-external-color-hover: var(
-    --dynamic-views-poster-hover-dim
+    --dynamic-views-tinted-hover-dim
   );
 }
 
 /* Direct rules for the case the presets do not cover: with no colour preset set, no body class matches and those rules never fire, leaving these as the only source of the dim. */
 .dynamic-views
-  .card.image-format-poster.has-poster.interact
+  #{$over-image-card}.interact
   .property
   a:is(.internal-link, .external-link):is(:hover, :active) {
-  color: var(--dynamic-views-poster-hover-dim);
+  color: var(--dynamic-views-tinted-hover-dim);
 }
 
 /* Unresolved links hover the OTHER way — up to full strength, landing where a resolved link sits at rest. They are the one link type with headroom to brighten, because they rest at 0.7, so hover can gain legibility here instead of spending it. */
 /* Dimming them instead compounds against their own opacity (0.7 x 0.7 = 0.49) and lands the faintest text on the card at the moment it is being read. */
 /* Repointing the dim variable to currentColor is what opts them out: whichever rule wins the colour — the preset rules at ~(0,11,2) or the direct one above — resolves through this variable, so neutralising it here beats out-specifying either. */
-.dynamic-views
-  .card.image-format-poster.has-poster
-  .property
-  a.internal-link.is-unresolved {
-  --dynamic-views-poster-hover-dim: currentColor;
+.dynamic-views #{$over-image-card} .property a.internal-link.is-unresolved {
+  --dynamic-views-tinted-hover-dim: currentColor;
   /* Obsidian gives every `a` a `transition: opacity`, and this is the one link whose hover moves opacity rather than colour — so alone among them it faded in and out instead of switching. Cleared on the RESTING rule, not the hover one, or only the hover-in would be instant and the fade would return on the way out. */
   transition: none;
 }
 
 /* Opacity is the ONLY unresolved signal left on a poster card: the rule above that flattens link colour to inherit outranks the accent colour `.internal-link.is-unresolved` would otherwise apply, so a hovered unresolved link is deliberately indistinguishable from a resolved one here. */
 .dynamic-views
-  .card.image-format-poster.has-poster.interact
+  #{$over-image-card}.interact
   .property
   a.internal-link.is-unresolved:is(:hover, :active) {
   opacity: 1;
@@ -362,9 +359,9 @@ body:is(
 /* Path segments take the same dim so every interactive target on a poster card answers a hover the same way. Kept separate from the link rule because the two differ in scope — links are confined to property rows, segments are interactive in the subtitle as well. */
 /* Their underline (_properties.scss) still carries its own weight here: unlike the links above, segments are NOT underlined at rest, so the underline remains the primary affordance and the dim only reinforces it. */
 .dynamic-views
-  .card.image-format-poster.has-poster.interact
+  #{$over-image-card}.interact
   :is(.folder-segment, .filename-segment):is(:hover, :active) {
-  color: var(--dynamic-views-poster-hover-dim);
+  color: var(--dynamic-views-tinted-hover-dim);
 }
 
 .dynamic-views.poster-mode-fade
@@ -385,27 +382,26 @@ body:is(
    identity filter with matching function list for smooth CSS transitions.
    ============================================ */
 
-/* Dark overlay defaults (unrevealed — identity filter with matching function list).
-   Dark is the Style Settings default — :not([class*=]) fallback fires without Style Settings installed. */
-body:is(
-    .dynamic-views-poster-color-scheme-dark,
-    .dynamic-views-poster-color-scheme-match.theme-dark,
-    :not([class*='dynamic-views-poster-color-scheme-'])
-  )
-  .dynamic-views.poster-mode-overlay
+/* Dark overlay defaults (unrevealed — identity filter with matching function list) */
+.dynamic-views.tint-dark.poster-mode-overlay
+  .card.image-format-poster
+  .card-poster
+  img,
+body.theme-dark
+  .dynamic-views.tint-adapt.poster-mode-overlay
   .card.image-format-poster
   .card-poster
   img {
   filter: brightness(1) blur(0px);
 }
 
-/* Light overlay defaults (unrevealed — double invert = identity).
-   No fallback arm — only fires when explicitly set to light. */
-body:is(
-    .dynamic-views-poster-color-scheme-light,
-    .dynamic-views-poster-color-scheme-match.theme-light
-  )
-  .dynamic-views.poster-mode-overlay
+/* Light overlay defaults (unrevealed — double invert = identity) */
+.dynamic-views.tint-light.poster-mode-overlay
+  .card.image-format-poster
+  .card-poster
+  img,
+body.theme-light
+  .dynamic-views.tint-adapt.poster-mode-overlay
   .card.image-format-poster
   .card-poster
   img {
@@ -413,12 +409,12 @@ body:is(
 }
 
 /* Dark overlay revealed (tap/press) */
-body:is(
-    .dynamic-views-poster-color-scheme-dark,
-    .dynamic-views-poster-color-scheme-match.theme-dark,
-    :not([class*='dynamic-views-poster-color-scheme-'])
-  )
-  .dynamic-views.poster-mode-overlay
+.dynamic-views.tint-dark.poster-mode-overlay
+  .card.image-format-poster.poster-revealed
+  .card-poster
+  img,
+body.theme-dark
+  .dynamic-views.tint-adapt.poster-mode-overlay
   .card.image-format-poster.poster-revealed
   .card-poster
   img {
@@ -429,12 +425,12 @@ body:is(
 }
 
 /* Dark overlay static (always dimmed for readability) */
-body:is(
-    .dynamic-views-poster-color-scheme-dark,
-    .dynamic-views-poster-color-scheme-match.theme-dark,
-    :not([class*='dynamic-views-poster-color-scheme-'])
-  )
-  .dynamic-views.poster-mode-overlay.poster-static
+.dynamic-views.tint-dark.poster-mode-overlay.poster-static
+  .card.image-format-poster
+  .card-poster
+  img,
+body.theme-dark
+  .dynamic-views.tint-adapt.poster-mode-overlay.poster-static
   .card.image-format-poster
   .card-poster
   img {
@@ -445,11 +441,12 @@ body:is(
 }
 
 /* Light overlay revealed (tap/press) */
-body:is(
-    .dynamic-views-poster-color-scheme-light,
-    .dynamic-views-poster-color-scheme-match.theme-light
-  )
-  .dynamic-views.poster-mode-overlay
+.dynamic-views.tint-light.poster-mode-overlay
+  .card.image-format-poster.poster-revealed
+  .card-poster
+  img,
+body.theme-light
+  .dynamic-views.tint-adapt.poster-mode-overlay
   .card.image-format-poster.poster-revealed
   .card-poster
   img {
@@ -459,11 +456,12 @@ body:is(
 }
 
 /* Light overlay static (always dimmed for readability) */
-body:is(
-    .dynamic-views-poster-color-scheme-light,
-    .dynamic-views-poster-color-scheme-match.theme-light
-  )
-  .dynamic-views.poster-mode-overlay.poster-static
+.dynamic-views.tint-light.poster-mode-overlay.poster-static
+  .card.image-format-poster
+  .card-poster
+  img,
+body.theme-light
+  .dynamic-views.tint-adapt.poster-mode-overlay.poster-static
   .card.image-format-poster
   .card-poster
   img {
@@ -475,12 +473,12 @@ body:is(
 /* Overlay revealed on hover intent (desktop) */
 @media (any-hover: hover) {
   /* Dark hover reveal */
-  body:is(
-      .dynamic-views-poster-color-scheme-dark,
-      .dynamic-views-poster-color-scheme-match.theme-dark,
-      :not([class*='dynamic-views-poster-color-scheme-'])
-    )
-    .dynamic-views.poster-mode-overlay:not(.poster-static)
+  .dynamic-views.tint-dark.poster-mode-overlay:not(.poster-static)
+    .card.image-format-poster.poster-hover-active
+    .card-poster
+    img,
+  body.theme-dark
+    .dynamic-views.tint-adapt.poster-mode-overlay:not(.poster-static)
     .card.image-format-poster.poster-hover-active
     .card-poster
     img {
@@ -491,11 +489,12 @@ body:is(
   }
 
   /* Light hover reveal */
-  body:is(
-      .dynamic-views-poster-color-scheme-light,
-      .dynamic-views-poster-color-scheme-match.theme-light
-    )
-    .dynamic-views.poster-mode-overlay:not(.poster-static)
+  .dynamic-views.tint-light.poster-mode-overlay:not(.poster-static)
+    .card.image-format-poster.poster-hover-active
+    .card-poster
+    img,
+  body.theme-light
+    .dynamic-views.tint-adapt.poster-mode-overlay:not(.poster-static)
     .card.image-format-poster.poster-hover-active
     .card-poster
     img {
@@ -704,11 +703,10 @@ body.dynamic-views-open-on-card
 }
 
 /* Overlay: text color overrides (light tint → dark text) */
-body.dynamic-views-poster-color-scheme-light
-  .dynamic-views.poster-mode-overlay
+.dynamic-views.tint-light.poster-mode-overlay
   .card.image-format-poster.has-poster,
-body.dynamic-views-poster-color-scheme-match.theme-light
-  .dynamic-views.poster-mode-overlay
+body.theme-light
+  .dynamic-views.tint-adapt.poster-mode-overlay
   .card.image-format-poster.has-poster {
   @include overlay-text-colors('light');
 }
@@ -741,14 +739,10 @@ body.dynamic-views-poster-bg-custom
 }
 
 /* Overlay: text color overrides (dark tint → light text) */
-body:is(
-    .dynamic-views-poster-color-scheme-dark,
-    :not([class*='dynamic-views-poster-color-scheme-'])
-  )
-  .dynamic-views.poster-mode-overlay
+.dynamic-views.tint-dark.poster-mode-overlay
   .card.image-format-poster.has-poster,
-body.dynamic-views-poster-color-scheme-match.theme-dark
-  .dynamic-views.poster-mode-overlay
+body.theme-dark
+  .dynamic-views.tint-adapt.poster-mode-overlay
   .card.image-format-poster.has-poster {
   @include overlay-text-colors('dark');
 }

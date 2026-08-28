@@ -329,6 +329,25 @@ export function getBasesViewOptions(
               (config?.get('showFileImages') ?? d.showFileImages) === 'never'),
         },
         {
+          type: 'dropdown',
+          displayName: 'Tint',
+          key: 'tint',
+          options: {
+            dark: 'Dark',
+            light: 'Light',
+            adapt: 'Adapt to color scheme',
+          },
+          default: d.tint,
+          shouldHide: () => {
+            const format = config?.get('imageFormat') ?? d.imageFormat;
+            return (
+              (format !== 'poster' && format !== 'backdrop') ||
+              (!(config?.get('imageProperty') || d.imageProperty) &&
+                (config?.get('showFileImages') ?? d.showFileImages) === 'never')
+            );
+          },
+        },
+        {
           type: 'toggle',
           displayName: 'Interact to show details',
           key: 'posterInteractToReveal',
@@ -659,6 +678,7 @@ export function readBasesSettings(
       'posterDisplayMode',
       defaults.posterDisplayMode
     ),
+    tint: getValidEnum(config, 'tint', defaults.tint),
     posterInteractToReveal: getBool(
       'posterInteractToReveal',
       defaults.posterInteractToReveal
@@ -769,6 +789,7 @@ export function extractBasesTemplate(
       'posterDisplayMode',
       mergedDefaults.posterDisplayMode
     ),
+    tint: getValidEnum(config, 'tint', mergedDefaults.tint),
     posterInteractToReveal: getBool(
       'posterInteractToReveal',
       mergedDefaults.posterInteractToReveal
