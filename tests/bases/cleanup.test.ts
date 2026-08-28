@@ -25,6 +25,7 @@ vi.mock('../../src/constants', () => ({
     imageProperty: '',
     showFileImages: 'always',
     imageFormat: 'thumbnail',
+    tint: 'adapt',
     thumbnailSize: 80,
     imagePosition: 'right',
     imageFit: 'crop',

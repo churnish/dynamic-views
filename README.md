@@ -108,6 +108,7 @@ Each Grid and Masonry view has its own settings, configured in the view's config
 | Show file images | When to use images embedded in-note as fallback | Always |
 | Format | How to display images | Thumbnail |
 | Display mode | Poster tint style: Fade (bottom gradient) or Overlay (full-image filter) | Fade |
+| Tint | Shade of the poster and backdrop tint: Dark, Light, or Adapt to color scheme | Adapt to color scheme |
 | Interact to show details | Hide content until hover (desktop) or press (mobile). When off, content is always visible and overflow is clipped. | Off |
 | Size | Thumbnail width in pixels | 80 |
 | Position | Image placement | Right |

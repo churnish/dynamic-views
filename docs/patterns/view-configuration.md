@@ -2,7 +2,7 @@
 title: View configuration
 description: Centralized reference for configuring Dynamic Views per-view settings — setting keys, workflows, and templates.
 author: Generated with Claude Code
-updated: 2026-08-09
+updated: 2026-08-28
 ---
 # View configuration
 
@@ -84,6 +84,7 @@ pm.setPluginSettings(settings);  // Merges sparse — only non-default values pe
 | `showFileImages` | `string` | `'always'` | `'always'`, `'if-unavailable'`, `'never'` | |
 | `imageFormat` | `string` | `'thumbnail'` | `'thumbnail'`, `'cover'`, `'poster'`, `'backdrop'` | |
 | `posterDisplayMode` | `string` | `'fade'` | `'fade'`, `'overlay'` | Only when `imageFormat` is `'poster'` |
+| `tint` | `string` | `'adapt'` | `'dark'`, `'light'`, `'adapt'` | Poster fade/overlay and backdrop tint. Only when `imageFormat` is `'poster'` or `'backdrop'` |
 | `posterInteractToReveal` | `boolean` | `false` | — | When ON: content hidden, revealed on hover (desktop) / press (mobile) |
 | `thumbnailSize` | `number` | `80` | 64–128 | CSS-only |
 | `imagePosition` | `string` | `'right'` | `'left'`, `'right'`, `'top'`, `'bottom'` | Thumbnail/cover position relative to content |
@@ -116,7 +117,7 @@ The card gap is a desktop and tablet setting only. Phone uses a fixed 6px gap (`
 
 These only affect CSS custom properties — changing them does NOT trigger a card re-render:
 
-`textPreviewLines`, `imageRatio`, `thumbnailSize`, `posterDisplayMode`, `imageFit`
+`textPreviewLines`, `imageRatio`, `thumbnailSize`, `posterDisplayMode`, `tint`, `imageFit`
 
 ## Per-view CSS variable overrides via `cssclasses`
 

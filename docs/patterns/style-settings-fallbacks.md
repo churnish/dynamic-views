@@ -2,13 +2,13 @@
 title: Style Settings fallback selectors
 description: Patterns for CSS defaults that work with or without the Style Settings plugin installed.
 author: 🤖 Generated with Claude Code
-updated: 2026-08-26
+updated: 2026-08-28
 ---
 # Style Settings fallback selectors
 
 ## Problem
 
-The [Style Settings](https://github.com/mgmeyers/obsidian-style-settings) plugin reads `class-select` options from [_style-settings.scss](../../styles/_style-settings.scss) and adds the selected value as a body class (e.g., `body.dynamic-views-poster-color-scheme-dark`). Without Style Settings installed, **no body class is added**, so CSS rules gated behind those classes silently fail.
+The [Style Settings](https://github.com/mgmeyers/obsidian-style-settings) plugin reads `class-select` options from [_style-settings.scss](../../styles/_style-settings.scss) and adds the selected value as a body class (e.g., `body.dynamic-views-poster-bg-dimmed`). Without Style Settings installed, **no body class is added**, so CSS rules gated behind those classes silently fail.
 
 ## Fallback pattern
 
@@ -16,13 +16,13 @@ Use `:is()` with a `:not([class*="prefix-"])` arm to match both "class explicitl
 
 ```scss
 body:is(
-    .dynamic-views-poster-color-scheme-dark,
-    :not([class*='dynamic-views-poster-color-scheme-'])
+    .dynamic-views-poster-bg-dimmed,
+    :not([class*='dynamic-views-poster-bg-'])
   )
-  .dynamic-views.poster-mode-overlay
-  .card.image-format-poster
-  .card-poster::after {
-  /* dark tint is the default — fires with or without Style Settings */
+  .dynamic-views
+  .card.image-format-poster.has-poster
+  .card-poster {
+  /* dimmed is the default — fires with or without Style Settings */
 }
 ```
 
@@ -50,7 +50,7 @@ This constraint is live: [_cover-side.scss](../../styles/card/_cover-side.scss) 
 
 ## Specificity
 
-`:is()` takes the specificity of its most specific argument. Both `.dynamic-views-poster-color-scheme-dark` (class = `0,1,0`) and `:not([class*="..."])` (attribute = `0,1,0`) have equal specificity. The fallback branch has the same weight as the explicit branch — no cascade surprises.
+`:is()` takes the specificity of its most specific argument. Both `.dynamic-views-poster-bg-dimmed` (class = `0,1,0`) and `:not([class*="..."])` (attribute = `0,1,0`) have equal specificity. The fallback branch has the same weight as the explicit branch — no cascade surprises.
 
 ## When a fallback is NOT needed
 
@@ -292,8 +292,6 @@ Font *family* settings are still not covered: they are `variable-text`, so they 
 
 | Setting                   | Default        | Fallback file                                                    |
 | ------------------------- | -------------- | ---------------------------------------------------------------- |
-| Poster overlay tint       | dark           | [_poster.scss](../../styles/card/_poster.scss)                                                   |
-| Poster fade tint          | dark           | [_poster.scss](../../styles/card/_poster.scss) — `:not(-light, -match)` enumeration (fires for `-dark` and no class) |
 | Cover background          | dimmed         | [_cover-placeholders.scss](../../styles/card/_cover-placeholders.scss), [_cover-elements.scss](../../styles/card/_cover-elements.scss)               |
 | Poster background         | dimmed         | [_poster.scss](../../styles/card/_poster.scss)                                                   |
 | Show cover placeholder    | Grid           | [_cover-side.scss](../../styles/card/_cover-side.scss), [_cover-placeholders.scss](../../styles/card/_cover-placeholders.scss)                   |

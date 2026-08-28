@@ -2,7 +2,7 @@
 title: Poster image format
 description: Poster image format architecture — static content clipping, scroll reset, tap-to-reveal, hover intent, display mode switching, and the CSS-only vs full-render setting boundary.
 author: 🤖 Generated with Claude Code
-updated: 2026-08-09
+updated: 2026-08-28
 ---
 # Poster image format
 
@@ -23,17 +23,19 @@ Both modes are purely CSS. Switching between them changes the available content 
 
 The fade gradient is a real DOM element (`.poster-gradient`) created in `shared-renderer.ts` — not an `::after` pseudo-element, which forces async compositor layer creation and a 1-3 frame blank flash on WebKit virtual scroll remount.
 
-Its color comes from the `dynamic-views-poster-fade-tint` Style Settings `class-select` (Light / Dark / Match color scheme, default dark), which is independent of the overlay tint:
+Its color comes from the per-view `tint` setting, which `applyLineAndModeVariables()` writes onto the `.dynamic-views` container as exactly one `tint-*` class. The same setting governs the overlay tint and the backdrop tint — one key, three rule sets, disambiguated by the container's `poster-mode-*` class and the card's `image-format-*` class:
 
-| Value | Body class | `--dynamic-views-poster-fade-rgb` | Text |
+| Value | Container class | `--dynamic-views-poster-fade-rgb` | Text |
 |---|---|---|---|
-| Dark (default) | `dynamic-views-poster-fade-dark` | `0 0 0` | `#fafafa` / `#f5f5f5` |
-| Light | `dynamic-views-poster-fade-light` | `255 255 255` | `#0a0a0a` / `#141414` |
-| Match color scheme | `dynamic-views-poster-fade-match` | follows `body.theme-dark` / `body.theme-light` | follows |
+| Dark | `tint-dark` | `0 0 0` | `#fafafa` / `#f5f5f5` |
+| Light | `tint-light` | `255 255 255` | `#0a0a0a` / `#141414` |
+| Adapt to color scheme (default) | `tint-adapt` | follows `body.theme-dark` / `body.theme-light` | follows |
+
+Because JS always writes one of the three classes, no Style-Settings-absent fallback arm is needed. Each palette rule is two selectors: the explicit tint, plus the `tint-adapt` arm gated on `body.theme-dark` or `body.theme-light`.
 
 Both the gradient stops and the fade-mode text color overrides (`--text-normal`, `--text-muted`, `--text-faint` and their `--dynamic-views-*` twins) read these variables, so light fade flips the text dark in the same rule. The variables are set on `.card.image-format-poster.has-poster` and inherit down to `.poster-gradient`.
 
-The tint is a repaint-only setting — it is deliberately absent from `getStyleSettingsHash()` so toggling it does not re-render cards or reset scroll.
+`tint` is in `CSS_ONLY_SETTINGS_KEYS` — a repaint-only setting that changes the container class without re-rendering cards or resetting scroll.
 
 ## Static vs interactive
 
