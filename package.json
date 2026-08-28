@@ -11,7 +11,7 @@
     "build": "npm run css && node esbuild.config.mjs production",
     "preversion": "node version-bump.mjs --preflight",
     "version": "node version-bump.mjs",
-    "postversion": "git push origin main --follow-tags --force-with-lease",
+    "postversion": "git push origin main --follow-tags",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
