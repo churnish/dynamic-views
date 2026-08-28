@@ -155,6 +155,15 @@ export function setupTouchPress(
       if (shouldActivate && !shouldActivate(e)) return;
 
       const activate = () => {
+        // A press landing inside the previous press's min-visible window finds
+        // that window's timer still pending. Only deactivate() clears it, and a
+        // press does not go through deactivate, so without this the old timer
+        // fires on schedule and strips the new press's highlight almost
+        // immediately.
+        if (timer !== null) {
+          window.clearTimeout(timer);
+          timer = null;
+        }
         activatedAt = Date.now();
         onActivate();
       };
@@ -202,8 +211,18 @@ export function setupTouchPress(
       0,
       TOUCH_PRESS_MIN_VISIBLE_MS - (Date.now() - activatedAt)
     );
+    // Two press-release cycles inside the min-visible window each schedule a
+    // timer. Overwriting the handle strands the first one, which then fires
+    // onDeactivate on a card the caller has already torn down. The early-strip
+    // half of that is handled in activate(), which a second press reaches and
+    // this does not.
+    if (timer !== null) {
+      window.clearTimeout(timer);
+      timer = null;
+    }
     if (remaining > 0) {
       timer = window.setTimeout(() => {
+        timer = null;
         onDeactivate();
         activatedAt = 0;
       }, remaining);

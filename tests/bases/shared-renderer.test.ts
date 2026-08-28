@@ -132,9 +132,11 @@ import {
 } from '../../src/utils/style-settings';
 import { filterBrokenUrls } from '../../src/core/image-loader';
 import { clipPosterStaticOverflowBatch } from '../../src/core/poster';
+import { showFileContextMenu } from '../../src/core/context-menu';
 import { VIEW_DEFAULTS } from '../../src/constants';
 import type { ResolvedSettings } from '../../src/types';
-import { Platform } from 'obsidian';
+import type { ParsedLink } from '../../src/utils/link-parser';
+import { Platform, TFile } from 'obsidian';
 import type { BasesEntry, BasesViewConfig } from 'obsidian';
 
 describe('SharedCardRenderer.hasImageChanged', () => {
@@ -503,6 +505,10 @@ describe('updateCardContent — URL button', () => {
   const makeRenderer = () =>
     new SharedCardRenderer({} as never, {} as never, { current: null });
 
+  beforeEach(() => {
+    vi.mocked(showFileContextMenu).mockClear();
+  });
+
   /** Card shaped like the render path leaves it: .card-content wraps header + body. */
   function buildCard(
     options: { header?: boolean; urlValue?: string; title?: boolean } = {}
@@ -622,6 +628,44 @@ describe('updateCardContent — URL button', () => {
     expect(after!.getAttribute('href')).toBe('https://new.example');
     expect(after!.getAttribute('aria-label')).toBe('https://new.example');
     expect(after!.dataset.dynamicViewsUrlValue).toBe('https://new.example');
+  });
+
+  // cardPath only surfaces through the button's context menu, which resolves
+  // the note the card stands for — not the site the button points at.
+  it('resolves the context menu against the card path, not the URL', () => {
+    const file = Object.assign(new TFile(), { path: 'Notes/Linked.md' });
+    const app = { vault: { getAbstractFileByPath: vi.fn(() => file) } };
+    const cardEl = buildCard({ header: true });
+
+    new SharedCardRenderer(app as never, {} as never, {
+      current: null,
+    }).updateCardContent(
+      cardEl,
+      {
+        path: 'Notes/Linked.md',
+        properties: [],
+        hasValidUrl: true,
+        urlValue: 'https://example.com/page',
+      } as unknown as CardData,
+      entry,
+      settings()
+    );
+
+    cardEl
+      .querySelector('.card-title-url-icon')!
+      .dispatchEvent(
+        new MouseEvent('contextmenu', { bubbles: true, cancelable: true })
+      );
+
+    expect(app.vault.getAbstractFileByPath).toHaveBeenCalledWith(
+      'Notes/Linked.md'
+    );
+    expect(vi.mocked(showFileContextMenu).mock.calls[0].slice(1)).toEqual([
+      app,
+      file,
+      'Notes/Linked.md',
+      'https://example.com/page',
+    ]);
   });
 });
 
@@ -1246,6 +1290,102 @@ describe('applyViewContainerStyles — view padding override', () => {
     const container = document.createElement('div');
 
     expect(() => clearViewContainerStyles(container)).not.toThrow();
+  });
+});
+
+describe('renderLink — context menu arguments', () => {
+  /** renderLink is private; nothing public reaches it without the whole property pipeline. */
+  type LinkRenderer = {
+    renderLink: (
+      container: HTMLElement,
+      link: ParsedLink,
+      sourcePath: string,
+      signal?: AbortSignal
+    ) => void;
+  };
+
+  const SOURCE_PATH = 'Notes/Source.md';
+
+  /** The note a wikilink points AT — deliberately not the note the link sits in. */
+  const linkedFile = Object.assign(new TFile(), {
+    path: 'Folder/Linked Note.md',
+  });
+  /** The note the link sits IN, which is what an external link's menu acts on. */
+  const sourceFile = Object.assign(new TFile(), { path: SOURCE_PATH });
+
+  const app = {
+    metadataCache: { getFirstLinkpathDest: vi.fn(() => linkedFile) },
+    vault: { getAbstractFileByPath: vi.fn(() => sourceFile) },
+    workspace: { trigger: vi.fn() },
+    dragManager: { dragLink: vi.fn(), onDragStart: vi.fn() },
+  };
+
+  const renderLink = (link: ParsedLink, container: HTMLElement) =>
+    (
+      new SharedCardRenderer(app as never, {} as never, {
+        current: null,
+      }) as unknown as LinkRenderer
+    ).renderLink(container, link, SOURCE_PATH);
+
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    vi.mocked(showFileContextMenu).mockClear();
+    container = document.createElement('div');
+  });
+
+  function contextMenu(el: Element): void {
+    el.dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, cancelable: true })
+    );
+  }
+
+  // A linktext carries no extension, and the path argument reaches
+  // openWithDefaultApp() — passing link.url there resolves to nothing.
+  it('forwards the resolved vault path for an internal link, not the linktext', () => {
+    renderLink(
+      {
+        type: 'internal',
+        url: 'Linked Note',
+        caption: 'Linked Note',
+        isEmbed: false,
+        isWebUrl: false,
+      },
+      container
+    );
+
+    contextMenu(container.querySelector('a.internal-link')!);
+
+    expect(vi.mocked(showFileContextMenu).mock.calls[0].slice(1)).toEqual([
+      app,
+      linkedFile,
+      linkedFile.path,
+    ]);
+  });
+
+  // The external link's menu acts on the note the link is written in, and the
+  // URL rides along as the fifth argument — the opposite of the internal case.
+  it('forwards the source path plus the URL for an external link', () => {
+    renderLink(
+      {
+        type: 'external',
+        url: 'https://example.com/page',
+        caption: 'Example',
+        isEmbed: false,
+        isWebUrl: true,
+      },
+      container
+    );
+
+    contextMenu(container.querySelector('a.external-link')!);
+
+    expect(app.vault.getAbstractFileByPath).toHaveBeenCalledWith(SOURCE_PATH);
+    expect(vi.mocked(showFileContextMenu).mock.calls[0].slice(1)).toEqual([
+      app,
+      sourceFile,
+      SOURCE_PATH,
+      'https://example.com/page',
+    ]);
   });
 });
 

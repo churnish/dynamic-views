@@ -9,6 +9,11 @@ import {
   setupHoverIntent,
   setupTouchPress,
 } from '../../src/core/hover-and-touch';
+import {
+  SCRUB_DIRECTION_THRESHOLD,
+  SWIPE_PRESS_DEFER_MS,
+  TOUCH_PRESS_MIN_VISIBLE_MS,
+} from '../../src/core/constants';
 
 /**
  * Dispatches a PointerEvent of the given type on the element.
@@ -19,6 +24,25 @@ function fire(el: HTMLElement, type: string, init?: PointerEventInit): void {
       bubbles: true,
       cancelable: true,
       pointerType: 'mouse',
+      ...init,
+    })
+  );
+}
+
+/**
+ * Dispatches a bubbling touch PointerEvent on a descendant, so `e.target` is
+ * what the swipe-surface check reads — not the element the listener sits on.
+ */
+function touch(
+  target: HTMLElement,
+  type: string,
+  init?: PointerEventInit
+): void {
+  target.dispatchEvent(
+    new PointerEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      pointerType: 'touch',
       ...init,
     })
   );
@@ -277,14 +301,40 @@ describe('isTouchPointer', () => {
   });
 });
 
+/**
+ * Card DOM as shared-renderer builds it: the press is wired on `.card` and the
+ * swipe surface is a descendant, so `e.target.closest()` has a real chain to
+ * walk. A flat fixture of bare divs matches no swipe-surface selector, which
+ * leaves the whole defer path dead while every assertion still passes.
+ */
+function buildPressCard(
+  swipeSurfaceClasses = 'card-cover card-cover-slideshow'
+): {
+  cardEl: HTMLElement;
+  bodyEl: HTMLElement;
+  swipeEl: HTMLElement;
+} {
+  const cardEl = document.createElement('div');
+  cardEl.className = 'card';
+  const bodyEl = document.createElement('div');
+  bodyEl.className = 'card-body';
+  cardEl.appendChild(bodyEl);
+  const swipeEl = document.createElement('div');
+  swipeEl.className = swipeSurfaceClasses;
+  cardEl.appendChild(swipeEl);
+  return { cardEl, bodyEl, swipeEl };
+}
+
 describe('setupTouchPress', () => {
   let el: HTMLElement;
+  let bodyEl: HTMLElement;
+  let swipeEl: HTMLElement;
   let onActivate: Mock;
   let onDeactivate: Mock;
   let controller: AbortController;
 
   beforeEach(() => {
-    el = document.createElement('div');
+    ({ cardEl: el, bodyEl, swipeEl } = buildPressCard());
     onActivate = vi.fn();
     onDeactivate = vi.fn();
     controller = new AbortController();
@@ -391,6 +441,182 @@ describe('setupTouchPress', () => {
     // After 100ms
     vi.advanceTimersByTime(100);
     expect(onDeactivate).toHaveBeenCalledOnce();
+  });
+
+  it('a press inside the previous min-visible window keeps its own highlight', () => {
+    // deactivate() clears a pending timer, but a press never goes through
+    // deactivate. Without activate() clearing it too, the first cycle's timer
+    // fires on its original schedule and strips the second press's highlight
+    // almost immediately.
+    setupTouchPress(el, onActivate, onDeactivate, controller.signal);
+    const touch = { bubbles: true, pointerType: 'touch' } as const;
+
+    el.dispatchEvent(new PointerEvent('pointerdown', touch));
+    vi.advanceTimersByTime(40);
+    el.dispatchEvent(new PointerEvent('pointerup', touch));
+
+    // Second press lands 50ms later, while the first window still has 10ms left
+    vi.advanceTimersByTime(50);
+    el.dispatchEvent(new PointerEvent('pointerdown', touch));
+    expect(onActivate).toHaveBeenCalledTimes(2);
+
+    // The first cycle's timer would have fired here and cleared the highlight
+    vi.advanceTimersByTime(20);
+    expect(onDeactivate).not.toHaveBeenCalled();
+
+    // The second press still gets its own full window
+    el.dispatchEvent(new PointerEvent('pointerup', touch));
+    vi.advanceTimersByTime(TOUCH_PRESS_MIN_VISIBLE_MS);
+    expect(onDeactivate).toHaveBeenCalledOnce();
+  });
+
+  // ── Swipe-surface press defer ──────────────────────────────────────────
+
+  it('defers the press on a swipe surface until the defer window elapses', () => {
+    setupTouchPress(el, onActivate, onDeactivate, controller.signal);
+
+    touch(swipeEl, 'pointerdown', { clientX: 40, clientY: 40 });
+    expect(onActivate).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(SWIPE_PRESS_DEFER_MS);
+    expect(onActivate).toHaveBeenCalledOnce();
+  });
+
+  it('activates immediately off a swipe surface', () => {
+    setupTouchPress(el, onActivate, onDeactivate, controller.signal);
+
+    touch(bodyEl, 'pointerdown', { clientX: 40, clientY: 40 });
+    expect(onActivate).toHaveBeenCalledOnce();
+
+    // No pending timer to double-fire it later
+    vi.advanceTimersByTime(SWIPE_PRESS_DEFER_MS * 2);
+    expect(onActivate).toHaveBeenCalledOnce();
+  });
+
+  // The Slide-mode cover carries `card-cover-slideshow` and no `multi-image`
+  // class. A selector listing only `multi-image` matched nothing here, so a
+  // Slide swipe activated at pointerdown and held the highlight all gesture.
+  it('defers on a Slide cover, which carries no multi-image class', () => {
+    ({ cardEl: el, swipeEl } = buildPressCard(
+      'card-cover card-cover-slideshow'
+    ));
+    expect(swipeEl.classList.contains('multi-image')).toBe(false);
+    setupTouchPress(el, onActivate, onDeactivate, controller.signal);
+
+    touch(swipeEl, 'pointerdown', { clientX: 40, clientY: 40 });
+
+    expect(onActivate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'card-cover card-cover-slideshow',
+    'card-cover multi-image',
+    'card-thumbnail multi-image',
+  ])('defers on a "%s" surface', (classes) => {
+    ({ cardEl: el, swipeEl } = buildPressCard(classes));
+    setupTouchPress(el, onActivate, onDeactivate, controller.signal);
+
+    touch(swipeEl, 'pointerdown', { clientX: 40, clientY: 40 });
+    expect(onActivate).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(SWIPE_PRESS_DEFER_MS);
+    expect(onActivate).toHaveBeenCalledOnce();
+  });
+
+  // `card-cover-slideshow` is matched as a whole class token, so a
+  // longer-named sibling class must not be mistaken for it.
+  it.each(['card-cover', 'card-thumbnail', 'card-cover-slideshow-overlay'])(
+    'does not defer on a non-swipe "%s" surface',
+    (classes) => {
+      ({ cardEl: el, swipeEl } = buildPressCard(classes));
+      setupTouchPress(el, onActivate, onDeactivate, controller.signal);
+
+      touch(swipeEl, 'pointerdown', { clientX: 40, clientY: 40 });
+
+      expect(onActivate).toHaveBeenCalledOnce();
+    }
+  );
+
+  it('cancels the pending press once the finger moves past the threshold horizontally', () => {
+    setupTouchPress(el, onActivate, onDeactivate, controller.signal);
+
+    touch(swipeEl, 'pointerdown', { clientX: 40, clientY: 40 });
+    touch(swipeEl, 'pointermove', {
+      clientX: 40 + SCRUB_DIRECTION_THRESHOLD + 1,
+      clientY: 40,
+    });
+
+    vi.advanceTimersByTime(SWIPE_PRESS_DEFER_MS * 2);
+    expect(onActivate).not.toHaveBeenCalled();
+  });
+
+  it('cancels the pending press on vertical movement past the threshold', () => {
+    setupTouchPress(el, onActivate, onDeactivate, controller.signal);
+
+    touch(swipeEl, 'pointerdown', { clientX: 40, clientY: 40 });
+    touch(swipeEl, 'pointermove', {
+      clientX: 40,
+      clientY: 40 + SCRUB_DIRECTION_THRESHOLD + 1,
+    });
+
+    vi.advanceTimersByTime(SWIPE_PRESS_DEFER_MS * 2);
+    expect(onActivate).not.toHaveBeenCalled();
+  });
+
+  it('keeps the pending press for movement at the threshold', () => {
+    setupTouchPress(el, onActivate, onDeactivate, controller.signal);
+
+    touch(swipeEl, 'pointerdown', { clientX: 40, clientY: 40 });
+    touch(swipeEl, 'pointermove', {
+      clientX: 40 + SCRUB_DIRECTION_THRESHOLD,
+      clientY: 40 + SCRUB_DIRECTION_THRESHOLD,
+    });
+
+    vi.advanceTimersByTime(SWIPE_PRESS_DEFER_MS);
+    expect(onActivate).toHaveBeenCalledOnce();
+  });
+
+  it('a lift inside the defer window leaves the press unfired', () => {
+    setupTouchPress(el, onActivate, onDeactivate, controller.signal);
+
+    touch(swipeEl, 'pointerdown', { clientX: 40, clientY: 40 });
+    touch(swipeEl, 'pointerup', { clientX: 40, clientY: 40 });
+
+    vi.advanceTimersByTime(SWIPE_PRESS_DEFER_MS * 2);
+    expect(onActivate).not.toHaveBeenCalled();
+    expect(onDeactivate).not.toHaveBeenCalled();
+  });
+
+  it('aborting inside the defer window leaves the press unfired', () => {
+    setupTouchPress(el, onActivate, onDeactivate, controller.signal);
+
+    touch(swipeEl, 'pointerdown', { clientX: 40, clientY: 40 });
+    controller.abort();
+
+    vi.advanceTimersByTime(SWIPE_PRESS_DEFER_MS * 2);
+    expect(onActivate).not.toHaveBeenCalled();
+  });
+
+  // Two press-release cycles inside the min-visible window each schedule a
+  // deactivate timer. The sequence is call-balanced, so only the teardown leak
+  // exposes it: abort clears one handle, and the stranded one fires
+  // onDeactivate on a card the caller has already torn down.
+  it('strands no deactivate timer when two presses land inside the min-visible window', () => {
+    setupTouchPress(el, onActivate, onDeactivate, controller.signal);
+
+    touch(bodyEl, 'pointerdown');
+    touch(bodyEl, 'pointerup');
+    vi.advanceTimersByTime(TOUCH_PRESS_MIN_VISIBLE_MS / 2);
+    touch(bodyEl, 'pointerdown');
+    touch(bodyEl, 'pointerup');
+
+    expect(onActivate).toHaveBeenCalledTimes(2);
+    expect(onDeactivate).not.toHaveBeenCalled();
+
+    controller.abort();
+    vi.advanceTimersByTime(TOUCH_PRESS_MIN_VISIBLE_MS * 2);
+
+    expect(onDeactivate).not.toHaveBeenCalled();
   });
 });
 

@@ -135,6 +135,7 @@ dynamic-views/
 │   │   ├── image.test.ts
 │   │   ├── image-extraction.test.ts
 │   │   ├── image-loader.test.ts
+│   │   ├── multi-image-icon.test.ts
 │   │   ├── multi-image-nav.test.ts
 │   │   ├── opaque-scan.test.ts
 │   │   ├── poster.test.ts

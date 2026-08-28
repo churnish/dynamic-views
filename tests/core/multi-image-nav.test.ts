@@ -19,6 +19,7 @@ import {
   unobserveScrubReset,
 } from '../../src/core/multi-image-nav';
 import { getCachedBlobUrl, preloadImageBatch } from '../../src/core/slideshow';
+import { SCROLL_THROTTLE_MS } from '../../src/core/constants';
 
 // Obsidian's addClass/removeClass extensions on HTMLElement (not present in jsdom)
 function patchObsidianMethods(el: HTMLElement): void {
@@ -44,12 +45,21 @@ function firePointer(
   );
 }
 
-/** Create a dual-image thumbnail DOM matching shared-renderer output. */
+/**
+ * Create a dual-image thumbnail DOM matching shared-renderer output.
+ *
+ * The `.bases-view` ancestor and the `.thumbnail-indicator` are both load
+ * bearing: without them `scrubEl.closest('.bases-view')` and the lazy indicator
+ * query resolve to null, and the scroll-restore registration and the indicator
+ * exclusivity claim are skipped in every case that uses this fixture.
+ */
 function createDualImageThumb(): {
   thumbEl: HTMLElement;
   currImg: HTMLImageElement;
   nextImg: HTMLImageElement;
   cardEl: HTMLElement;
+  basesView: HTMLElement;
+  indicator: HTMLElement;
 } {
   const thumbEl = document.createElement('div');
   const embedContainer = document.createElement('div');
@@ -66,12 +76,20 @@ function createDualImageThumb(): {
   patchObsidianMethods(nextImg);
   embedContainer.appendChild(nextImg);
 
+  const indicator = document.createElement('div');
+  indicator.classList.add('thumbnail-indicator');
+  thumbEl.appendChild(indicator);
+
   const cardEl = document.createElement('div');
   cardEl.classList.add('card');
   cardEl.appendChild(thumbEl);
-  document.body.appendChild(cardEl);
 
-  return { thumbEl, currImg, nextImg, cardEl };
+  const basesView = document.createElement('div');
+  basesView.classList.add('bases-view');
+  basesView.appendChild(cardEl);
+  document.body.appendChild(basesView);
+
+  return { thumbEl, currImg, nextImg, cardEl, basesView, indicator };
 }
 
 // ── computeScrubIndex ─────────────────────────────────────────────────────
@@ -159,6 +177,8 @@ describe('setupTouchSwipeNavigation', () => {
   let currImg: HTMLImageElement;
   let nextImg: HTMLImageElement;
   let cardEl: HTMLElement;
+  let basesView: HTMLElement;
+  let indicator: HTMLElement;
   let imageUrls: string[];
   let controller: AbortController;
   let preloadGuard: { done: boolean };
@@ -166,7 +186,8 @@ describe('setupTouchSwipeNavigation', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
-    ({ thumbEl, currImg, nextImg, cardEl } = createDualImageThumb());
+    ({ thumbEl, currImg, nextImg, cardEl, basesView, indicator } =
+      createDualImageThumb());
 
     imageUrls = ['/img/a.jpg', '/img/b.jpg', '/img/c.jpg'];
     controller = new AbortController();
@@ -684,12 +705,6 @@ describe('setupTouchSwipeNavigation', () => {
   });
 
   it('signal abort mid-scrub restores scroll-locked and removes scrub-hover', () => {
-    // Create a .bases-view parent element and append thumbEl inside it
-    const basesView = document.createElement('div');
-    basesView.classList.add('bases-view');
-    basesView.appendChild(cardEl); // cardEl already contains thumbEl
-    document.body.appendChild(basesView);
-
     const reset = setupTouchSwipeNavigation({
       scrubEl: thumbEl,
       cardEl,
@@ -763,6 +778,89 @@ describe('setupTouchSwipeNavigation', () => {
       '.slideshow-img-current'
     )!;
     expect(curr.classList.contains('slideshow-exit-left')).toBe(true);
+  });
+
+  it('hides the corner indicator for the duration of a swipe', () => {
+    setupTouchSwipeNavigation({
+      scrubEl: thumbEl,
+      cardEl,
+      imageUrls,
+      signal: controller.signal,
+      preloadSignal: controller.signal,
+      preloadGuard,
+      brokenHandler,
+    });
+
+    expect(indicator.classList.contains('dynamic-views-icon-hidden')).toBe(
+      false
+    );
+
+    firePointer(thumbEl, 'pointerdown', { pointerType: 'touch', clientX: 50 });
+    firePointer(thumbEl, 'pointermove', { pointerType: 'touch', clientX: 38 });
+
+    expect(indicator.classList.contains('dynamic-views-icon-hidden')).toBe(
+      true
+    );
+  });
+
+  it('restores the hidden indicator on the next scroll of the view', () => {
+    setupTouchSwipeNavigation({
+      scrubEl: thumbEl,
+      cardEl,
+      imageUrls,
+      signal: controller.signal,
+      preloadSignal: controller.signal,
+      preloadGuard,
+      brokenHandler,
+    });
+
+    firePointer(thumbEl, 'pointerdown', { pointerType: 'touch', clientX: 50 });
+    firePointer(thumbEl, 'pointermove', { pointerType: 'touch', clientX: 38 });
+    expect(indicator.classList.contains('dynamic-views-icon-hidden')).toBe(
+      true
+    );
+
+    // Past the shared listener's throttle window, which starts unset
+    vi.advanceTimersByTime(SCROLL_THROTTLE_MS + 1);
+    basesView.dispatchEvent(new Event('scroll'));
+
+    expect(indicator.classList.contains('dynamic-views-icon-hidden')).toBe(
+      false
+    );
+  });
+
+  // Every image failed validation and was spliced out. The wrap modulo would
+  // produce NaN on an empty set, so the swipe path bails before committing.
+  it('ignores a swipe on a zero-length image set', () => {
+    const onFrameChange = vi.fn();
+    setupTouchSwipeNavigation({
+      scrubEl: thumbEl,
+      cardEl,
+      imageUrls: [],
+      signal: controller.signal,
+      preloadSignal: controller.signal,
+      preloadGuard,
+      brokenHandler,
+      onFrameChange,
+    });
+
+    firePointer(thumbEl, 'pointerdown', { pointerType: 'touch', clientX: 50 });
+    firePointer(thumbEl, 'pointermove', { pointerType: 'touch', clientX: 38 });
+
+    expect(onFrameChange).not.toHaveBeenCalled();
+    expect(thumbEl.classList.contains('scrub-hover')).toBe(false);
+    expect(basesView.classList.contains('dynamic-views-scroll-locked')).toBe(
+      false
+    );
+    expect(indicator.classList.contains('dynamic-views-icon-hidden')).toBe(
+      false
+    );
+    // No frame committed, so nothing was loaded into the incoming element
+    expect(nextImg.getAttribute('src')).toBeNull();
+    for (const img of thumbEl.querySelectorAll('.slideshow-img')) {
+      expect(img.className).not.toContain('slideshow-exit');
+      expect(img.className).not.toContain('slideshow-enter');
+    }
   });
 
   it('swaps roles and clears src on timeout completion', () => {
