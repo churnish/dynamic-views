@@ -9,6 +9,7 @@ import {
 import { getOwnerWindow, type OwnerWindow } from '../utils/owner-window';
 import { CONTENT_HIDDEN_CLASS } from './content-visibility';
 import { URL_ICON_SELECTOR } from './constants';
+import { setInteractSource } from './hover-and-touch';
 
 const CLIP_HIDDEN_CLASS = 'poster-clip-hidden';
 const HAS_PARAGRAPHS_CLASS = 'has-paragraphs';
@@ -63,18 +64,23 @@ export function handlePosterTapReveal(
     e.stopPropagation();
     const prevRevealed = cardEl
       .closest('.dynamic-views')
-      ?.querySelector('.card.poster-revealed');
+      ?.querySelector<HTMLElement>('.card.poster-revealed');
     if (prevRevealed) {
-      prevRevealed.classList.remove('poster-revealed', 'interact');
-      resetPosterScroll(prevRevealed as HTMLElement);
+      prevRevealed.classList.remove('poster-revealed');
+      setInteractSource(prevRevealed, 'reveal', false);
+      resetPosterScroll(prevRevealed);
     }
-    cardEl.classList.add('poster-revealed', 'interact');
+    cardEl.classList.add('poster-revealed');
+    // The reveal source, never the hover source — a finger tap must not turn on
+    // the image zoom that keys on interact-hover.
+    setInteractSource(cardEl, 'reveal', true);
     return true;
   }
 
   if (!isInteractive && !isTextTarget && !hasTextSelection) {
     e.stopPropagation();
-    cardEl.classList.remove('poster-revealed', 'interact');
+    cardEl.classList.remove('poster-revealed');
+    setInteractSource(cardEl, 'reveal', false);
     resetPosterScroll(cardEl);
     return true;
   }

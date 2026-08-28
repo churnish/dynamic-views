@@ -21,8 +21,10 @@ import {
 import { brokenImageUrls, markImageBroken } from './image-loader';
 import { getCachedBlobUrl } from './slideshow';
 import {
+  canHover,
   deferContainerHoverDrop,
   markContainerHoverCard,
+  setInteractSource,
 } from './hover-and-touch';
 import { getNextImageIndex } from './viewer-navigation';
 import {
@@ -45,25 +47,6 @@ const WHEEL_PAN_MULTIPLIER = 1.5;
 const VIEWER_MAX_ZOOM = 10;
 
 type GestureMode = 'mobile' | 'desktop';
-
-/**
- * `Platform.hasPhysicalKeyboard` is undocumented and absent from the typings,
- * which declare `Platform` as a const object literal — not an interface, so it
- * cannot be reached by module augmentation. It is **true on desktop** — the
- * desktop boot IIFE sets it alongside `isDesktopApp`/`isDesktop`
- * (app.js:226430) — and `emulateMobile()` forces it false, via the `App`
- * constructor's `emulate-mobile` branch (app.js:223079), so it cannot be
- * exercised through desktop mobile emulation. Only ever used to widen a mobile
- * case, so the desktop value never decides anything on its own.
- *
- * Line numbers read against Obsidian 1.13.6; re-resolve by symbol.
- */
-function hasPhysicalKeyboard(): boolean {
-  return (
-    (Platform as unknown as { hasPhysicalKeyboard?: boolean })
-      .hasPhysicalKeyboard === true
-  );
-}
 
 // Store cleanup functions for event listeners (Map for explicit lifecycle control)
 const viewerListenerCleanups = new Map<HTMLElement, () => void>();
@@ -241,7 +224,12 @@ function closeImageViewer(
     // removal, Electron doesn't re-hit-test so :hover and pointerenter are
     // unreliable — restore class directly using last tracked cursor position.
     // Skipped when a new viewer pre-empts this one (mouse is on a different card).
-    if (restoreHoverIntent && !Platform.isMobile) {
+    //
+    // Gated on canHover, not Platform: whether hover intent was ever wired is a
+    // canHover decision, and a tablet with a trackpad is Platform.isMobile yet
+    // fully hover-capable. Gating on the platform left exactly those devices
+    // with the hover state the viewer suppressed and no path back out of it.
+    if (restoreHoverIntent && canHover(original)) {
       const cursor = viewerCursorPositions.get(original);
       // The card and the thumbnail below ask the same question of two rects
       const contains = (rect: DOMRect): boolean =>
@@ -256,10 +244,11 @@ function closeImageViewer(
         if (contains(cardEl.getBoundingClientRect())) {
           // Cursor is over the card — restore without re-triggering transitions
           cardEl.classList.add('interact-restore');
-          // interact-hover rides along with interact everywhere the hover
-          // lifecycle moves it, so the zoom that keys on it survives a viewer
-          // round trip the same way the rest of the hover styling does.
-          cardEl.classList.add('interact', 'interact-hover');
+          // Hover source only. This is standing in for the pointerenter the
+          // overlay ate, so it may restore exactly what a real hover would —
+          // re-adding interact wholesale would resurrect a press or a poster
+          // reveal that ended while the viewer was open.
+          setInteractSource(cardEl, 'hover', true);
           markContainerHoverCard(cardEl);
           void cardEl.offsetHeight;
           cardEl.classList.remove('interact-restore');
@@ -271,12 +260,12 @@ function closeImageViewer(
           // mouse move and may arrive long after any timeout would have lapsed.
           if (original.closest('.card-cover')) cardEl.dataset.zoomResume = '1';
         } else {
-          // Cursor outside card — remove hover state that was preserved
+          // Cursor outside card — release the hover source that was preserved
           // during viewer open (pointerleave was suppressed by viewer-active).
-          // interact-hover must go with interact: the pointer has left, and a
-          // stranded one would hold the image zoom open for good — pointerleave
-          // already fired under the overlay and will not fire again.
-          cardEl.classList.remove('interact', 'interact-hover');
+          // This close is the hover source's missing exit: the real pointerleave
+          // already fired under the overlay and will not fire again, so without
+          // it the image zoom stays on for good.
+          setInteractSource(cardEl, 'hover', false);
           cardEl.classList.remove('poster-hover-active');
           deferContainerHoverDrop(cardEl);
         }
@@ -1257,11 +1246,13 @@ function openImageViewer(
     };
 
     // Arrow keys step through the card's navigable image set. The viewer index
-    // is independent — the card underneath never advances. Desktop always, plus
-    // tablets with a hardware keyboard; phones are excluded even when one is
-    // attached.
-    const canArrowNavigate =
-      !isMobile || (Platform.isTablet && hasPhysicalKeyboard());
+    // is independent — the card underneath never advances. Phones are excluded
+    // by product decision; everything else is allowed, because a device with no
+    // keyboard cannot send an arrow key in the first place. Deliberately NOT
+    // gated on Platform.hasPhysicalKeyboard: that flag is set by the desktop
+    // boot path and never on iPadOS, so gating on it left arrow navigation and
+    // the Escape close permanently dead on tablets.
+    const canArrowNavigate = !isPhone;
     let stepImage: ((direction: 1 | -1) => void) | null = null;
     let pendingNavError: (() => void) | null = null;
 
@@ -1363,21 +1354,22 @@ function openImageViewer(
         return false;
       }
 
+      // Close keys act on every platform. Space would otherwise scroll the pane
+      // or re-activate the card underneath.
+      if (e.key === 'Escape' || e.code === 'Space') {
+        closeImageViewer(cloneEl, viewerCleanupFns, viewerClones);
+        return false;
+      }
+
+      // Suppression only: the rest must not reach the pane underneath while a
+      // viewer is open, but there is nothing here to act on.
       if (isMobile) {
-        return e.code === 'Space' ||
-          e.key === 'Enter' ||
-          e.key === 'Escape' ||
+        return e.key === 'Enter' ||
           e.key === 'r' ||
           e.key === 'R' ||
           e.key === 'ArrowDown'
           ? false
           : undefined;
-      }
-
-      // Space would otherwise scroll the pane or re-activate the card underneath
-      if (e.key === 'Escape' || e.code === 'Space') {
-        closeImageViewer(cloneEl, viewerCleanupFns, viewerClones);
-        return false;
       }
       return undefined;
     });

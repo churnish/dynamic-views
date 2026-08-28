@@ -4,8 +4,10 @@ import {
   canHover,
   canPrimaryHover,
   deferContainerHoverDrop,
+  hasInteractSource,
   isHoverPointer,
   isTouchPointer,
+  setInteractSource,
   setupHoverIntent,
   setupTouchPress,
 } from '../../src/core/hover-and-touch';
@@ -660,5 +662,162 @@ describe('deferContainerHoverDrop', () => {
     const card = document.createElement('div');
     card.classList.add('card');
     expect(() => deferContainerHoverDrop(card)).not.toThrow();
+  });
+});
+
+describe('setInteractSource', () => {
+  let card: HTMLElement;
+
+  beforeEach(() => {
+    card = document.createElement('div');
+    card.className = 'card';
+  });
+
+  it('sets the source flag class and derives interact from it', () => {
+    setInteractSource(card, 'press', true);
+
+    expect(card.classList.contains('interact-press')).toBe(true);
+    expect(card.classList.contains('interact')).toBe(true);
+  });
+
+  it('keeps interact-hover as the hover source class', () => {
+    setInteractSource(card, 'hover', true);
+
+    expect(card.classList.contains('interact-hover')).toBe(true);
+    expect(card.classList.contains('interact')).toBe(true);
+  });
+
+  it('never sets interact-hover for a non-hover source', () => {
+    setInteractSource(card, 'press', true);
+    setInteractSource(card, 'reveal', true);
+
+    expect(card.classList.contains('interact-hover')).toBe(false);
+  });
+
+  it('drops interact only once the last source releases', () => {
+    setInteractSource(card, 'hover', true);
+    setInteractSource(card, 'press', true);
+
+    setInteractSource(card, 'press', false);
+    expect(card.classList.contains('interact')).toBe(true);
+
+    setInteractSource(card, 'hover', false);
+    expect(card.classList.contains('interact')).toBe(false);
+  });
+
+  it('releasing a source that was never held leaves the others alone', () => {
+    setInteractSource(card, 'hover', true);
+
+    setInteractSource(card, 'reveal', false);
+
+    expect(card.classList.contains('interact')).toBe(true);
+    expect(card.classList.contains('interact-hover')).toBe(true);
+  });
+
+  it('is idempotent', () => {
+    setInteractSource(card, 'press', true);
+    setInteractSource(card, 'press', true);
+    setInteractSource(card, 'press', false);
+
+    expect(card.classList.contains('interact-press')).toBe(false);
+    expect(card.classList.contains('interact')).toBe(false);
+  });
+
+  it('leaves interact-restore alone — it suppresses transitions, it is not a source', () => {
+    card.classList.add('interact-restore');
+
+    setInteractSource(card, 'hover', true);
+    setInteractSource(card, 'hover', false);
+
+    expect(card.classList.contains('interact-restore')).toBe(true);
+    expect(card.classList.contains('interact')).toBe(false);
+  });
+});
+
+describe('hasInteractSource', () => {
+  it('answers for one source only, never the union', () => {
+    const card = document.createElement('div');
+    setInteractSource(card, 'press', true);
+
+    expect(card.classList.contains('interact')).toBe(true);
+    expect(hasInteractSource(card, 'press')).toBe(true);
+    expect(hasInteractSource(card, 'hover')).toBe(false);
+    expect(hasInteractSource(card, 'reveal')).toBe(false);
+  });
+});
+
+// The tablet-with-trackpad case: shared-renderer.ts wires setupHoverIntent and
+// setupTouchPress to the same card, so a finger and a trackpad pointer can hold
+// it at once. Both setups are driven here exactly as that renderer drives them.
+describe('concurrent hover and press sources', () => {
+  let card: HTMLElement;
+  let bodyEl: HTMLElement;
+  let controller: AbortController;
+
+  beforeEach(() => {
+    ({ cardEl: card, bodyEl } = buildPressCard());
+    controller = new AbortController();
+    vi.useFakeTimers();
+
+    setupHoverIntent(
+      card,
+      () => setInteractSource(card, 'hover', true),
+      () => setInteractSource(card, 'hover', false),
+      controller.signal
+    );
+    setupTouchPress(
+      card,
+      () => setInteractSource(card, 'press', true),
+      () => setInteractSource(card, 'press', false),
+      controller.signal
+    );
+  });
+
+  afterEach(() => {
+    controller.abort();
+    vi.useRealTimers();
+  });
+
+  it('releasing a press leaves interact set while the pointer still hovers', () => {
+    fire(card, 'pointerenter');
+    fire(card, 'pointermove');
+    touch(bodyEl, 'pointerdown');
+    touch(bodyEl, 'pointerup');
+    vi.advanceTimersByTime(TOUCH_PRESS_MIN_VISIBLE_MS);
+
+    expect(card.classList.contains('interact-press')).toBe(false);
+    expect(card.classList.contains('interact-hover')).toBe(true);
+    expect(card.classList.contains('interact')).toBe(true);
+  });
+
+  it('a hover exit leaves interact set while a press is held', () => {
+    fire(card, 'pointerenter');
+    fire(card, 'pointermove');
+    touch(bodyEl, 'pointerdown');
+
+    fire(card, 'pointerleave');
+
+    expect(card.classList.contains('interact-hover')).toBe(false);
+    expect(card.classList.contains('interact-press')).toBe(true);
+    expect(card.classList.contains('interact')).toBe(true);
+  });
+
+  it('a finger press never sets the hover source on a hover-capable device', () => {
+    touch(bodyEl, 'pointerdown');
+
+    expect(card.classList.contains('interact')).toBe(true);
+    expect(card.classList.contains('interact-hover')).toBe(false);
+  });
+
+  it('interact clears once both sources have released', () => {
+    fire(card, 'pointerenter');
+    fire(card, 'pointermove');
+    touch(bodyEl, 'pointerdown');
+
+    touch(bodyEl, 'pointerup');
+    vi.advanceTimersByTime(TOUCH_PRESS_MIN_VISIBLE_MS);
+    fire(card, 'pointerleave');
+
+    expect(card.classList.contains('interact')).toBe(false);
   });
 });

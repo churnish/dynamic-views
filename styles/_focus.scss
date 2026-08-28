@@ -31,12 +31,18 @@
   outline-offset: 2px;
 }
 
-.dynamic-views .card:focus-visible {
+.dynamic-views-keyboard-nav .card:focus {
   outline: none;
 }
 
-/* Card focus ring — uses ::after so it renders on top of covers */
-body .dynamic-views .card:focus-visible::after {
+/* Card focus ring — uses ::after so it renders on top of covers.
+   Deliberately NOT keyed on :focus-visible. That selector answers a question
+   the browser decides and we cannot correct: WebKit does not carry it across a
+   script-driven focus(), so arrow navigation drew no ring on iPadOS, and it
+   fires for the focus that lands on a card when an image viewer is dismissed
+   with Escape, ringing a card the user never navigated to. keyboard-nav.ts
+   owns the state instead and still consults :focus-visible to catch Tab. */
+body .dynamic-views-keyboard-nav .card:focus::after {
   content: '';
   position: absolute;
   inset: 0;

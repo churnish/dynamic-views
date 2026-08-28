@@ -17,6 +17,7 @@ vi.mock('../../src/core/text-preview-dom', () => ({
   applyParagraphClamp: vi.fn(),
 }));
 
+import { setInteractSource } from '../../src/core/hover-and-touch';
 import {
   handlePosterTapReveal,
   clipPosterStaticOverflow,
@@ -211,6 +212,71 @@ describe('handlePosterTapReveal', () => {
       } as Selection);
 
       expect(handlePosterTapReveal(e, card, false)).toBe(true);
+    });
+  });
+
+  // Tap reveal is one of three independent sources of .interact. It owns the
+  // 'reveal' source only: it must not claim the hover source (that would zoom
+  // the image on a finger tap), and its exit must not strip an .interact another
+  // source is still holding.
+  describe('interact source ownership', () => {
+    function silenceSelection(): void {
+      vi.spyOn(window, 'getSelection').mockReturnValue({
+        toString: () => '',
+      } as Selection);
+    }
+
+    it('reveal claims the reveal source, never the hover source', () => {
+      const card = makeCardWithPoster(false);
+
+      handlePosterTapReveal(makeMouseEvent(card), card, false);
+
+      expect(card.classList.contains('interact-reveal')).toBe(true);
+      expect(card.classList.contains('interact-hover')).toBe(false);
+      expect(card.classList.contains('interact')).toBe(true);
+    });
+
+    it('dismiss leaves interact set while the pointer still hovers', () => {
+      const card = makeCardWithPoster(false);
+      setInteractSource(card, 'hover', true);
+      handlePosterTapReveal(makeMouseEvent(card), card, false);
+      silenceSelection();
+
+      handlePosterTapReveal(makeMouseEvent(card), card, false);
+
+      expect(card.classList.contains('poster-revealed')).toBe(false);
+      expect(card.classList.contains('interact-reveal')).toBe(false);
+      expect(card.classList.contains('interact-hover')).toBe(true);
+      expect(card.classList.contains('interact')).toBe(true);
+    });
+
+    it('dismiss clears interact when the reveal was the only source', () => {
+      const card = makeCardWithPoster(false);
+      handlePosterTapReveal(makeMouseEvent(card), card, false);
+      silenceSelection();
+
+      handlePosterTapReveal(makeMouseEvent(card), card, false);
+
+      expect(card.classList.contains('interact')).toBe(false);
+    });
+
+    it('dismissing a previous card releases its reveal source only', () => {
+      const card1 = makeCardWithPoster(false);
+      handlePosterTapReveal(makeMouseEvent(card1), card1, false);
+      setInteractSource(card1, 'hover', true);
+
+      const card2 = document.createElement('div');
+      card2.className = 'card';
+      const poster2 = document.createElement('div');
+      poster2.className = 'card-poster';
+      card2.appendChild(poster2);
+      card1.parentElement!.appendChild(card2);
+
+      handlePosterTapReveal(makeMouseEvent(card2), card2, false);
+
+      expect(card1.classList.contains('poster-revealed')).toBe(false);
+      expect(card1.classList.contains('interact-reveal')).toBe(false);
+      expect(card1.classList.contains('interact')).toBe(true);
     });
   });
 

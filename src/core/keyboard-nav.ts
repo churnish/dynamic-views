@@ -304,6 +304,25 @@ interface FocusManagedContainer extends HTMLElement {
  * Call this when container is created/re-created.
  * @returns Cleanup function to remove handlers
  */
+/** Class mirroring `_keyboardNavActive` so CSS can see it.
+ *  The focus ring cannot key on `:focus-visible`: WebKit does not carry that
+ *  state across a script-driven `focus()`, so arrow navigation — which is
+ *  nothing but script-driven focus — drew no ring on iPadOS at all, except on
+ *  cards at a grid edge where the arrow found no neighbour and focus never
+ *  moved. Chromium carries it, which is why desktop looked correct. */
+const KEYBOARD_NAV_CLASS = 'dynamic-views-keyboard-nav';
+
+/** Single writer for keyboard-nav visibility: the property drives JS decisions,
+ *  the class drives the ring, and they must never disagree. */
+export function setKeyboardNavActive(
+  container: HTMLElement | null,
+  active: boolean
+): void {
+  if (!container) return;
+  (container as FocusManagedContainer)._keyboardNavActive = active;
+  container.classList.toggle(KEYBOARD_NAV_CLASS, active);
+}
+
 export function initializeContainerFocus(container: HTMLElement): () => void {
   const el = container as FocusManagedContainer;
 
@@ -313,7 +332,7 @@ export function initializeContainerFocus(container: HTMLElement): () => void {
   }
 
   // Initialize focus state
-  el._keyboardNavActive = false;
+  setKeyboardNavActive(el, false);
   el._intentionalFocus = false;
 
   // Reset keyboard nav mode when focus leaves all cards
@@ -322,14 +341,33 @@ export function initializeContainerFocus(container: HTMLElement): () => void {
     // Only reset if focus is leaving to something that's not a card
     // Use optional chaining for defensive access to classList
     if (!relatedTarget?.classList?.contains('card')) {
-      el._keyboardNavActive = false;
+      setKeyboardNavActive(el, false);
     }
   };
 
+  // Tab-focus is the one keyboard path that does not go through an arrow key,
+  // so it needs its own activation. :focus-visible is used as an INPUT here,
+  // never as the ring's selector — as a selector it also fires for the focus
+  // that lands on a card when an image viewer is dismissed with Escape, which
+  // is a genuine key press the user did not aim at the card.
+  const handleFocusin = (e: FocusEvent) => {
+    const card = (e.target as HTMLElement | null)?.closest?.<HTMLElement>('.card');
+    if (!card) return;
+    if (card.dataset.viewerDismissing) return;
+    try {
+      if (!card.matches(':focus-visible')) return;
+    } catch {
+      return;
+    }
+    setKeyboardNavActive(el, true);
+  };
+
+  container.addEventListener('focusin', handleFocusin);
   container.addEventListener('focusout', handleFocusout);
 
   // Store and return cleanup function
   el._focusCleanup = () => {
+    container.removeEventListener('focusin', handleFocusin);
     container.removeEventListener('focusout', handleFocusout);
     delete el._focusCleanup;
   };
@@ -397,7 +435,7 @@ export function setupHoverKeyboardNavigation(
 
       if (container?.isConnected) {
         container._intentionalFocus = true;
-        container._keyboardNavActive = true;
+        setKeyboardNavActive(container, true);
       }
 
       hoveredCard.focus();
@@ -430,7 +468,7 @@ export function setupHoverKeyboardNavigation(
       focusedCardContainer &&
       focusedCardContainer === getContainerRef()
     ) {
-      focusedCardContainer._keyboardNavActive = true;
+      setKeyboardNavActive(focusedCardContainer, true);
     }
 
     // Case 4: Not hovering and no card has DOM focus → do nothing

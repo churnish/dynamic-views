@@ -6,17 +6,8 @@
 import { Platform } from 'obsidian';
 import type { App } from 'obsidian';
 
+import { setInteractSource } from './hover-and-touch';
 import type { OwnerWindow } from '../utils/owner-window';
-
-// interact-hover rides with interact: a drag captures the pointer, so the
-// pointerleave that would normally clear hover state never arrives and the
-// image zoom would stay on for the rest of the card's life.
-// Split out from the full set because the URL button cannot drop
-// poster-hover-active synchronously — see the deferred removal in
-// createUrlButtonDragHandlers.
-const HOVER_CLASSES_SYNC = ['interact', 'interact-hover'] as const;
-
-const HOVER_CLASSES = [...HOVER_CLASSES_SYNC, 'poster-hover-active'] as const;
 
 /**
  * Marker MIME type set on DataTransfer during plugin-initiated drags.
@@ -24,9 +15,24 @@ const HOVER_CLASSES = [...HOVER_CLASSES_SYNC, 'poster-hover-active'] as const;
  */
 const DRAG_MARKER = 'application/x-dynamic-views-drag';
 
-/** Remove hover-triggered classes from the nearest card before drag starts. */
+/**
+ * Release the card's hover source. A drag captures the pointer, so the
+ * pointerleave that would normally clear it never arrives and the image zoom
+ * would stay on for the rest of the card's life.
+ *
+ * Split out from clearCardHoverState because the URL button cannot drop
+ * poster-hover-active synchronously — see the deferred removal in
+ * createUrlButtonDragHandlers.
+ */
+function clearCardHoverSource(el: Element | null | undefined): void {
+  if (el) setInteractSource(el, 'hover', false);
+}
+
+/** Remove every hover-triggered class from the nearest card before drag starts. */
 function clearCardHoverState(el: Element | null | undefined): void {
-  if (el) el.classList.remove(...HOVER_CLASSES);
+  if (!el) return;
+  clearCardHoverSource(el);
+  el.classList.remove('poster-hover-active');
 }
 
 /**
@@ -60,6 +66,9 @@ export function createTagDragHandler(
 ): (e: DragEvent) => void {
   return (e) => {
     e.stopPropagation();
+    // A tag sits inside the card, so its drag captures the pointer away from the
+    // card just as a card drag does — same missing pointerleave, same cleanup.
+    clearCardHoverState((e.currentTarget as HTMLElement)?.closest('.card'));
     e.dataTransfer?.clearData();
     e.dataTransfer?.setData('text/plain', '#' + tag);
     app.dragManager.onDragStart(e, {
@@ -100,6 +109,8 @@ export function createExternalLinkDragHandler(
 ): (e: DragEvent) => void {
   return (e) => {
     e.stopPropagation();
+    // Property-row links live inside the card too — see createTagDragHandler.
+    clearCardHoverState((e.currentTarget as HTMLElement)?.closest('.card'));
     e.dataTransfer?.clearData();
     e.dataTransfer?.setData(DRAG_MARKER, '');
     const dragText = caption === url ? url : `[${caption}](${url})`;
@@ -214,8 +225,8 @@ export function createUrlButtonDragHandlers(
       // element while dragstart still fires on the native <a>)
       body.addClass('dynamic-views-dragging');
       const card = iconEl.closest('.card');
-      // Remove non-poster hover classes synchronously
-      card?.classList.remove(...HOVER_CLASSES_SYNC);
+      // Release the hover source synchronously
+      clearCardHoverSource(card);
       // Defer poster-hover-active removal and icon pointer-events —
       // synchronous removal sets pointer-events: none on .card-content,
       // aborting the drag. Deferred runs after drag system takes over.

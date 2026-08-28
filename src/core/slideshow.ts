@@ -5,7 +5,12 @@
 import { requestUrl } from 'obsidian';
 import { SLIDESHOW_ANIMATION_MS, SWIPE_DETECT_THRESHOLD } from './constants';
 import { isExternalUrl } from './image';
-import { canHover, setupHoverIntent } from './hover-and-touch';
+import {
+  canHover,
+  hasInteractSource,
+  isHoverPointer,
+  setupHoverIntent,
+} from './hover-and-touch';
 import {
   addScrollIndicatorRestore,
   claimIndicator,
@@ -606,7 +611,9 @@ export function setupSwipeGestures(
   coverEl.addEventListener(
     'wheel',
     (e) => {
-      if (requiresHoverIntent && !cardEl.classList.contains('interact')) {
+      // The hover source specifically, not the .interact union — a finger press
+      // sets the union too, and a wheel gesture must answer only to hover.
+      if (requiresHoverIntent && !hasInteractSource(cardEl, 'hover')) {
         // Reset gesture state so the next accepted event starts clean
         accumulatedDeltaX = 0;
         navigatedThisGesture = false;
@@ -857,10 +864,16 @@ export function setupHoverZoomEligibility(
   imageEmbed: HTMLElement,
   signal: AbortSignal
 ): () => void {
+  // Pointer events, not mouse events: WebKit synthesises a mouseleave/mouseenter
+  // pair from a finger tap, so on a tablet with a trackpad a tap under a resting
+  // pointer revoked eligibility and re-granted it, replaying the zoom on every
+  // tap. pointerType is the only thing that distinguishes the two, and every
+  // other hover path in the plugin already filters on it.
   hoverTarget.addEventListener(
-    'mouseenter',
-    () => {
-      // Removing the viewer overlay fires a genuine mouseenter on the card even
+    'pointerenter',
+    (e) => {
+      if (!isHoverPointer(e)) return;
+      // Removing the viewer overlay fires a genuine pointerenter on the card even
       // though the pointer never left it, so re-arming here would clear
       // zoom-cancel and animate the zoom back in on every viewer close. The
       // state the card had before the viewer opened is the one to keep — the
@@ -884,9 +897,10 @@ export function setupHoverZoomEligibility(
     { signal }
   );
   hoverTarget.addEventListener(
-    'mouseleave',
-    () => {
-      // The viewer overlay's pointer-events fire mouseleave on the card while it
+    'pointerleave',
+    (e) => {
+      if (!isHoverPointer(e)) return;
+      // The viewer overlay's pointer-events fire pointerleave on the card while it
       // is open. Dropping eligibility here would replay the zoom-in when the
       // viewer closes and the pointer lands back on the card — the card never
       // stopped being hovered. Mirrors the same guard on the card's hover-intent

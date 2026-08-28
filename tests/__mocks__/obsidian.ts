@@ -314,6 +314,28 @@ export function setIcon(parent: HTMLElement, iconId: string): void {
   parent.setAttribute('data-icon', iconId);
 }
 
+// Mock Scope — handlers are stored so a test can invoke them directly, since
+// nothing here reproduces Obsidian's keymap dispatch.
+export class Scope {
+  parent: Scope | undefined;
+  handlers: Array<(e: KeyboardEvent) => false | undefined> = [];
+
+  constructor(parent?: Scope) {
+    this.parent = parent;
+  }
+
+  register(
+    _modifiers: string[] | null,
+    _key: string | null,
+    func: (e: KeyboardEvent) => false | undefined
+  ): unknown {
+    this.handlers.push(func);
+    return func;
+  }
+
+  unregister(): void {}
+}
+
 // Mock YAML helpers — use JSON for test simplicity
 export function parseYaml(content: string): unknown {
   return JSON.parse(content);

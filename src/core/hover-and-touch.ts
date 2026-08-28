@@ -4,6 +4,7 @@
  * - canPrimaryHover(): primary pointer hover check (hover — mouse/trackpad only)
  * - isHoverPointer(): per-event pointer type filter (mouse/pen hover only)
  * - isTouchPointer(): per-event touch/pen-contact filter (inverse of isHoverPointer)
+ * - setInteractSource(): per-source ownership of the derived `.interact` class
  * - setupHoverIntent(): requires pointermove after pointerenter to activate
  * - setupTouchPress(): activates on pointerdown, deactivates on pointerup with min duration.
  *   Optional shouldActivate() narrows activation to part of the element.
@@ -51,6 +52,57 @@ export function isTouchPointer(e: PointerEvent): boolean {
   if (e.pointerType === 'touch') return true;
   if (e.pointerType === 'pen' && e.pressure > 0) return true;
   return false;
+}
+
+/** The independent interactions that can hold a card in its `.interact` state. */
+export type InteractSource = 'hover' | 'press' | 'reveal';
+
+/**
+ * One flag class per source. `interact-hover` predates the ownership model and
+ * is read directly by CSS as the hover-only zoom gate, so it keeps its name —
+ * the other two exist only as bookkeeping for the union below.
+ */
+const INTERACT_SOURCE_CLASSES: Record<InteractSource, string> = {
+  hover: 'interact-hover',
+  press: 'interact-press',
+  reveal: 'interact-reveal',
+};
+
+const INTERACT_SOURCE_CLASS_LIST = Object.values(INTERACT_SOURCE_CLASSES);
+
+/**
+ * Record one source's claim on a card and recompute `.interact` from all of them.
+ *
+ * `.interact` means "hovered OR pressed OR revealed", and the three sources run
+ * concurrently: a tablet with a trackpad wires hover intent and touch press to
+ * the same card, so a finger tap and a stationary trackpad pointer can hold the
+ * card at once. Writing `.interact` directly makes every exit unconditional —
+ * the tap's release strips the class while the pointer still hovers, and the
+ * card cannot recover because setupHoverIntent's `hasMoved` latch only re-arms
+ * on a pointerleave/pointerenter round trip. Deriving the class as the union of
+ * the source flags is what makes each exit answer for its own source only.
+ *
+ * `.interact` is never written anywhere else. `interact-restore` is unrelated —
+ * it suppresses transitions, it is not a source.
+ */
+export function setInteractSource(
+  el: Element,
+  source: InteractSource,
+  active: boolean
+): void {
+  el.classList.toggle(INTERACT_SOURCE_CLASSES[source], active);
+  el.classList.toggle(
+    'interact',
+    INTERACT_SOURCE_CLASS_LIST.some((cls) => el.classList.contains(cls))
+  );
+}
+
+/** Whether one specific source holds the card. For reads that must not answer to the union — a finger press must not satisfy a hover-only guard. */
+export function hasInteractSource(
+  el: Element,
+  source: InteractSource
+): boolean {
+  return el.classList.contains(INTERACT_SOURCE_CLASSES[source]);
 }
 
 /**

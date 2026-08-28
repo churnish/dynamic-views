@@ -130,11 +130,15 @@ dynamic-views/
 │   │   ├── content-loader.test.ts
 │   │   ├── content-visibility.test.ts
 │   │   ├── data-transform.test.ts
+│   │   ├── drag.test.ts
 │   │   ├── file.test.ts
 │   │   ├── hover-and-touch.test.ts
-│   │   ├── image.test.ts
+│   │   ├── hover-zoom-eligibility.test.ts
 │   │   ├── image-extraction.test.ts
 │   │   ├── image-loader.test.ts
+│   │   ├── image-viewer-hover.test.ts
+│   │   ├── image.test.ts
+│   │   ├── keyboard-nav-ring.test.ts
 │   │   ├── multi-image-icon.test.ts
 │   │   ├── multi-image-nav.test.ts
 │   │   ├── opaque-scan.test.ts
@@ -147,6 +151,7 @@ dynamic-views/
 │   │   ├── render-utils.test.ts
 │   │   ├── scroll-gradient.test.ts
 │   │   ├── settings-schema.test.ts
+│   │   ├── slideshow-wheel-guard.test.ts
 │   │   ├── text-preview-dom.test.ts
 │   │   ├── text-preview.test.ts
 │   │   ├── text-selection.test.ts

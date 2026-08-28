@@ -96,6 +96,7 @@ import {
   deferContainerHoverDrop,
   isHoverPointer,
   markContainerHoverCard,
+  setInteractSource,
   setupHoverIntent,
   setupTouchPress,
 } from '../core/hover-and-touch';
@@ -110,6 +111,7 @@ import {
   handleArrowNavigation,
   isArrowKey,
   isImageViewerBlockingNav,
+  setKeyboardNavActive,
   type VirtualCardRect,
 } from '../core/keyboard-nav';
 import {
@@ -1211,7 +1213,7 @@ export class SharedCardRenderer {
                 cardEl,
                 container,
                 (_targetCard, targetIndex) => {
-                  container._keyboardNavActive = true;
+                  setKeyboardNavActive(container, true);
                   if (keyboardNav.onFocusChange) {
                     keyboardNav.onFocusChange(targetIndex);
                   }
@@ -1228,7 +1230,7 @@ export class SharedCardRenderer {
               | (HTMLElement & { _keyboardNavActive?: boolean })
               | null;
             if (container?.isConnected) {
-              container._keyboardNavActive = false;
+              setKeyboardNavActive(container, false);
             }
             cardEl.blur();
           }
@@ -1247,7 +1249,7 @@ export class SharedCardRenderer {
             | (HTMLElement & { _keyboardNavActive?: boolean })
             | null;
           if (container) {
-            container._keyboardNavActive = false;
+            setKeyboardNavActive(container, false);
           }
         },
         { signal, capture: true }
@@ -1321,21 +1323,21 @@ export class SharedCardRenderer {
       setupHoverIntent(
         cardEl,
         () => {
-          // interact-hover is the hover-only half of interact. setupHoverIntent
-          // filters every event through isHoverPointer, so reaching here proves
-          // the input was a mouse or a pen in hover range — never a finger.
-          // Image zoom keys on it so the gate is the input that produced the
-          // event, not the device: a tablet with a trackpad still zooms, and a
-          // finger on that same tablet does not. setupTouchPress must never set
-          // this class — its absence there is the whole mechanism.
-          cardEl.classList.add('interact', 'interact-hover');
+          // The hover source publishes interact-hover, the hover-only half of
+          // interact. setupHoverIntent filters every event through
+          // isHoverPointer, so reaching here proves the input was a mouse or a
+          // pen in hover range — never a finger. Image zoom keys on that class
+          // so the gate is the input that produced the event, not the device: a
+          // tablet with a trackpad still zooms, and a finger on that same tablet
+          // does not, because the press source never claims 'hover'.
+          setInteractSource(cardEl, 'hover', true);
           markContainerHoverCard(cardEl);
           keyboardNav?.onHoverStart?.(cardEl);
         },
         () => {
           // Image viewer overlay triggers pointerleave — keep hover state
           if (cardEl.classList.contains('viewer-active')) return;
-          cardEl.classList.remove('interact', 'interact-hover');
+          setInteractSource(cardEl, 'hover', false);
           deferContainerHoverDrop(cardEl);
           keyboardNav?.onHoverEnd?.();
         },
@@ -1346,11 +1348,11 @@ export class SharedCardRenderer {
     setupTouchPress(
       cardEl,
       () => {
-        cardEl.classList.add('interact');
+        setInteractSource(cardEl, 'press', true);
         markContainerHoverCard(cardEl);
       },
       () => {
-        cardEl.classList.remove('interact');
+        setInteractSource(cardEl, 'press', false);
         deferContainerHoverDrop(cardEl);
       },
       signal,
@@ -2557,9 +2559,13 @@ export class SharedCardRenderer {
       // image and card content is an ordinary excursion that must not restart it.
       if (format === 'cover') {
         setupHoverZoomEligibility(cardEl, imageEmbedContainer, signal!);
+        // Pointer event, not mouseenter: WebKit synthesises mouse events from a
+        // finger tap, which would re-arm the zoom mid-press. Same reason the
+        // eligibility handlers next door filter on pointerType.
         cardEl.addEventListener(
-          'mouseenter',
-          () => {
+          'pointerenter',
+          (e) => {
+            if (!isHoverPointer(e)) return;
             zoomCleared = false;
           },
           { signal }
