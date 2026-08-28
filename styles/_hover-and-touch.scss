@@ -1,7 +1,7 @@
 /* Poster hover mode: apply title hover color on :hover (not hover-intent) so
    the color is correct from the start of the 300ms content fade-in.
-   hover-intent requires mouseenter + mousemove, but CSS :hover fires on
-   mouseenter alone — the gap causes a flash of normal color.
+   hover-intent requires pointerenter + pointermove, but CSS :hover matches as
+   soon as the pointer enters — the gap causes a flash of normal color.
    All presets resolve to --dynamic-views-title-hover-color-value (see _variables.scss). */
 body.dynamic-views-open-on-card:not(
     .dynamic-views-title-hover-color-no-change
@@ -164,7 +164,8 @@ body:is(
   }
 }
 
-/* Gate pointer cursor behind hover intent on desktop */
+/* Gate pointer cursor behind .interact on desktop. .interact means pressed OR
+   hovered, not hover intent alone — its hover-only half is .interact-hover. */
 @media (any-hover: hover) {
   .dynamic-views .card:not(.interact) {
     &.clickable-card {

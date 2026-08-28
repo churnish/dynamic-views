@@ -2,7 +2,7 @@
 title: Project structure
 description: Maps every source, test, and stylesheet file in the Dynamic Views plugin to its responsibility.
 author: 🤖 Generated with Claude Code
-updated: 2026-04-10
+updated: 2026-08-28
 ---
 # Project structure
 
@@ -87,11 +87,12 @@ dynamic-views/
 │   │   ├── _cover-side.scss          # Side cover layout adjustments
 │   │   ├── _cover.scss               # Cover flexbox system, wrapper positioning, masonry cover height overrides
 │   │   ├── _header.scss              # Title, subtitle, file type indicators
-│   │   ├── _images.scss              # Shared image styles across all formats (skip-cover-fade, fullbleed img)
+│   │   ├── _image.scss               # Shared image styles across all formats (skip-cover-fade, fullbleed img)
 │   │   ├── _poster.scss              # Poster image format
 │   │   ├── _previews.scss            # Thumbnail sizing, text preview, position layouts
 │   │   ├── _slideshow.scss           # Slideshow animations
-│   │   └── _url-button.scss          # URL button: in-header glyph, cover top-right variants, hover background
+│   │   ├── _url-button.scss          # URL button: in-header glyph, cover top-right variants, hover background
+│   │   └── _url-button-selectors.scss # Shared URL button selector variables (emits no CSS)
 │   │
 │   ├── _compact.scss                 # Narrow pane breakpoints, compact toolbar
 │   ├── _container.scss               # Container queries, width system, scroll fade

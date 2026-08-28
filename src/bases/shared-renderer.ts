@@ -95,6 +95,7 @@ import {
   canPrimaryHover,
   deferContainerHoverDrop,
   isHoverPointer,
+  markContainerHoverCard,
   setupHoverIntent,
   setupTouchPress,
 } from '../core/hover-and-touch';
@@ -959,6 +960,11 @@ export class SharedCardRenderer {
     // External link
     if (link.isEmbed) {
       // Embedded external link (image)
+      // draggable: 'false' does not suppress WebKit's long-press image drag — it
+      // retargets it to the nearest draggable ancestor, which is the card or the
+      // link wrapping this image. That retargeting IS the fix: the gesture then
+      // produces the card or link drag the user expects instead of a bare image
+      // payload. Every <img> the plugin creates carries it for this reason.
       const img = container.createEl('img', {
         cls: 'external-embed',
         attr: { src: link.url, alt: link.caption, draggable: 'false' },
@@ -1001,7 +1007,7 @@ export class SharedCardRenderer {
     );
     el.addEventListener(
       'dragstart',
-      createExternalLinkDragHandler(this.app, el, link.caption, link.url),
+      createExternalLinkDragHandler(this.app, link.caption, link.url),
       { signal }
     );
     el.addEventListener(
@@ -1307,9 +1313,7 @@ export class SharedCardRenderer {
           // finger on that same tablet does not. setupTouchPress must never set
           // this class — its absence there is the whole mechanism.
           cardEl.classList.add('interact', 'interact-hover');
-          cardEl
-            .closest('.masonry-container, .bases-cards-group')
-            ?.classList.add('has-hover-card');
+          markContainerHoverCard(cardEl);
           keyboardNav?.onHoverStart?.(cardEl);
         },
         () => {
@@ -1327,9 +1331,7 @@ export class SharedCardRenderer {
       cardEl,
       () => {
         cardEl.classList.add('interact');
-        cardEl
-          .closest('.masonry-container, .bases-cards-group')
-          ?.classList.add('has-hover-card');
+        markContainerHoverCard(cardEl);
       },
       () => {
         cardEl.classList.remove('interact');
@@ -1796,7 +1798,6 @@ export class SharedCardRenderer {
         cardEl,
         imageUrls,
         hasImage,
-        position,
         settings,
         effectiveOpenOnTitle,
         card,
@@ -1849,6 +1850,8 @@ export class SharedCardRenderer {
     if (format === 'poster' && hasImage) {
       const bgWrapper = cardEl.createDiv('card-poster');
       cardEl.classList.add('has-poster');
+      // draggable: 'false' retargets the WebKit long-press drag — see the
+      // external-embed img in renderLink().
       const img = bgWrapper.createEl('img', {
         attr: { src: imageUrls[0], alt: '', draggable: 'false' },
       });
@@ -1870,6 +1873,8 @@ export class SharedCardRenderer {
     if (format === 'backdrop' && hasImage) {
       const bgWrapper = cardEl.createDiv('card-backdrop');
       cardEl.classList.add('has-backdrop');
+      // draggable: 'false' retargets the WebKit long-press drag — see the
+      // external-embed img in renderLink().
       const img = bgWrapper.createEl('img', {
         attr: { src: imageUrls[0], alt: '', draggable: 'false' },
       });
@@ -1926,7 +1931,6 @@ export class SharedCardRenderer {
             imageEl,
             imageUrls,
             'thumbnail',
-            position,
             settings,
             effectiveOpenOnTitle,
             cardEl,
@@ -1938,7 +1942,13 @@ export class SharedCardRenderer {
               : null
           );
 
-          // Multi-image indicator for scrubbable thumbnails
+          // Multi-image indicator for scrubbable thumbnails.
+          // No "Hide icon" gate here, unlike the cover icon, which has one in
+          // JS as well as in CSS. Neither toggle is in getStyleSettingsHash(),
+          // so flipping one re-renders nothing and the CSS rule is what hides
+          // the icon on cards already on screen — see card/_previews.scss. The
+          // cover's JS gate only spares the node on the next render; it is a
+          // saving, not the mechanism, so the thumbnail needs no twin.
           if (imageUrls.length > 1 && !isThumbnailScrubbingDisabled()) {
             const indicator = imageEl.createDiv('thumbnail-indicator');
             setIcon(indicator, 'lucide-copy');
@@ -1968,7 +1978,6 @@ export class SharedCardRenderer {
         cardEl,
         imageUrls,
         hasImage,
-        position,
         settings,
         effectiveOpenOnTitle,
         card,
@@ -2116,16 +2125,11 @@ export class SharedCardRenderer {
     return { el: cardEl, cleanup };
   }
 
-  /**
-   * Creates a cover wrapper element on the card with image/slideshow/placeholder.
-   * Also sets up side cover dimension observers for left/right positions.
-   */
   /** Creates cover wrapper. Only called when format === "cover". */
   private renderCoverWrapper(
     cardEl: HTMLElement,
     imageUrls: string[],
     hasImage: boolean,
-    position: 'left' | 'right' | 'top' | 'bottom',
     settings: ResolvedSettings,
     /**
      * renderCard's title-aware open mode. Threaded rather than read from
@@ -2158,7 +2162,6 @@ export class SharedCardRenderer {
           slideshowEl,
           slideshowUrls,
           'cover',
-          position,
           settings,
           effectiveOpenOnTitle,
           card.path
@@ -2169,7 +2172,6 @@ export class SharedCardRenderer {
           imageEl,
           imageUrls,
           'cover',
-          position,
           settings,
           effectiveOpenOnTitle,
           cardEl,
@@ -2198,7 +2200,6 @@ export class SharedCardRenderer {
     slideshowEl: HTMLElement,
     imageUrls: string[],
     format: 'thumbnail' | 'cover',
-    position: 'left' | 'right' | 'top' | 'bottom',
     settings: ResolvedSettings,
     /**
      * renderCard's title-aware open mode. Threaded rather than read from
@@ -2239,13 +2240,15 @@ export class SharedCardRenderer {
       { signal }
     );
 
-    // Create two persistent img elements (current and next)
+    // Create two persistent img elements (current and next).
+    // draggable: 'false' retargets the WebKit long-press drag — see the
+    // external-embed img in renderLink().
     const currentImg = imageEmbedContainer.createEl('img', {
       cls: 'slideshow-img slideshow-img-current',
       attr: { src: imageUrls[0], alt: '', draggable: 'false' },
     });
 
-    // Next image starts with empty src
+    // Next image starts with empty src (draggable: 'false' as above)
     imageEmbedContainer.createEl('img', {
       cls: 'slideshow-img slideshow-img-next',
       attr: { src: '', alt: '', draggable: 'false' },
@@ -2393,7 +2396,6 @@ export class SharedCardRenderer {
     imageEl: HTMLElement,
     imageUrls: string[],
     format: 'thumbnail' | 'cover',
-    position: 'left' | 'right' | 'top' | 'bottom',
     settings: ResolvedSettings,
     /**
      * renderCard's title-aware open mode. Threaded rather than read from
@@ -2426,6 +2428,8 @@ export class SharedCardRenderer {
       signal ? { signal } : undefined
     );
 
+    // draggable: 'false' retargets the WebKit long-press drag — see the
+    // external-embed img in renderLink().
     const imgEl = imageEmbedContainer.createEl('img', {
       attr: { src: imageUrls[0], alt: '', draggable: 'false' },
     });
@@ -2454,9 +2458,11 @@ export class SharedCardRenderer {
     // Hover zoom survives only until the displayed frame first changes. One flag,
     // no seed: the frame the session started on is whatever is already on screen,
     // which the src comparison reads directly.
+    // Covers only, matching the setupHoverZoomEligibility gate below: thumbnails
+    // never zoom, and no rule consumes the zoom-cancel class on one.
     let zoomCleared = false;
     const dropZoomOnFrameChange = () => {
-      if (zoomCleared) return;
+      if (format !== 'cover' || zoomCleared) return;
       zoomCleared = true;
       cancelHoverZoom(imageEmbedContainer);
     };
@@ -2545,6 +2551,7 @@ export class SharedCardRenderer {
       }
 
       // Second image element for swipe animation (touch only)
+      // (draggable: 'false' as on the current image above)
       const nextImg = imageEmbedContainer.createEl('img', {
         cls: ['slideshow-img', 'slideshow-img-next'],
         attr: { src: '', alt: '', draggable: 'false' },
@@ -2851,6 +2858,34 @@ export class SharedCardRenderer {
    * render time, the per-card urlButtonRerenderController on update — so the two
    * lifecycles stay distinct without branching in here.
    */
+  /**
+   * Point an existing URL button at a URL: href, tooltip label, external-link
+   * attributes, drag ghost text, and the dataset copy the drag and
+   * context-menu handlers read so a surgical update needs no re-binding.
+   *
+   * `clearNonWebAttrs` is the one real difference between the two callers. A
+   * freshly created anchor has no target/rel to remove, while one being updated
+   * may still carry them from a web URL that has since become a custom URI.
+   */
+  private static applyUrlToButton(
+    iconEl: HTMLAnchorElement,
+    urlValue: string,
+    clearNonWebAttrs: boolean
+  ): void {
+    iconEl.href = urlValue;
+    iconEl.setAttribute('aria-label', urlValue);
+    if (/^https?:\/\//i.test(urlValue)) {
+      iconEl.target = '_blank';
+      iconEl.rel = 'noopener noreferrer';
+    } else if (clearNonWebAttrs) {
+      iconEl.removeAttribute('target');
+      iconEl.removeAttribute('rel');
+    }
+    const dragText = iconEl.querySelector('.dynamic-views-drag-text');
+    if (dragText) dragText.textContent = urlValue;
+    iconEl.dataset.dynamicViewsUrlValue = urlValue;
+  }
+
   private createUrlIcon(
     headerEl: HTMLElement,
     urlValue: string,
@@ -2859,22 +2894,14 @@ export class SharedCardRenderer {
   ): HTMLAnchorElement {
     const iconEl = headerEl.createEl('a', {
       cls: 'card-title-url-icon text-icon-button svg-icon',
-      href: urlValue,
     });
-    iconEl.setAttribute('aria-label', urlValue);
-    if (/^https?:\/\//i.test(urlValue)) {
-      iconEl.target = '_blank';
-      iconEl.rel = 'noopener noreferrer';
-    }
     setIcon(iconEl, 'arrow-up-right');
     // Hidden text for native link drag ghost — Chromium uses textContent
     // to generate the 2-line ghost (title + URL). Without text, only the
-    // SVG icon appears as the ghost.
-    const dragText = iconEl.createSpan('dynamic-views-drag-text');
-    dragText.textContent = urlValue;
-    // Store for freshness — surgical updates refresh this without
-    // re-binding event listeners
-    iconEl.dataset.dynamicViewsUrlValue = urlValue;
+    // SVG icon appears as the ghost. Created before the applier fills it, and
+    // after setIcon(), which owns the element's existing children.
+    iconEl.createSpan('dynamic-views-drag-text');
+    SharedCardRenderer.applyUrlToButton(iconEl, urlValue, false);
 
     iconEl.addEventListener(
       'click',
@@ -2917,18 +2944,7 @@ export class SharedCardRenderer {
 
     if (card.hasValidUrl && card.urlValue) {
       if (existingIcon) {
-        existingIcon.href = card.urlValue;
-        existingIcon.setAttribute('aria-label', card.urlValue);
-        if (/^https?:\/\//i.test(card.urlValue)) {
-          existingIcon.target = '_blank';
-          existingIcon.rel = 'noopener noreferrer';
-        } else {
-          existingIcon.removeAttribute('target');
-          existingIcon.removeAttribute('rel');
-        }
-        const dragText = existingIcon.querySelector('.dynamic-views-drag-text');
-        if (dragText) dragText.textContent = card.urlValue;
-        existingIcon.dataset.dynamicViewsUrlValue = card.urlValue;
+        SharedCardRenderer.applyUrlToButton(existingIcon, card.urlValue, true);
       } else {
         // A card with no header is the displayFirstAsTitle-OFF case: nothing was
         // renderable at render time, so the header has to be created now or the

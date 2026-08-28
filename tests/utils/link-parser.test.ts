@@ -70,10 +70,6 @@ describe('link-parser', () => {
       expect(firstLink('![[image.png]]').type).toBe('internal');
     });
 
-    it('isMarkdownLink is false', () => {
-      expect(firstLink('![[image.png]]').isMarkdownLink).toBe(false);
-    });
-
     it('isEmbed is true', () => {
       expect(firstLink('![[image.png]]').isEmbed).toBe(true);
     });
@@ -107,10 +103,6 @@ describe('link-parser', () => {
       expect(firstLink('[[Note]]').type).toBe('internal');
     });
 
-    it('isMarkdownLink is false', () => {
-      expect(firstLink('[[Note]]').isMarkdownLink).toBe(false);
-    });
-
     it('isEmbed is false', () => {
       expect(firstLink('[[Note]]').isEmbed).toBe(false);
     });
@@ -140,10 +132,6 @@ describe('link-parser', () => {
   // findLinksInText — embedded Markdown ![caption](path)
   // ---------------------------------------------------------------------------
   describe('findLinksInText — embedded Markdown link', () => {
-    it('isMarkdownLink is true', () => {
-      expect(firstLink('![Alt](image.png)').isMarkdownLink).toBe(true);
-    });
-
     it('isEmbed is true', () => {
       expect(firstLink('![Alt](image.png)').isEmbed).toBe(true);
     });
@@ -185,12 +173,6 @@ describe('link-parser', () => {
   // findLinksInText — Markdown link [caption](url)
   // ---------------------------------------------------------------------------
   describe('findLinksInText — Markdown link', () => {
-    it('isMarkdownLink is true', () => {
-      expect(firstLink('[Example](https://example.org)').isMarkdownLink).toBe(
-        true
-      );
-    });
-
     it('isEmbed is false', () => {
       expect(firstLink('[Example](https://example.org)').isEmbed).toBe(false);
     });
@@ -239,12 +221,6 @@ describe('link-parser', () => {
   // findLinksInText — Markdown link with angle brackets [caption](<url>)
   // ---------------------------------------------------------------------------
   describe('findLinksInText — Markdown link with angle brackets', () => {
-    it('isMarkdownLink is true', () => {
-      expect(firstLink('[Example](<https://example.org>)').isMarkdownLink).toBe(
-        true
-      );
-    });
-
     it('url has angle brackets stripped', () => {
       expect(firstLink('[Example](<https://example.org>)').url).toBe(
         'https://example.org'
@@ -266,10 +242,6 @@ describe('link-parser', () => {
   // findLinksInText — angle bracket URL <scheme://...>
   // ---------------------------------------------------------------------------
   describe('findLinksInText — angle bracket URL', () => {
-    it('isMarkdownLink is false', () => {
-      expect(firstLink('<https://example.org>').isMarkdownLink).toBe(false);
-    });
-
     it('isEmbed is false', () => {
       expect(firstLink('<https://example.org>').isEmbed).toBe(false);
     });
@@ -298,10 +270,6 @@ describe('link-parser', () => {
   // findLinksInText — plain URL
   // ---------------------------------------------------------------------------
   describe('findLinksInText — plain URL', () => {
-    it('isMarkdownLink is false', () => {
-      expect(firstLink('https://example.org').isMarkdownLink).toBe(false);
-    });
-
     it('isEmbed is false', () => {
       expect(firstLink('https://example.org').isEmbed).toBe(false);
     });

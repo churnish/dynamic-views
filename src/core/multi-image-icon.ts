@@ -1,11 +1,18 @@
 /**
- * Single owner of the multi-image indicator's hidden state.
+ * Two responsibilities, both serving the multi-image corner icon.
  *
- * Both navigation modes hide the corner icon during a touch swipe — scrub, in
- * `multi-image-nav.ts`, and slide, in `slideshow.ts`. Exclusivity only holds if
- * both claim the same module variable, and `multi-image-nav.ts` already imports
- * from `slideshow.ts`, so that variable cannot live in either without making a
- * cycle. It lives here instead, and this module imports from neither.
+ * 1. Single owner of the indicator's hidden state. Both navigation modes hide
+ *    the corner icon during a touch swipe — scrub, in `multi-image-nav.ts`, and
+ *    slide, in `slideshow.ts`. Exclusivity only holds if both claim the same
+ *    module variable, and `multi-image-nav.ts` already imports from
+ *    `slideshow.ts`, so that variable cannot live in either without making a
+ *    cycle. It lives here instead, and this module imports from neither.
+ *
+ * 2. A per-container throttled scroll registry, which is what restores the
+ *    hidden indicator on the next vertical scroll. Generic in shape, but it
+ *    exists only for that restore and shares the exclusivity slot's callers, so
+ *    splitting it into its own module would separate the two halves of one
+ *    behaviour for no gain.
  */
 
 import { SCROLL_THROTTLE_MS } from './constants';

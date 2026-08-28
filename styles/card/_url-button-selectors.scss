@@ -1,0 +1,31 @@
+// Shared URL button selector list.
+//
+// Consumed by card/_header.scss, which owns the header and body layout these
+// cards need, and by card/_url-button.scss, which paints and positions the icon
+// itself. The two files describe the same set of cards from opposite sides, so
+// the selectors live here rather than being repeated — a change to what counts
+// as, say, a top-right card is then one edit that reaches both.
+//
+// This module emits NO CSS, so `@use`-ing it from either partial cannot disturb
+// the cascade order main.scss establishes. A partial that `@use`d a rule-emitting
+// module would pull that module's output to the earlier position.
+
+/* Cover card whose content area holds nothing but the URL button: the content area
+   leaves flow so the cover fills the card, and the icon is painted over the
+   cover's top-right corner. Absolute rather than a DOM move — the icon keeps its
+   listeners, its urlButtonRerenderController lifecycle, and updateUrlButton()'s
+   header-empty cleanup all unchanged. */
+$url-button-over-cover: '.card.image-format-cover:is(.card-cover-top, .card-cover-bottom).has-cover.has-url-icon:not(.has-card-content, .has-title-block)';
+
+/* Body states in which a cover placeholder actually renders. Mirrors the
+   enumeration in card/_cover-side.scss: Grid shows placeholders with no
+   Style Settings class present, Masonry requires explicit opt-in. */
+$ph-body-grid: "body:is(.dynamic-views-show-cover-placeholder-grid, .dynamic-views-show-cover-placeholder-both, :not([class*='dynamic-views-show-cover-placeholder-']))";
+$ph-body-masonry: 'body:is(.dynamic-views-show-cover-placeholder-masonry, .dynamic-views-show-cover-placeholder-both)';
+
+/* Cards whose URL button leaves the header for the card's top-right corner.
+   Cover-top excludes the cover-only card: $url-button-over-cover already pins its
+   whole content area there. Cover-right needs no exclusion — the collapse is
+   top/bottom only. */
+$url-button-tr-image: '.card.image-format-cover.has-cover.has-url-icon:is(.card-cover-right, .card-cover-top:is(.has-card-content, .has-title-block))';
+$url-button-tr-ph: '.card.image-format-cover.has-cover-placeholder.has-url-icon:is(.card-cover-right, .card-cover-top)';

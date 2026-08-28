@@ -12,8 +12,6 @@ body {
   --dynamic-views-font-ui-large: var(--font-ui-large, 20px);
   --dynamic-views-font-weight: var(--font-weight, 400);
   --dynamic-views-bold-modifier: var(--bold-modifier, 200);
-  --dynamic-views-font-semibold: var(--font-semibold, 600);
-  --dynamic-views-font-monospace: var(--font-monospace, monospace);
   --dynamic-views-font-text: var(--font-text, sans-serif);
   /* Fallback depends on --dynamic-views-font-text declared above */
   --dynamic-views-font-interface: var(
@@ -27,17 +25,11 @@ body {
   --dynamic-views-pill-radius: var(--pill-radius, 2em);
 
   /* Icons */
-  --dynamic-views-icon-s: var(--icon-s, 16px);
   --dynamic-views-icon-xs-stroke-width: var(--icon-xs-stroke-width, 2px);
   --dynamic-views-icon-color: var(--icon-color, #5c5c5c);
-  --dynamic-views-icon-color-active: var(
-    --icon-color-active,
-    hsl(258, 88%, 66%)
-  );
   --dynamic-views-icon-opacity-hover: var(--icon-opacity-hover, 1);
   --dynamic-views-icon-m: var(--icon-m, 18px);
   --dynamic-views-icon-s-stroke-width: var(--icon-s-stroke-width, 2px);
-  --dynamic-views-icon-color-hover: var(--icon-color-hover, #5c5c5c);
   --dynamic-views-icon-opacity: var(--icon-opacity, 0.85);
   --dynamic-views-clickable-icon-radius: var(--clickable-icon-radius, 4px);
   /* Plugin-owned: --shadow-xs/-s/-l are all multi-layer box-shadow values and
@@ -123,7 +115,6 @@ body {
     --background-primary-alt,
     #fafafa
   );
-  --dynamic-views-background-secondary: var(--background-secondary, #f6f6f6);
   --dynamic-views-border-width: var(--border-width, 0.5px);
   --dynamic-views-background-modifier-border: var(
     --background-modifier-border,
@@ -140,14 +131,6 @@ body {
   --dynamic-views-background-modifier-hover: var(
     --background-modifier-hover,
     rgba(0, 0, 0, 0.067)
-  );
-  --dynamic-views-background-modifier-active-hover: var(
-    --background-modifier-active-hover,
-    hsla(258, 88%, 66%, 0.1)
-  );
-  --dynamic-views-background-modifier-box-shadow: var(
-    --background-modifier-box-shadow,
-    rgba(0, 0, 0, 0.1)
   );
   --dynamic-views-raised-background: var(--raised-background, transparent);
   /* Obsidian's native lightbox chrome. Fallbacks are the plugin's convention for
@@ -171,7 +154,6 @@ body {
     --text-accent-hover,
     hsl(255, 90%, 76%)
   );
-  --dynamic-views-text-on-accent: var(--text-on-accent, white);
 
   /* Links */
   --dynamic-views-link-color: var(--link-color, hsl(258, 88%, 66%));
@@ -195,17 +177,10 @@ body {
     --interactive-accent,
     hsl(257, 89%, 71%)
   );
-  --dynamic-views-interactive-accent-hover: var(
-    --interactive-accent-hover,
-    hsl(255, 90%, 76%)
-  );
 
-  /* Clamp thumbnail aspect ratio to 0.5-2.0 range */
-  --dynamic-views-thumbnail-aspect-ratio: clamp(
-    0.5,
-    var(--dynamic-views-image-aspect-ratio, 1),
-    2
-  );
+  /* No CSS rule consumes these two — they are read from JS by
+     utils/style-settings.ts, which is why a stylesheet-only search reads them as
+     dead. */
   --dynamic-views-list-separator: ' ';
   --dynamic-views-empty-value-marker: '—';
   /* Custom colors from HSL components — hover variants shift hue slightly
@@ -235,11 +210,6 @@ body {
     var(--dynamic-views-tag-color-custom-h),
     var(--dynamic-views-tag-color-custom-s),
     var(--dynamic-views-tag-color-custom-l)
-  );
-  --dynamic-views-tag-color-custom-hover: hsl(
-    calc(var(--dynamic-views-tag-color-custom-h) - 3),
-    calc(var(--dynamic-views-tag-color-custom-s) * 1.02),
-    calc(var(--dynamic-views-tag-color-custom-l) * 1.15)
   );
 }
 

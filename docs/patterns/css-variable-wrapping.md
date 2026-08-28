@@ -2,7 +2,7 @@
 title: CSS variable wrapping
 description: Plugin-namespaced CSS variable wrappers, variable catalog, JS-set variables, and resolution semantics.
 author: 🤖 Generated with Claude Code
-updated: 2026-08-17
+updated: 2026-08-28
 ---
 # CSS variable wrapping
 
@@ -40,20 +40,17 @@ Organized into groups: Typography, Border radius, Icons, Animation, Shadows, Lay
 These do not wrap an Obsidian variable. They compute a value from other `--dynamic-views-*` variables using `calc()`, `clamp()`, `color-mix()`, or `hsl()`.
 
 ```scss
-// Clamped from the JS-set image aspect ratio
---dynamic-views-thumbnail-aspect-ratio: clamp(0.5, var(--dynamic-views-image-aspect-ratio, 1), 2);
-
 // Composed from HSL components set by Style Settings (hsl-split format)
---dynamic-views-tag-color-custom: hsl(
-  var(--dynamic-views-tag-color-custom-h),
-  var(--dynamic-views-tag-color-custom-s),
-  var(--dynamic-views-tag-color-custom-l)
+--dynamic-views-property-color-with-names-custom: hsl(
+  var(--dynamic-views-property-color-with-names-custom-h),
+  var(--dynamic-views-property-color-with-names-custom-s),
+  var(--dynamic-views-property-color-with-names-custom-l)
 );
 // Hover variant with slight hue shift, saturation boost, and lightness increase
---dynamic-views-tag-color-custom-hover: hsl(
-  calc(var(--dynamic-views-tag-color-custom-h) - 3),
-  calc(var(--dynamic-views-tag-color-custom-s) * 1.02),
-  calc(var(--dynamic-views-tag-color-custom-l) * 1.15)
+--dynamic-views-property-color-with-names-custom-hover: hsl(
+  calc(var(--dynamic-views-property-color-with-names-custom-h) - 3),
+  calc(var(--dynamic-views-property-color-with-names-custom-s) * 1.02),
+  calc(var(--dynamic-views-property-color-with-names-custom-l) * 1.15)
 );
 ```
 
@@ -93,7 +90,7 @@ Defined in `shared-renderer.ts`. Called on every `onDataUpdated()` callback, out
 | `--dynamic-views-text-preview-lines` | `config.get('textPreviewLines')` | Consumed by `-webkit-line-clamp` |
 | `--dynamic-views-title-lines` | `config.get('titleLines')` | Also toggles `title-single-line` class |
 | `--dynamic-views-subtitle-lines` | `config.get('subtitleLines')` | Consumed by `max-height`, not `-webkit-line-clamp` — see `card-dom-structure.md`. Also toggles `subtitle-scroll` class |
-| `--dynamic-views-image-aspect-ratio` | `config.get('imageRatio')` | Fed into `--dynamic-views-thumbnail-aspect-ratio` via `clamp()` in `_variables.scss` |
+| `--dynamic-views-image-aspect-ratio` | `config.get('imageRatio')` | Consumed directly by the cover, poster, and thumbnail height calcs |
 | `--dynamic-views-thumbnail-size` | `config.get('thumbnailSize')` | Set with `px` unit |
 
 `applyViewContainerStyles()` (same file, called from the render pass rather than the CSS fast-path) sets one more container variable:

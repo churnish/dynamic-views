@@ -490,7 +490,7 @@ describe('setupTouchSwipeNavigation', () => {
       clientX: 38,
     });
 
-    // After cancel-and-restart, roles should have swapped (finishSlideAnimation ran)
+    // After cancel-and-restart, roles should have swapped (finishSwipeAnimation ran)
     // The new current img should now have the exit class
     const newCurr = thumbEl.querySelector<HTMLImageElement>(
       '.slideshow-img-current'
@@ -670,18 +670,14 @@ describe('setupTouchSwipeNavigation', () => {
       clientX: 62,
     });
 
-    // Animation is in progress
-    thumbEl.dataset.scrubbedSrc = '/img/b.jpg';
-
-    // Call reset
+    // Call reset while the animation is in progress
     reset();
 
-    // After reset: current img shows first URL, scrubbedSrc cleared
+    // After reset: current img shows first URL
     const curr = thumbEl.querySelector<HTMLImageElement>(
       '.slideshow-img-current'
     )!;
     expect(curr.src).toContain('/img/a.jpg');
-    expect(thumbEl.dataset.scrubbedSrc).toBeUndefined();
     // Animation classes removed
     expect(curr.classList.contains('slideshow-exit-right')).toBe(false);
     expect(curr.classList.contains('slideshow-exit-left')).toBe(false);
@@ -767,35 +763,6 @@ describe('setupTouchSwipeNavigation', () => {
       '.slideshow-img-current'
     )!;
     expect(curr.classList.contains('slideshow-exit-left')).toBe(true);
-  });
-
-  it('sets dataset.scrubbedSrc after animation completes', () => {
-    setupTouchSwipeNavigation({
-      scrubEl: thumbEl,
-      cardEl,
-      imageUrls,
-      signal: controller.signal,
-      preloadSignal: controller.signal,
-      preloadGuard,
-      brokenHandler,
-    });
-
-    firePointer(thumbEl, 'pointerdown', {
-      pointerType: 'touch',
-      clientX: 50,
-    });
-    firePointer(thumbEl, 'pointermove', {
-      pointerType: 'touch',
-      clientX: 38,
-    });
-
-    // scrubbedSrc not set during animation
-    expect(thumbEl.dataset.scrubbedSrc).toBeUndefined();
-
-    vi.runAllTimers();
-
-    // Set after animation finishes
-    expect(thumbEl.dataset.scrubbedSrc).toBe('/img/b.jpg');
   });
 
   it('swaps roles and clears src on timeout completion', () => {

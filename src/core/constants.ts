@@ -95,6 +95,16 @@ export const TOUCH_TAP_THRESHOLD_MS = 200;
  */
 export const SWIPE_PRESS_DEFER_MS = 120;
 
+/**
+ * Minimum time (ms) the press highlight stays visible once it has appeared.
+ *
+ * Measured from activation, not from pointerdown, so on a swipe surface it adds
+ * to SWIPE_PRESS_DEFER_MS instead of overlapping it: the defer decides whether
+ * the highlight appears at all, this floor only decides how long it lingers
+ * once it has.
+ */
+export const TOUCH_PRESS_MIN_VISIBLE_MS = 100;
+
 /** Context menu click suppression window (ms) — clicks within this window after a context menu event are dropped. */
 export const CONTEXT_MENU_SUPPRESS_MS = 500;
 

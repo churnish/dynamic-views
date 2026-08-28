@@ -49,7 +49,7 @@ export function applyScrubImage(imgEl: HTMLImageElement, rawUrl: string): void {
   }
 }
 
-// ── Slide animation state ───────────────────────────────────────────────
+// ── Swipe animation state ───────────────────────────────────────────────
 
 interface ThumbnailAnimState {
   isAnimating: boolean;
@@ -58,9 +58,9 @@ interface ThumbnailAnimState {
   enterClass: string;
 }
 
-/** Finish the current slide animation immediately: remove classes, swap
+/** Finish the current swipe animation immediately: remove classes, swap
  *  image roles, clear src on the now-next element, reset state. */
-function finishSlideAnimation(
+function finishSwipeAnimation(
   state: ThumbnailAnimState,
   scrubEl: HTMLElement
 ): void {
@@ -212,7 +212,7 @@ export function setupTouchSwipeNavigation(opts: TouchSwipeOptions): () => void {
       if (newIndex !== currentIndex) {
         // Cancel any in-flight animation before starting a new one
         if (animState.isAnimating) {
-          finishSlideAnimation(animState, scrubEl);
+          finishSwipeAnimation(animState, scrubEl);
         }
 
         const currImg = scrubEl.querySelector<HTMLImageElement>(
@@ -240,7 +240,7 @@ export function setupTouchSwipeNavigation(opts: TouchSwipeOptions): () => void {
             if (imageUrls.length <= 1) {
               opts.onReduced?.();
             }
-            finishSlideAnimation(animState, scrubEl);
+            finishSwipeAnimation(animState, scrubEl);
           },
           { once: true }
         );
@@ -264,10 +264,7 @@ export function setupTouchSwipeNavigation(opts: TouchSwipeOptions): () => void {
 
         animState.timeout = window.setTimeout(() => {
           animState.timeout = null;
-          finishSlideAnimation(animState, scrubEl);
-          scrubEl.dataset.scrubbedSrc = getCachedBlobUrl(
-            imageUrls[currentIndex]
-          );
+          finishSwipeAnimation(animState, scrubEl);
         }, animationDuration);
       }
     },
@@ -341,7 +338,7 @@ export function setupTouchSwipeNavigation(opts: TouchSwipeOptions): () => void {
   // Comprehensive reset: cancel animation, reset index, restore images and scroll state
   return () => {
     if (animState.isAnimating) {
-      finishSlideAnimation(animState, scrubEl);
+      finishSwipeAnimation(animState, scrubEl);
     }
     scrubEl.classList.remove('scrub-hover');
     if (scrollContainer)
@@ -363,7 +360,6 @@ export function setupTouchSwipeNavigation(opts: TouchSwipeOptions): () => void {
       '.slideshow-img-next'
     );
     if (nextImg) nextImg.src = '';
-    delete scrubEl.dataset.scrubbedSrc;
   };
 }
 

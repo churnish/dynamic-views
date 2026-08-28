@@ -7,16 +7,9 @@
 // Loaded after card/header purely to keep the two files adjacent. No other partial
 // styles .card-title-url-icon, so no cascade currently depends on this position.
 
-// Copies, not moves: card/_header.scss still interpolates all five for the
-// header/body rules it keeps. Duplicated rather than shared — a @use'd module
-// would work (card/_core.scss and card/_poster.scss both import selector
-// variables) and is the better home if a third consumer appears.
-// See card/_header.scss for what each one enumerates and why.
-$url-button-over-cover: '.card.image-format-cover:is(.card-cover-top, .card-cover-bottom).has-cover.has-url-icon:not(.has-card-content, .has-title-block)';
-$ph-body-grid: "body:is(.dynamic-views-show-cover-placeholder-grid, .dynamic-views-show-cover-placeholder-both, :not([class*='dynamic-views-show-cover-placeholder-']))";
-$ph-body-masonry: 'body:is(.dynamic-views-show-cover-placeholder-masonry, .dynamic-views-show-cover-placeholder-both)';
-$url-button-tr-image: '.card.image-format-cover.has-cover.has-url-icon:is(.card-cover-right, .card-cover-top:is(.has-card-content, .has-title-block))';
-$url-button-tr-ph: '.card.image-format-cover.has-cover-placeholder.has-url-icon:is(.card-cover-right, .card-cover-top)';
+// Shared with card/_header.scss, which styles the header and body layout the
+// same cards need. See card/_url-button-selectors.scss for what each enumerates.
+@use 'url-button-selectors' as *;
 
 .dynamic-views {
   .card-title-url-icon {
@@ -29,18 +22,23 @@ $url-button-tr-ph: '.card.image-format-cover.has-cover-placeholder.has-url-icon:
     margin: calc(-1 * var(--size-2-2));
   }
 
+  /* Source box for the multi-image icon's geometry. Three values elsewhere are
+     computed against it and have to be recomputed together if it changes: the
+     12.578px --dynamic-views-multi-image-icon-size in _variables.scss, and the
+     1.458px rendered pen weight and 1.4 mobile scale the arithmetic in
+     card/_slideshow.scss works from. Equal boxes do NOT draw equal glyphs —
+     Lucide's copy fills far more of its viewBox than arrow-up-right does, which
+     is why that arithmetic exists at all. */
   .card-title-url-icon svg {
     width: 20px;
     height: 20px;
     color: var(--dynamic-views-text-faint);
   }
 
-  /* Gated on has-poster: inherit is only right over an image, where the card
-     re-points --text-muted at the poster fade colour. Without an image the card
-     keeps the standard tokens, so inherit would resolve to Obsidian's
-     .text-icon-button colour (--text-muted) and render the icon darker than the
-     same imageless card in every other image format. */
-  .card.image-format-poster.has-poster .card-title-url-icon svg {
+  /* Gated on an image being present: inherit is only right over one, where the card re-points --text-muted at the tint. Without an image the card keeps the standard tokens, so inherit would resolve to Obsidian's .text-icon-button colour (--text-muted) and render the icon darker than the same imageless card in every other image format. */
+  /* Backdrop re-points the same tokens as poster, so it takes the same treatment. Leaving it on the base --text-faint made it the only over-image format at 60% alpha, which also weakened the hover background below — that mixes off currentColor, so a faint glyph produced a proportionally faint surface. */
+  .card.image-format-poster.has-poster .card-title-url-icon svg,
+  .card.image-format-backdrop.has-backdrop .card-title-url-icon svg {
     color: inherit;
   }
 }
@@ -189,6 +187,10 @@ body:is(
   z-index: 4;
 }
 
+/* The desktop box × 1.4. That same 1.4 is the factor card/_slideshow.scss scales
+   the multi-image cover icon's mobile box and inset by, so the two glyphs hold
+   their desktop relationship on both platforms — change this box and those
+   follow. */
 .is-mobile .dynamic-views .card-title-url-icon svg.svg-icon {
   width: 28px;
   height: 28px;

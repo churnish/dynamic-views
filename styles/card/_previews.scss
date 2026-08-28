@@ -216,7 +216,12 @@ body.dynamic-views-text-preview-hyphenate .dynamic-views .card-text-preview {
   }
 }
 
-/* Hide thumbnail indicator when toggle is on */
+/* Hide thumbnail indicator when toggle is on.
+   CSS-only, unlike the cover icon, which is also gated in JS at creation.
+   Neither toggle is in getStyleSettingsHash(), so flipping either re-renders
+   nothing and this rule is what hides the indicator on cards already on
+   screen. The cover's JS gate is a render-time saving on top, not the
+   mechanism — see the indicator's creation in bases/shared-renderer.ts. */
 body.dynamic-views-hide-thumbnail-icon
   .dynamic-views
   .card-thumbnail

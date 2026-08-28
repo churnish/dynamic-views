@@ -292,7 +292,8 @@ body:not(.is-mobile):not(.dynamic-views-image-viewer-constrain-to-pane)
   cursor: grabbing !important;
 }
 
-/* Image viewer cursor — requires hover intent (.interact) */
+/* Image viewer cursor — requires .interact, which means the card is pressed OR
+   hovered, not hover intent alone. Its hover-only half is .interact-hover. */
 body:not(.dynamic-views-image-viewer-disabled)
   .dynamic-views
   .card.interact

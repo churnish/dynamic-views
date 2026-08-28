@@ -30,6 +30,23 @@ export default defineConfig([
         { args: 'none', varsIgnorePattern: '^_' },
       ],
       'no-undef': 'off',
+      // The 'dv' shorthand is banned everywhere in the codebase, but only these
+      // two spellings leak into the DOM and become a compatibility surface users
+      // write CSS and scripts against, so they are the ones worth a rule.
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "MemberExpression[object.property.name='dataset'][property.name=/^dv[A-Z0-9]/]",
+          message:
+            "Dataset keys must be spelled out in full — 'dynamicViews…', which the DOM exposes as 'data-dynamic-views-…'. The 'dv' shorthand is never used in code.",
+        },
+        {
+          selector: 'Literal[value=/^dv-/]',
+          message:
+            "Class names must use the full 'dynamic-views-' prefix. The 'dv-' shorthand is never used in code.",
+        },
+      ],
       // Enforce layer boundaries: utils/ (pure) → core/ (Obsidian-aware) → bases/ (views)
       'import/no-restricted-paths': [
         'error',

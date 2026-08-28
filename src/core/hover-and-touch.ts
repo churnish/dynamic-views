@@ -9,7 +9,11 @@
  *   Optional shouldActivate() narrows activation to part of the element.
  */
 
-import { SCRUB_DIRECTION_THRESHOLD, SWIPE_PRESS_DEFER_MS } from './constants';
+import {
+  SCRUB_DIRECTION_THRESHOLD,
+  SWIPE_PRESS_DEFER_MS,
+  TOUCH_PRESS_MIN_VISIBLE_MS,
+} from './constants';
 import { getOwnerWindow } from '../utils/owner-window';
 
 /**
@@ -49,6 +53,14 @@ export function isTouchPointer(e: PointerEvent): boolean {
   return false;
 }
 
+/**
+ * Hover activation that requires a pointermove after pointerenter.
+ *
+ * A card scrolling under a stationary pointer fires pointerenter without the
+ * user having aimed at anything, so entry alone is not intent — the move is.
+ * Every event is filtered through isHoverPointer, so a finger never activates
+ * this path. onDeactivate fires on pointerleave and re-arms the next entry.
+ */
 export function setupHoverIntent(
   el: HTMLElement,
   onActivate: () => void,
@@ -91,11 +103,19 @@ export function setupHoverIntent(
   }
 }
 
+/** The element that carries `.has-hover-card` — Masonry's positioning context, or a Grid card group. */
+const HOVER_CARD_CONTAINER_SELECTOR = '.masonry-container, .bases-cards-group';
+
+/** Add .has-hover-card to a card's container, so the container can raise its stacking context while one of its cards is enlarged. Paired with deferContainerHoverDrop() for removal. */
+export function markContainerHoverCard(cardEl: HTMLElement): void {
+  cardEl
+    .closest<HTMLElement>(HOVER_CARD_CONTAINER_SELECTOR)
+    ?.classList.add('has-hover-card');
+}
+
 /** Remove .has-hover-card from a card's container after the card's scale/translate out-transition completes. 150ms = 140ms transition (--dynamic-views-anim-duration-fast) + 10ms buffer. Checks that no other card in the container is still interacting before removing. */
 export function deferContainerHoverDrop(cardEl: HTMLElement): void {
-  const container = cardEl.closest<HTMLElement>(
-    '.masonry-container, .bases-cards-group'
-  );
+  const container = cardEl.closest<HTMLElement>(HOVER_CARD_CONTAINER_SELECTOR);
   if (!container) return;
   window.setTimeout(() => {
     if (!container.querySelector('.card.interact')) {
@@ -104,7 +124,7 @@ export function deferContainerHoverDrop(cardEl: HTMLElement): void {
   }, 150);
 }
 
-/** Touch press feedback: activates on pointerdown (touch/pen contact), deactivates on pointerup/cancel with minimum 100ms visible duration. */
+/** Touch press feedback: activates on pointerdown (touch/pen contact), deactivates on pointerup/cancel after TOUCH_PRESS_MIN_VISIBLE_MS. */
 export function setupTouchPress(
   el: HTMLElement,
   onActivate: () => void,
@@ -178,7 +198,10 @@ export function setupTouchPress(
     // A lift or cancel before the defer elapsed means the press never happened
     cancelPendingPress();
     if (!activatedAt) return;
-    const remaining = Math.max(0, 100 - (Date.now() - activatedAt));
+    const remaining = Math.max(
+      0,
+      TOUCH_PRESS_MIN_VISIBLE_MS - (Date.now() - activatedAt)
+    );
     if (remaining > 0) {
       timer = window.setTimeout(() => {
         onDeactivate();

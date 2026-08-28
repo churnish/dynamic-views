@@ -20,7 +20,10 @@ import {
 } from './image';
 import { brokenImageUrls, markImageBroken } from './image-loader';
 import { getCachedBlobUrl } from './slideshow';
-import { deferContainerHoverDrop } from './hover-and-touch';
+import {
+  deferContainerHoverDrop,
+  markContainerHoverCard,
+} from './hover-and-touch';
 import { getNextImageIndex } from './viewer-navigation';
 import {
   getVideoIdFromThumbnailUrl,
@@ -257,9 +260,7 @@ function closeImageViewer(
           // lifecycle moves it, so the zoom that keys on it survives a viewer
           // round trip the same way the rest of the hover styling does.
           cardEl.classList.add('interact', 'interact-hover');
-          cardEl
-            .closest('.masonry-container, .bases-cards-group')
-            ?.classList.add('has-hover-card');
+          markContainerHoverCard(cardEl);
           void cardEl.offsetHeight;
           cardEl.classList.remove('interact-restore');
           // Removing the overlay makes Chromium fire a genuine mouseenter on the
