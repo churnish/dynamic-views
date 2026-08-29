@@ -1,6 +1,6 @@
 ---
 title: Release guide
-description: "End-to-end release workflow: npm version commands, preversion/version/postversion lifecycle, GitHub Action build, and rollback procedures."
+description: "End-to-end release workflow: npm version commands, preversion/version/postversion lifecycle, GitHub Action build, wiki publishing, and rollback procedures."
 author: 🤖 Generated with Claude Code
 updated: 2026-03-09T00:00:00.000Z
 ---
@@ -77,6 +77,17 @@ The tag push triggers `.github/workflows/release.yml`:
 3. **Bundles** `main.js`, `manifest.json`, `styles.css` into a zip.
 4. **Generates release notes** from merged PRs and closed issues since the previous tag.
 5. **Creates a GitHub Release** with the bundle and individual files attached.
+
+## Updating wiki pages
+
+Wiki pages live in a separate Git repo (`{plugin-name}.wiki.git`), not in the main source repo. The local clone is at `wiki/`.
+
+```bash
+cd wiki/
+git add -A && git commit -m "Update wiki" && git push
+```
+
+Wiki changes are independent from releases — push them anytime.
 
 ## If something goes wrong
 
