@@ -85,7 +85,7 @@ function cleanupTemplateSettings(
     if (
       key !== 'minimumColumns' &&
       validValues &&
-      !validValues.includes(String(settings[key]) as never)
+      !validValues.includes(String(settings[key]))
     ) {
       settings[key] = validValues[0];
       changed = true;
@@ -163,9 +163,7 @@ export class PersistenceManager {
     // Must run AFTER the preventSidebarSwipe migration above: the cleaner would
     // delete the stale string, silently reverting the user's choice to the
     // default `true` instead of the `false` the migration maps it to.
-    if (
-      cleanupPluginSettings(this.data.pluginSettings as Record<string, unknown>)
-    ) {
+    if (cleanupPluginSettings(this.data.pluginSettings)) {
       pluginSettingsDirty = true;
     }
 
@@ -174,9 +172,7 @@ export class PersistenceManager {
     for (const viewType of ['grid', 'masonry'] as const) {
       const template = this.data.templates[viewType];
       if (!template) continue;
-      if (
-        cleanupTemplateSettings(template as Record<string, unknown>, viewType)
-      ) {
+      if (cleanupTemplateSettings(template, viewType)) {
         // Remove template entirely if no settings remain after cleanup
         if (Object.keys(template).length === 0) {
           delete this.data.templates[viewType];

@@ -20,7 +20,7 @@ export function getLeafProps(
   leaf: WorkspaceLeaf | null | undefined
 ): LeafRuntimeProps {
   if (!leaf) return {};
-  return leaf as unknown as LeafRuntimeProps;
+  return leaf;
 }
 
 export interface ScrollPreservationConfig {

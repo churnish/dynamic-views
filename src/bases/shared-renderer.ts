@@ -112,6 +112,7 @@ import {
   isArrowKey,
   isImageViewerBlockingNav,
   setKeyboardNavActive,
+  type FocusManagedContainer,
   type VirtualCardRect,
 } from '../core/keyboard-nav';
 import {
@@ -1056,7 +1057,7 @@ export class SharedCardRenderer {
     keyboardNav?: {
       index: number;
       focusableCardIndex: number;
-      containerRef: { current: HTMLElement | null };
+      containerRef: { current: FocusManagedContainer | null };
       onFocusChange?: (index: number) => void;
       onHoverStart?: (el: HTMLElement) => void;
       onHoverEnd?: () => void;
@@ -1200,12 +1201,7 @@ export class SharedCardRenderer {
               return;
             // Arrow key navigation
             e.preventDefault();
-            const container = keyboardNav.containerRef.current as
-              | (HTMLElement & {
-                  _keyboardNavActive?: boolean;
-                  _intentionalFocus?: boolean;
-                })
-              | null;
+            const container = keyboardNav.containerRef.current;
             if (container?.isConnected) {
               container._intentionalFocus = true;
               handleArrowNavigation(
@@ -1226,9 +1222,7 @@ export class SharedCardRenderer {
             }
           } else if (e.key === 'Escape') {
             // Exit keyboard nav mode and unfocus card
-            const container = keyboardNav.containerRef.current as
-              | (HTMLElement & { _keyboardNavActive?: boolean })
-              | null;
+            const container = keyboardNav.containerRef.current;
             if (container?.isConnected) {
               setKeyboardNavActive(container, false);
             }
@@ -1245,9 +1239,7 @@ export class SharedCardRenderer {
       cardEl.addEventListener(
         'mousedown',
         () => {
-          const container = keyboardNav.containerRef.current as
-            | (HTMLElement & { _keyboardNavActive?: boolean })
-            | null;
+          const container = keyboardNav.containerRef.current;
           if (container) {
             setKeyboardNavActive(container, false);
           }
@@ -1631,7 +1623,7 @@ export class SharedCardRenderer {
                 else cancelPendingPreview();
               }
             },
-            { signal, passive: true } as AddEventListenerOptions
+            { signal, passive: true }
           );
 
           link.addEventListener(

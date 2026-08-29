@@ -284,7 +284,7 @@ describe('PersistenceManager', () => {
     it('should sanitize settings', async () => {
       const { sanitizeObject } = (await import('../src/utils/sanitize')) as any;
 
-      await manager.setPluginSettings({ randomizeAction: 'test' as any });
+      await manager.setPluginSettings({ randomizeAction: 'test' });
 
       expect(sanitizeObject).toHaveBeenCalled();
     });

@@ -85,7 +85,7 @@ describe('handleTemplateToggle', () => {
       };
 
       handleTemplateToggle(
-        config as any,
+        config,
         'grid',
         plugin as any,
         initializedRef,
@@ -106,7 +106,7 @@ describe('handleTemplateToggle', () => {
       };
 
       handleTemplateToggle(
-        config as any,
+        config,
         'grid',
         plugin as any,
         initializedRef,
@@ -131,7 +131,7 @@ describe('handleTemplateToggle', () => {
       };
 
       handleTemplateToggle(
-        config as any,
+        config,
         'grid',
         plugin as any,
         initializedRef,
@@ -154,7 +154,7 @@ describe('handleTemplateToggle', () => {
       };
 
       handleTemplateToggle(
-        config as any,
+        config,
         'grid',
         plugin as any,
         initializedRef,
@@ -176,7 +176,7 @@ describe('handleTemplateToggle', () => {
       };
 
       handleTemplateToggle(
-        config as any,
+        config,
         'grid',
         plugin as any,
         initializedRef,
@@ -202,7 +202,7 @@ describe('handleTemplateToggle', () => {
       };
 
       handleTemplateToggle(
-        config as any,
+        config,
         'masonry',
         plugin as any,
         initializedRef,
@@ -225,7 +225,7 @@ describe('handleTemplateToggle', () => {
       };
 
       handleTemplateToggle(
-        config as any,
+        config,
         'grid',
         plugin as any,
         initializedRef,
@@ -250,7 +250,7 @@ describe('handleTemplateToggle', () => {
 
       // First toggle — starts cooldown
       handleTemplateToggle(
-        config as any,
+        config,
         'grid',
         plugin as any,
         initializedRef,
@@ -267,7 +267,7 @@ describe('handleTemplateToggle', () => {
       // Second toggle — should save again
       config.get.mockReturnValue(true);
       handleTemplateToggle(
-        config as any,
+        config,
         'grid',
         plugin as any,
         initializedRef,
@@ -305,7 +305,7 @@ describe('handleTemplateToggle', () => {
       // later test in this file, so an early throw here would leak into all of them.
       try {
         handleTemplateToggle(
-          config as any,
+          config,
           'grid',
           plugin as any,
           initializedRef,

@@ -49,9 +49,7 @@ function getPropertyInfo(
   propertyName: string
 ): { type?: string; widget?: string } | undefined {
   const fmProp = stripNotePrefix(propertyName);
-  return app.metadataCache.getAllPropertyInfos?.()?.[fmProp] as
-    | { type?: string; widget?: string }
-    | undefined;
+  return app.metadataCache.getAllPropertyInfos?.()?.[fmProp];
 }
 
 /**

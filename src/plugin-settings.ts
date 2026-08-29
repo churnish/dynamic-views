@@ -111,7 +111,7 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
   async setControlValue(key: string, value: unknown): Promise<void> {
     await this.plugin.persistenceManager.setPluginSettings({
       [key]: value,
-    } as Partial<PluginSettings>);
+    });
 
     CASCADES[key as SettingKey]?.(this.plugin);
 
@@ -281,15 +281,9 @@ export class DynamicViewsSettingTab extends PluginSettingTab {
           const host =
             setting.settingEl.closest(SETTINGS_CONTAINER_SELECTOR) ??
             setting.settingEl.ownerDocument;
-          host.addEventListener(
-            'click',
-            this.handlePluginLinkClick as EventListener
-          );
+          host.addEventListener('click', this.handlePluginLinkClick);
           return () =>
-            host.removeEventListener(
-              'click',
-              this.handlePluginLinkClick as EventListener
-            );
+            host.removeEventListener('click', this.handlePluginLinkClick);
         },
       },
 

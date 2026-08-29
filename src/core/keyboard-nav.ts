@@ -292,7 +292,7 @@ export function isImageViewerBlockingNav(
  * @property _focusCleanup - Cleanup function for focusout listener, used to
  *   prevent duplicate handler registration on re-initialization.
  */
-interface FocusManagedContainer extends HTMLElement {
+export interface FocusManagedContainer extends HTMLElement {
   _keyboardNavActive?: boolean;
   _intentionalFocus?: boolean;
   _focusCleanup?: () => void;
@@ -351,7 +351,9 @@ export function initializeContainerFocus(container: HTMLElement): () => void {
   // that lands on a card when an image viewer is dismissed with Escape, which
   // is a genuine key press the user did not aim at the card.
   const handleFocusin = (e: FocusEvent) => {
-    const card = (e.target as HTMLElement | null)?.closest?.<HTMLElement>('.card');
+    const card = (e.target as HTMLElement | null)?.closest?.<HTMLElement>(
+      '.card'
+    );
     if (!card) return;
     if (card.dataset.viewerDismissing) return;
     try {
@@ -390,7 +392,7 @@ export function initializeContainerFocus(container: HTMLElement): () => void {
  */
 export function setupHoverKeyboardNavigation(
   getHoveredCard: () => HTMLElement | null,
-  getContainerRef: () => HTMLElement | null,
+  getContainerRef: () => FocusManagedContainer | null,
   setFocusableIndex: (index: number) => void
 ): { cleanup: () => void; reattach: () => void } {
   const handleKeydown = (e: KeyboardEvent) => {
@@ -426,12 +428,7 @@ export function setupHoverKeyboardNavigation(
       e.preventDefault();
       e.stopImmediatePropagation();
 
-      const container = getContainerRef() as
-        | (HTMLElement & {
-            _keyboardNavActive?: boolean;
-            _intentionalFocus?: boolean;
-          })
-        | null;
+      const container = getContainerRef();
 
       if (container?.isConnected) {
         container._intentionalFocus = true;

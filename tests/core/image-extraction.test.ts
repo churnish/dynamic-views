@@ -445,7 +445,7 @@ key: value
       beforeEach(() => {
         mockApp.metadataCache.getFirstLinkpathDest = vi
           .fn()
-          .mockReturnValue({ extension: 'jpg' } as TFile);
+          .mockReturnValue({ extension: 'jpg' });
         mockApp.vault.getResourcePath = vi
           .fn()
           .mockReturnValue('app://local/image.jpg');
@@ -711,7 +711,7 @@ image: https://example.com/cover.png
         mockApp.vault.cachedRead = vi
           .fn()
           .mockResolvedValue('![[Image[1355x762].png]]');
-        const getDest = vi.fn().mockReturnValue({ extension: 'png' } as TFile);
+        const getDest = vi.fn().mockReturnValue({ extension: 'png' });
         mockApp.metadataCache.getFirstLinkpathDest = getDest;
         mockApp.vault.getResourcePath = vi
           .fn()
@@ -727,7 +727,7 @@ image: https://example.com/cover.png
         mockApp.vault.cachedRead = vi
           .fn()
           .mockResolvedValue('![[Image[1].png|A caption]]');
-        const getDest = vi.fn().mockReturnValue({ extension: 'png' } as TFile);
+        const getDest = vi.fn().mockReturnValue({ extension: 'png' });
         mockApp.metadataCache.getFirstLinkpathDest = getDest;
         mockApp.vault.getResourcePath = vi
           .fn()

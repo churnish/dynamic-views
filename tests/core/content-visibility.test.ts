@@ -21,7 +21,7 @@ beforeAll(() => {
       thresholds: [],
       takeRecords: vi.fn().mockReturnValue([]),
     };
-  }) as unknown as typeof IntersectionObserver;
+  });
 });
 
 describe('setupContentVisibility', () => {

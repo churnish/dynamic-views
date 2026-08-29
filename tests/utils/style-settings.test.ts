@@ -65,7 +65,7 @@ describe('style-settings', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
           name === '--dynamic-views-card-spacing-desktop' ? '16' : '',
-      } as CSSStyleDeclaration);
+      });
 
       expect(getCardSpacing()).toBe(16);
     });
@@ -75,7 +75,7 @@ describe('style-settings', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
           name === '--dynamic-views-card-spacing-phone' ? '10px' : '',
-      } as CSSStyleDeclaration);
+      });
 
       expect(getCardSpacing()).toBe(10);
     });
@@ -84,7 +84,7 @@ describe('style-settings', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
           name === '--dynamic-views-card-spacing-desktop' ? '0' : '',
-      } as CSSStyleDeclaration);
+      });
 
       expect(getCardSpacing()).toBe(0);
     });
@@ -97,7 +97,7 @@ describe('style-settings', () => {
 
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) => (name === '--size-4-2' ? '8' : ''),
-      } as CSSStyleDeclaration);
+      });
 
       expect(getCardSpacing(mockContainer)).toBe(8);
     });
@@ -135,7 +135,7 @@ describe('style-settings', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
           name === '--dynamic-views-card-spacing-desktop' ? '12' : '',
-      } as CSSStyleDeclaration);
+      });
 
       expect(getCardSpacing(mockContainer)).toBe(12);
     });
@@ -208,7 +208,7 @@ describe('style-settings', () => {
     const withValue = (name: string, value: string) => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (prop: string) => (prop === name ? value : ''),
-      } as CSSStyleDeclaration);
+      });
       clearStyleSettingsCache();
     };
 
@@ -249,7 +249,7 @@ describe('style-settings', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
           name === '--dynamic-views-list-separator' ? '", "' : '',
-      } as CSSStyleDeclaration);
+      });
 
       expect(getListSeparator()).toBe(', ');
     });
@@ -258,7 +258,7 @@ describe('style-settings', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
           name === '--dynamic-views-list-separator' ? '" | "' : '',
-      } as CSSStyleDeclaration);
+      });
 
       expect(getListSeparator()).toBe(' | ');
     });
@@ -267,7 +267,7 @@ describe('style-settings', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
           name === '--dynamic-views-list-separator' ? '" • "' : '',
-      } as CSSStyleDeclaration);
+      });
 
       expect(getListSeparator()).toBe(' • ');
     });
@@ -276,7 +276,7 @@ describe('style-settings', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
           name === '--dynamic-views-list-separator' ? "' / '" : '',
-      } as CSSStyleDeclaration);
+      });
 
       expect(getListSeparator()).toBe(' / ');
     });
@@ -285,7 +285,7 @@ describe('style-settings', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
           name === '--dynamic-views-list-separator' ? '   ' : '',
-      } as CSSStyleDeclaration);
+      });
 
       // Whitespace-only is trimmed to empty, so falls back to default
       expect(getListSeparator()).toBe(' ');
@@ -295,7 +295,7 @@ describe('style-settings', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
           name === '--dynamic-views-list-separator' ? '"hello' : '',
-      } as CSSStyleDeclaration);
+      });
 
       expect(getListSeparator()).toBe('"hello');
     });
@@ -304,7 +304,7 @@ describe('style-settings', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
           name === '--dynamic-views-list-separator' ? '""' : '',
-      } as CSSStyleDeclaration);
+      });
 
       expect(getListSeparator()).toBe(' '); // Falls back to default
     });
@@ -315,7 +315,7 @@ describe('style-settings', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
           name === '--dynamic-views-compact-breakpoint' ? value : '',
-      } as CSSStyleDeclaration);
+      });
 
     it('should return 390 when unset', () => {
       expect(getCompactBreakpoint()).toBe(390);
@@ -358,7 +358,7 @@ describe('style-settings', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
           name === '--dynamic-views-empty-value-marker' ? 'N/A' : '',
-      } as CSSStyleDeclaration);
+      });
 
       expect(getEmptyValueMarker()).toBe('N/A');
     });
@@ -367,7 +367,7 @@ describe('style-settings', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
           name === '--dynamic-views-empty-value-marker' ? '"..."' : '',
-      } as CSSStyleDeclaration);
+      });
 
       expect(getEmptyValueMarker()).toBe('...');
     });
@@ -376,7 +376,7 @@ describe('style-settings', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
           name === '--dynamic-views-empty-value-marker' ? "'—'" : '',
-      } as CSSStyleDeclaration);
+      });
 
       expect(getEmptyValueMarker()).toBe('—');
     });
@@ -385,7 +385,7 @@ describe('style-settings', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
           name === '--dynamic-views-empty-value-marker' ? '""' : '',
-      } as CSSStyleDeclaration);
+      });
 
       expect(getEmptyValueMarker()).toBe('—'); // Falls back to default
     });
@@ -394,7 +394,7 @@ describe('style-settings', () => {
       mockGetComputedStyle.mockReturnValue({
         getPropertyValue: (name: string) =>
           name === '--dynamic-views-empty-value-marker' ? '∅' : '',
-      } as CSSStyleDeclaration);
+      });
 
       expect(getEmptyValueMarker()).toBe('∅');
     });

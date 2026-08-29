@@ -225,7 +225,7 @@ export async function cleanUpBaseFile(
         if (
           validValues &&
           key !== 'minimumColumns' &&
-          !validValues.includes(String(viewObj[key]) as never)
+          !validValues.includes(String(viewObj[key]))
         ) {
           viewObj[key] = validValues[0];
           changeCount++;
@@ -475,14 +475,13 @@ export function hasGroupBy(
   if (typeof config !== 'object' || config === null || !('groupBy' in config)) {
     return false;
   }
-  const groupBy = (config as { groupBy: unknown }).groupBy;
+  const groupBy = config.groupBy;
   // groupBy can be undefined (no grouping) or object with optional property string
   return (
     groupBy === undefined ||
     (typeof groupBy === 'object' &&
       groupBy !== null &&
-      (!('property' in groupBy) ||
-        typeof (groupBy as { property: unknown }).property === 'string'))
+      (!('property' in groupBy) || typeof groupBy.property === 'string'))
   );
 }
 
@@ -540,13 +539,13 @@ export function serializeGroupKey(key: unknown): string | undefined {
     }
 
     // Handle Bases date Value objects (e.g., {date: Date, time: boolean})
-    if ('date' in key && (key as { date: unknown }).date instanceof Date) {
+    if ('date' in key && key.date instanceof Date) {
       return (key as { date: Date }).date.toISOString();
     }
 
     // Handle Bases Value objects with .data property (e.g., {icon: "...", data: 462})
     if ('data' in key) {
-      const data = (key as { data: unknown }).data;
+      const data = key.data;
       if (data === null || data === undefined) return undefined;
       if (typeof data === 'string') return data;
       if (typeof data === 'number' || typeof data === 'boolean')
@@ -614,13 +613,13 @@ function isTagArray(key: unknown): boolean {
   // Bases proxy has .data property containing the actual array
   if (!('data' in key)) return false;
 
-  const data = (key as { data: unknown }).data;
+  const data = key.data;
   if (!data || !Array.isArray(data) || data.length === 0) return false;
 
   // Check if first item has .data starting with #
   const first: unknown = data[0];
   if (first && typeof first === 'object' && 'data' in first) {
-    const itemData = (first as { data: unknown }).data;
+    const itemData = first.data;
     return typeof itemData === 'string' && itemData.startsWith('#');
   }
   return false;
@@ -646,7 +645,7 @@ function renderGroupValue(
     // Create tag elements
     arr.forEach((item) => {
       if (item && typeof item === 'object' && 'data' in item) {
-        const data = (item as { data: unknown }).data;
+        const data = item.data;
         if (typeof data === 'string' && data.startsWith('#')) {
           const element = container.createSpan('value-list-element');
           element.createEl('a', {
@@ -696,7 +695,7 @@ function renderGroupValue(
     key &&
     typeof key === 'object' &&
     'date' in key &&
-    (key as { date: unknown }).date instanceof Date
+    key.date instanceof Date
   ) {
     const date = (key as { date: Date }).date;
     valueEl.setText(date.toLocaleDateString());
@@ -708,7 +707,7 @@ function renderGroupValue(
     // Extract folder path from Bases Value object or plain string
     const folderPath =
       key && typeof key === 'object' && 'data' in key
-        ? String((key as { data: unknown }).data)
+        ? String(key.data)
         : typeof key === 'string'
           ? key
           : null;
@@ -986,7 +985,7 @@ export async function loadContentForEntries(
         return {
           path: entry.file.path,
           file,
-          imagePropertyValues: imagePropertyValues as unknown[],
+          imagePropertyValues: imagePropertyValues,
         };
       })
       .filter((e): e is NonNullable<typeof e> => e !== null);

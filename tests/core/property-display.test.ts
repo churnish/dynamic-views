@@ -307,7 +307,7 @@ describe('property-display', () => {
 
       normalizeSettingsPropertyNames(
         mockApp,
-        settings as any,
+        settings,
         reverseMap,
         displayNameMap
       );
@@ -328,7 +328,7 @@ describe('property-display', () => {
         titleProperty: 'filename123, created time',
       };
 
-      normalizeSettingsPropertyNames(mockApp, settings as any, reverseMap, {});
+      normalizeSettingsPropertyNames(mockApp, settings, reverseMap, {});
 
       expect(settings.titleProperty).toBe('file.name,file.ctime');
     });
@@ -337,12 +337,7 @@ describe('property-display', () => {
       const displayNameMap = { 'file.name': 'filename123' };
       const settings: Record<string, unknown> = {};
 
-      normalizeSettingsPropertyNames(
-        mockApp,
-        settings as any,
-        {},
-        displayNameMap
-      );
+      normalizeSettingsPropertyNames(mockApp, settings, {}, displayNameMap);
 
       expect((settings as any)._displayNameMap).toBe(displayNameMap);
     });

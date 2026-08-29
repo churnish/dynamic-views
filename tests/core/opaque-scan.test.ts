@@ -207,7 +207,7 @@ describe('opaque-scan', () => {
       mockFile = { path: 'note.md' } as TFile;
       mockApp.metadataCache.getFirstLinkpathDest = vi
         .fn()
-        .mockReturnValue({ extension: 'png' } as TFile);
+        .mockReturnValue({ extension: 'png' });
       mockApp.vault.getResourcePath = vi.fn().mockReturnValue(RESOURCE_PATH);
     });
 

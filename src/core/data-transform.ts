@@ -278,7 +278,7 @@ export function basesEntryToCardData(
           ? tagData
               .map((t: unknown) => {
                 if (t && typeof t === 'object' && 'data' in t) {
-                  return String((t as { data: unknown }).data);
+                  return String(t.data);
                 }
                 return typeof t === 'string' || typeof t === 'number'
                   ? String(t)
@@ -304,7 +304,7 @@ export function basesEntryToCardData(
           ? tagData
               .map((t: unknown) => {
                 if (t && typeof t === 'object' && 'data' in t) {
-                  return String((t as { data: unknown }).data);
+                  return String(t.data);
                 }
                 return typeof t === 'string' || typeof t === 'number'
                   ? String(t)
@@ -614,7 +614,7 @@ export function resolveBasesProperty(
       .map((item: unknown) => {
         // Handle nested Bases objects with .data
         if (item && typeof item === 'object' && 'data' in item) {
-          const nestedData = (item as { data: unknown }).data;
+          const nestedData = item.data;
           if (nestedData == null || nestedData === '') return null;
           if (
             typeof nestedData === 'string' ||
@@ -627,13 +627,13 @@ export function resolveBasesProperty(
           // Check link first (original text), fall back to path (resolved)
           if (typeof nestedData === 'object' && nestedData !== null) {
             if ('link' in nestedData) {
-              const linkValue = (nestedData as { link: unknown }).link;
+              const linkValue = nestedData.link;
               if (typeof linkValue === 'string' && linkValue.trim() !== '') {
                 return `[[${linkValue}]]`;
               }
             }
             if ('path' in nestedData) {
-              const pathValue = (nestedData as { path: unknown }).path;
+              const pathValue = nestedData.path;
               if (typeof pathValue === 'string' && pathValue.trim() !== '') {
                 return `[[${pathValue}]]`;
               }

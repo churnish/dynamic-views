@@ -672,8 +672,10 @@ describe('updateCardContent — URL button', () => {
 describe('getPropertiesRenderedElsewhere', () => {
   const settings = (
     over: Partial<ResolvedSettings> = {}
-  ): Pick<ResolvedSettings, 'textPreviewProperty' | 'urlProperty'> =>
-    ({ ...VIEW_DEFAULTS, ...over }) as ResolvedSettings;
+  ): Pick<ResolvedSettings, 'textPreviewProperty' | 'urlProperty'> => ({
+    ...VIEW_DEFAULTS,
+    ...over,
+  });
 
   it('excludes the text preview property', () => {
     const excluded = getPropertiesRenderedElsewhere(
@@ -867,9 +869,7 @@ describe('applyCssOnlySettings — poster display mode re-clip', () => {
   }
 
   beforeEach(() => {
-    vi.mocked(getOwnerWindow).mockReturnValue(
-      window as unknown as Window & typeof globalThis
-    );
+    vi.mocked(getOwnerWindow).mockReturnValue(window);
   });
 
   afterEach(() => {
@@ -973,9 +973,7 @@ describe('applyCssOnlySettings — class swap gating', () => {
   }
 
   beforeEach(() => {
-    vi.mocked(getOwnerWindow).mockReturnValue(
-      window as unknown as Window & typeof globalThis
-    );
+    vi.mocked(getOwnerWindow).mockReturnValue(window);
   });
 
   it('swaps the poster mode and image fit classes once across identical calls', () => {
@@ -1044,9 +1042,7 @@ describe('applyCssOnlySettings — text preview re-clip gating', () => {
   }
 
   beforeEach(() => {
-    vi.mocked(getOwnerWindow).mockReturnValue(
-      window as unknown as Window & typeof globalThis
-    );
+    vi.mocked(getOwnerWindow).mockReturnValue(window);
     vi.mocked(clipPosterStaticOverflowBatch).mockClear();
   });
 
@@ -1421,9 +1417,7 @@ describe('renderCard — titleless open-on-title fallback', () => {
       unobserve(): void {}
       disconnect(): void {}
     };
-    vi.mocked(getOwnerWindow).mockReturnValue(
-      window as unknown as Window & typeof globalThis
-    );
+    vi.mocked(getOwnerWindow).mockReturnValue(window);
     vi.mocked(filterBrokenUrls).mockReturnValue([]);
     vi.mocked(getEmptyValueMarker).mockReturnValue('—');
 

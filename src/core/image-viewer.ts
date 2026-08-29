@@ -903,22 +903,10 @@ function setupImageViewerGestures(
       // constrained branch, whose class outlives the clone.
       setGrabbingCursor(false);
       if (mobileTouchHandler) {
-        container.removeEventListener(
-          'touchstart',
-          mobileTouchHandler as EventListener
-        );
-        container.removeEventListener(
-          'touchend',
-          mobileTouchHandler as EventListener
-        );
-        container.removeEventListener(
-          'touchmove',
-          mobileTouchHandler as EventListener
-        );
-        container.removeEventListener(
-          'touchcancel',
-          mobileTouchHandler as EventListener
-        );
+        container.removeEventListener('touchstart', mobileTouchHandler);
+        container.removeEventListener('touchend', mobileTouchHandler);
+        container.removeEventListener('touchmove', mobileTouchHandler);
+        container.removeEventListener('touchcancel', mobileTouchHandler);
         gestureWin.cancelAnimationFrame(mobileAnimFrame);
       }
       if (mobileLoadHandler) {

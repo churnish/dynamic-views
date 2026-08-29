@@ -40,7 +40,7 @@ function stubRect(el: HTMLElement, rect: Partial<DOMRect>): void {
     bottom: 0,
     toJSON: () => ({}),
     ...rect,
-  } as DOMRect);
+  });
 }
 
 /** `.card > .card-cover > img` — the cover is the embed the trigger fires on. */

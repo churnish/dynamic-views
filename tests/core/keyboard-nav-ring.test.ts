@@ -11,29 +11,37 @@ describe('setKeyboardNavActive', () => {
   let container: HTMLElement & { _keyboardNavActive?: boolean };
 
   beforeEach(() => {
-    container = document.createElement('div') as typeof container;
+    container = document.createElement('div');
     container.className = 'dynamic-views-grid';
   });
 
   it('sets both the property and the class the ring keys on', () => {
     setKeyboardNavActive(container, true);
     expect(container._keyboardNavActive).toBe(true);
-    expect(container.classList.contains('dynamic-views-keyboard-nav')).toBe(true);
+    expect(container.classList.contains('dynamic-views-keyboard-nav')).toBe(
+      true
+    );
   });
 
   it('clears both together', () => {
     setKeyboardNavActive(container, true);
     setKeyboardNavActive(container, false);
     expect(container._keyboardNavActive).toBe(false);
-    expect(container.classList.contains('dynamic-views-keyboard-nav')).toBe(false);
+    expect(container.classList.contains('dynamic-views-keyboard-nav')).toBe(
+      false
+    );
   });
 
   it('is idempotent', () => {
     setKeyboardNavActive(container, true);
     setKeyboardNavActive(container, true);
-    expect(container.classList.contains('dynamic-views-keyboard-nav')).toBe(true);
+    expect(container.classList.contains('dynamic-views-keyboard-nav')).toBe(
+      true
+    );
     expect(
-      container.className.split(' ').filter((c) => c === 'dynamic-views-keyboard-nav')
+      container.className
+        .split(' ')
+        .filter((c) => c === 'dynamic-views-keyboard-nav')
     ).toHaveLength(1);
   });
 

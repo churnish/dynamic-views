@@ -93,9 +93,7 @@ export function getBasesViewOptions(
   }
 
   // Cache property registry once (used by imageProperty filter)
-  const propertyInfos = window.app?.metadataCache?.getAllPropertyInfos?.() as
-    | Record<string, { widget?: string }>
-    | undefined;
+  const propertyInfos = window.app?.metadataCache?.getAllPropertyInfos?.();
 
   /** Count properties that render as property rows (excludes text preview, URL, and position-derived title/subtitle — none of these render as property rows). Memoized per getBasesViewOptions invocation. */
   let _displayableCountCache: number | null = null;
@@ -564,7 +562,7 @@ function getValidEnum<T extends string>(
   defaultValue: T,
   previousValue?: T
 ): T {
-  const value = config.get(field as string);
+  const value = config.get(field);
   const valid = VALID_VIEW_VALUES[field];
   if (valid?.includes(value as string)) return value as T;
   if (previousValue !== undefined) return previousValue;

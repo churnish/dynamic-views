@@ -38,7 +38,7 @@ export function getFirstBasesPropertyValue(
       value &&
       typeof value === 'object' &&
       'date' in value &&
-      (value as { date: unknown }).date instanceof Date &&
+      value.date instanceof Date &&
       !isNaN((value as { date: Date }).date.getTime()) &&
       'time' in value
     ) {
@@ -51,7 +51,7 @@ export function getFirstBasesPropertyValue(
       value &&
       typeof value === 'object' &&
       'file' in value &&
-      (value as { file: unknown }).file instanceof TFile
+      value.file instanceof TFile
     ) {
       return value;
     }
