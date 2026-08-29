@@ -51,31 +51,6 @@ And numerous other quality‑of‑life improvements over the default Bases card 
 - Everyday notes
 - [Web Clipper](https://obsidian.md/clipper)
 
-## Installation
-
-> **NOTE:** The plugin is in beta — things can break, or change drastically between releases. Please ensure your vault is regularly [backed up](https://help.obsidian.md/backup).
-
-Until **Dynamic Views** appears in the plugin directory, to install it:
-
-1. Download and enable the [BRAT](https://churnish.github.io/http-protocol-redirector?r=obsidian://show-plugin?id=obsidian42-brat) plugin.
-2. [Install via BRAT](https://churnish.github.io/http-protocol-redirector?r=obsidian://brat?plugin=churnish/dynamic-views).
-3. Select “Add plugin”.
-
-<details><summary>Install manually</summary>
-
-Note: To get updates for **Dynamic Views**, you will have to check for and install them manually.
-
-1. Download `manifest.json`, `main.js` and `styles.css` from the `Assets` of the [latest release](https://github.com/churnish/dynamic-views/releases).
-2. Open the vault folder in the system file manager.
-3. Navigate to your Obsidian config folder (`.obsidian` by default, hidden on most OSes).
-4. Navigate to the `plugins` folder.
-5. Create a folder titled `dynamic-views`.
-6. Place the three files you downloaded in the new folder.
-7. Reload plugins or app.
-8. Enable **Dynamic Views** in Obsidian settings → Community plugins → Installed plugins.
-
-</details>
-
 ## Support
 
 - Have a question? [Start a discussion](https://github.com/churnish/dynamic-views/discussions).
