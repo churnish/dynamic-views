@@ -2,202 +2,86 @@
 
 Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases).
 
+<img src="https://github.com/user-attachments/assets/e4aae73c-4388-4cc9-88e7-1d6798ebc05c" />
+
+<img src="https://github.com/user-attachments/assets/d367680e-9857-4d28-8a8a-ce7c279d02a2" />
+
+<img src="https://github.com/user-attachments/assets/5eda2513-c0dc-4d08-975d-931eb3afb99d" />
+
+<img src="https://github.com/user-attachments/assets/f811aec9-8885-4783-afa6-c937f3617b98" />
+
 ## Features
 
-- Show text previews from first few lines of notes
-- Show file images
-- Display images as covers, thumbnails, posters, or backdrops
-- Full screen image viewer
-- Wrap long titles to new line
+- Display note images as thumbnails, covers, posters, or card backdrops
+- Slide through images
+- Open images in full screen
+- Show text previews from note content
+- Wrap long titles
 - Scroll long properties horizontally
-- Immersive full screen view on mobile
+- Hide menus when scrolling on phone
+- Customize everything
 
 ### Extras
 
-- Position card images on top, bottom, left, or right of text
-- Slide or hover to preview other images
-- Position property names inline, above, or hide them
+- Position card images on top, bottom, left or right of text
+- Position property names above, inline, or hide them
 - Display properties stacked or side-by-side
-- Interactive checkbox properties
-- Fold sections when grouping by property
 - Select card text
-- Configure default view settings
+- Fold sections when grouping by property
+- Interactive checkbox properties
 - Full keyboard navigation
-- Apply CSS snippets to individual views
-- **Open URL** card button
-- **Shuffle view** button
-- **Open random file** button
+- “Open URL ↗” card button
+- “Open random file” and “Shuffle view” ribbon buttons
+- Configure default view settings
+- Apply [CSS snippets](https://obsidian.md/help/snippets#Writing+CSS+for+Obsidian:~:text=CSS%20classes) to individual views
 
-And numerous other quality‑of‑life improvements over the default Bases card layout.
+And numerous other quality‑of‑life improvements over the default Bases card view.
 
 ### Integrations
 
-- Extensive [Style Settings](https://obsidian.md/plugins?id=obsidian-style-settings) customization options
+- Reveal files, folders and tags in [Notebook Navigator](https://community.obsidian.md/plugins/notebook-navigator)
 - Show YouTube thumbnails
-- Show [Auto Card Link](https://obsidian.md/plugins?id=auto-card-link) or [Link Embed](https://obsidian.md/plugins?id=obsidian-link-embed) images
-- Reveal files, folders and tags in [Notebook Navigator](https://obsidian.md/plugins?id=notebook-navigator)
+- Show [Auto Card Link](https://community.obsidian.md/plugins/auto-card-link) or [Link Embed](https://community.obsidian.md/plugins/obsidian-link-embed) images
 
 ## Perfect for
 
-- Media libraries
 - Mood boards
+- Media libraries
 - Image galleries
 - Everyday notes
 - [Web Clipper](https://obsidian.md/clipper)
 
 ## Installation
 
-> [!IMPORTANT]  
-> The plugin is in active development — things can break, or change drastically between releases.
+> **NOTE:** The plugin is in beta — things can break, or change drastically between releases. Please ensure your vault is regularly [backed up](https://help.obsidian.md/backup).
 
-Until **Dynamic Views** is [approved](https://github.com/obsidianmd/obsidian-releases/pull/8400), to install it:
+Until **Dynamic Views** appears in the plugin directory, to install it:
 
 1. Download and enable the [BRAT](https://churnish.github.io/http-protocol-redirector?r=obsidian://show-plugin?id=obsidian42-brat) plugin.
 2. [Install via BRAT](https://churnish.github.io/http-protocol-redirector?r=obsidian://brat?plugin=churnish/dynamic-views).
-3. Select **Add plugin**.
+3. Select “Add plugin”.
 
-<details>
-<summary>Install manually</summary>
+<details><summary>Install manually</summary>
 
-1. Download `main.js`, `manifest.json`, and `styles.css` from the `Assets` of the [latest release](https://github.com/churnish/dynamic-views/releases).
+Note: To get updates for **Dynamic Views**, you will have to check for and install them manually.
+
+1. Download `manifest.json`, `main.js` and `styles.css` from the `Assets` of the [latest release](https://github.com/churnish/dynamic-views/releases).
 2. Open the vault folder in the system file manager.
 3. Navigate to your Obsidian config folder (`.obsidian` by default, hidden on most OSes).
-4. Create a `dynamic-views` folder inside the `plugins` folder.
-5. Place all three downloaded files in the `dynamic-views` folder.
-6. Reload plugins or app.
-7. Enable **Dynamic Views** in **Obsidian settings → Community plugins → Installed plugins**.
-
-**Tip:** To be notified about new **Dynamic Views** releases, press **Watch** at the top of the repository page then select **Custom → Releases → Apply**.
-
-</details>
-
-## Usage
-
-<details>
-<summary>View settings</summary>
-
-Each Grid and Masonry view has its own settings, configured in the view's config menu. Changes apply only to that view.
-
-### Card size
-
-| Setting | Description | Default |
-| --- | --- | --- |
-| Card size | Minimum card width in pixels | 300 |
-
-### Title
-
-| Setting | Description | Default |
-| --- | --- | --- |
-| Display first property as title | Use the first property from property menu as card title | On |
-| Lines | Maximum title lines before truncating | 2 |
-| Display second property as subtitle | Use the second property from property menu as subtitle | Off |
-
-### Text preview
-
-| Setting | Description | Default |
-| --- | --- | --- |
-| Text preview property | Visible property to display as preview text | None |
-| Show note content if property unavailable | Fall back to displaying note content when a note does not have the property, or its value is empty | On |
-| Lines | Maximum lines before truncating | 5 |
-
-### Image
-
-| Setting | Description | Default |
-| --- | --- | --- |
-| Image property | Property containing path to image or image URL | None |
-| Show file images | When to use images embedded in-note as fallback | Always |
-| Format | How to display images | Thumbnail |
-| Display mode | Poster tint style: Fade (bottom gradient) or Overlay (full-image filter) | Fade |
-| Tint | Shade of the poster and backdrop tint: Dark, Light, or Adapt to color scheme | Adapt to color scheme |
-| Interact to show details | Hide content until hover (desktop) or press (mobile). When off, content is always visible and overflow is clipped. | Off |
-| Size | Thumbnail width in pixels | 80 |
-| Position | Image placement | Right |
-| Fit | Crop to fill, or contain within bounds | Crop |
-| Ratio | Aspect ratio of the image area (card-to-image ratio for side covers) | 1.0 |
-
-### Properties
-
-| Setting | Description | Default |
-| --- | --- | --- |
-| Property names | How to display property names | Inline |
-| URL property | Visible property to display as an 'Open URL' button (↗) | None |
-| Pair properties | Display properties side-by-side | Off |
-| Right property position | Placement of the second property in a pair | Right |
-| Invert pairing for property | Properties not to pair (if pairing enabled), or that should pair (if pairing disabled) | None |
-
-### Other
-
-| Setting | Description | Default |
-| --- | --- | --- |
-| Minimum columns | Smallest number of visible columns | One (Grid) Two (Masonry) |
-| CSS classes | Apply custom CSS class names for this view | None |
-| Save as default settings | Save a one-time snapshot of this view's settings as defaults for new views. Later changes to the original view will not update the saved defaults. The toggle resets on next view load, so enable it again to re-save. | Off |
-
-</details>
-
-<br>
-
-<details>
-<summary>Image viewer controls</summary>
-
-Press on a card's cover or thumbnail to open the image viewer — a fullscreen overlay with pan and zoom.
-
-The image viewer can be disabled in Style Settings, or constrained to the current pane instead of taking over the window.
-
-### Desktop
-
-| Action | Control |
-| --- | --- |
-| Zoom | Ctrl/Cmd+scroll / Pinch |
-| Pan (while zoomed) | Scroll / Drag |
-| Previous / next image | ← / → |
-| Drag into a note | Drag (constrained to pane, not zoomed) |
-| Close | Click background / Esc / Space |
-
-### Mobile
-
-| Action | Control |
-| --- | --- |
-| Zoom | Spread / Pinch |
-| Pan (while zoomed) | Drag |
-| Close | Tap background |
-
-### Style Settings
-
-These options are available in [Style Settings](https://obsidian.md/plugins?id=obsidian-style-settings) → Dynamic Views → Images.
-
-| Setting | Description | Default |
-| --- | --- | --- |
-| Disable image viewer | Turns off the image viewer entirely. Images will behave as normal embeds. | Off |
-| Constrain image viewer to pane | Keeps the image within the pane instead of opening full screen. | Off |
-| Disable HDR | Shows HDR images in standard dynamic range instead of at full brightness. | Off |
-
-</details>
-
-<br>
-
-<details>
-<summary>Keyboard navigation</summary>
-
-Navigate between cards using the keyboard in Grid and Masonry views.
-
-Start by hovering a card and pressing an arrow key, or pressing Tab to focus the first card.
-
-| Action | Control |
-| --- | --- |
-| Move between cards | ↑ ↓ ← → |
-| Open note | Enter / Space |
-| Open in new tab | Ctrl/⌘+Enter |
-| Exit keyboard navigation | Esc |
+4. Navigate to the `plugins` folder.
+5. Create a folder titled `dynamic-views`.
+6. Place the three files you downloaded in the new folder.
+7. Reload plugins or app.
+8. Enable **Dynamic Views** in Obsidian settings → Community plugins → Installed plugins.
 
 </details>
 
 ## Support
 
-Found a bug or have a feature request? [Open an issue](https://github.com/churnish/dynamic-views/issues).
-
-Have a question? [Start a discussion](https://github.com/churnish/dynamic-views/discussions).
+- Have a question? [Start a discussion](https://github.com/churnish/dynamic-views/discussions).
+- Have a feature request or found a bug? [Open an issue](https://github.com/churnish/dynamic-views/issues).
+- [Contributors welcome](https://github.com/churnish/dynamic-views#contributing-ov-file).
 
 ## Credits
 
-The theme in the screenshots is [Cupertino](https://github.com/aaaaalexis/obsidian-cupertino).
+The theme in the screenshots is [Cupertino](https://community.obsidian.md/themes/cupertino).
