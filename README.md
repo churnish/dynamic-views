@@ -1,7 +1,3 @@
-# Dynamic Views
-
-Elegant grid and masonry card views for [Bases](https://help.obsidian.md/bases).
-
 <img src="https://github.com/user-attachments/assets/e4aae73c-4388-4cc9-88e7-1d6798ebc05c" />
 
 <img src="https://github.com/user-attachments/assets/d367680e-9857-4d28-8a8a-ce7c279d02a2" />
