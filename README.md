@@ -46,6 +46,7 @@ And numerous other quality‑of‑life improvements over the default Bases card 
 - Image galleries
 - Everyday notes
 - [Web Clipper](https://obsidian.md/clipper)
+- [Web viewer](https://obsidian.md/help/plugins/web-viewer)
 
 ## Support
 
