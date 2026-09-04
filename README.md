@@ -23,7 +23,6 @@
 - Position property names above, inline, or hide them
 - Display properties stacked or side-by-side
 - Select card text
-- Fold sections when grouping by property
 - Interactive checkbox properties
 - Full keyboard navigation
 - “Open URL ↗” card button
