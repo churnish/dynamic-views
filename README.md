@@ -19,15 +19,15 @@
 
 ### Extras
 
-- Position card images on top, bottom, left or right of text
+- Position images on top, bottom, left or right of text
 - Position property names above, inline, or hide them
 - Display properties stacked or side-by-side
 - Select card text
 - Interactive checkbox properties
-- Full keyboard navigation
+- Keyboard navigation
 - “Open URL ↗” card button
 - “Open random file” and “Shuffle view” ribbon buttons
-- Configure default view settings
+- Configure default settings for new views
 - Apply [CSS snippets](https://obsidian.md/help/snippets#Writing+CSS+for+Obsidian:~:text=CSS%20classes) to individual views
 
 And numerous other quality‑of‑life improvements over the default Bases card view.
