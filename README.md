@@ -30,7 +30,7 @@
 - Configure default settings for new views
 - Apply [CSS snippets](https://obsidian.md/help/snippets#Writing+CSS+for+Obsidian:~:text=CSS%20classes) to individual views
 
-And numerous other quality‑of‑life improvements over the default Bases card view.
+And numerous other quality‑of‑life improvements over the default Bases Cards view.
 
 ### Integrations
 
