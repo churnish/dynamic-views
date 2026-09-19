@@ -29,19 +29,19 @@
 - Position property names above, inline, or hide them
 - Display properties stacked or side-by-side
 - Select card text
-- Interactive checkbox properties
-- Keyboard navigation
-- “Open URL ↗” card button
-- “Open random file” and “Shuffle view” ribbon buttons
+- Toggle checkbox properties
+- Navigate with keyboard
 - Configure default settings for new views
 - Apply [CSS snippets](https://obsidian.md/help/snippets#Writing+CSS+for+Obsidian:~:text=CSS%20classes) to individual views
+- “Open URL ↗” card button
+- “Open random file” and “Shuffle view” ribbon buttons
 
 And numerous other quality‑of‑life improvements over the default Bases Cards view.
 
 ### Integrations
 
-- Reveal files, folders and tags in [Notebook Navigator](https://community.obsidian.md/plugins/notebook-navigator)
 - Show YouTube thumbnails
+- Reveal files, folders and tags in [Notebook Navigator](https://community.obsidian.md/plugins/notebook-navigator)
 - Show [Auto Card Link](https://community.obsidian.md/plugins/auto-card-link) or [Link Embed](https://community.obsidian.md/plugins/obsidian-link-embed) images
 
 ## Perfect for
