@@ -32,7 +32,7 @@
 - Toggle checkbox properties
 - Navigate with keyboard
 - Configure default settings for new views
-- Apply [CSS snippets](https://obsidian.md/help/snippets#Writing+CSS+for+Obsidian:~:text=CSS%20classes) to individual views
+- Apply [CSS snippets](https://obsidian.md/help/snippets#Writing+CSS+for+Obsidian) to individual views
 - “Open URL ↗” card button
 - “Open random file” and “Shuffle view” ribbon buttons
 
@@ -40,9 +40,9 @@ And numerous other quality‑of‑life improvements over the default Bases Cards
 
 ### Integrations
 
-- Show YouTube thumbnails
 - Reveal files, folders and tags in [Notebook Navigator](https://community.obsidian.md/plugins/notebook-navigator)
-- Show [Auto Card Link](https://community.obsidian.md/plugins/auto-card-link) or [Link Embed](https://community.obsidian.md/plugins/obsidian-link-embed) images
+- Show YouTube thumbnails
+- Show [Link Embed](https://community.obsidian.md/plugins/obsidian-link-embed) or [Auto Card Link](https://community.obsidian.md/plugins/auto-card-link) images
 
 ## Perfect for
 
