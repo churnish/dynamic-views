@@ -19,19 +19,19 @@
 - Open images in full screen
 - Show text previews from note content
 - Wrap long titles
-- Scroll long properties horizontally
+- Scroll long properties sideways
 - Hide menus when scrolling on phone
-- Customize everything
+- Extensive customization options
 
 ### Extras
 
 - Position images on top, bottom, left or right of text
 - Position property names above, inline, or hide them
 - Display properties stacked or side-by-side
-- Select card text
-- Toggle checkbox properties
 - Navigate with keyboard
 - Configure default settings for new views
+- Select card text
+- Toggle checkbox properties
 - Apply [CSS snippets](https://obsidian.md/help/snippets#Writing+CSS+for+Obsidian) to individual views
 - “Open URL ↗” card button
 - “Open random file” and “Shuffle view” ribbon buttons
